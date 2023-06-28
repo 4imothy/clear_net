@@ -1,3 +1,4 @@
+// implement RELU for hidden functions to combat vanishing gradient
 #ifndef CLEAR_NET
 #define CLEAR_NET
 
@@ -6,11 +7,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARR_LEN(a) sizeof((a)) / sizeof((a))[0]
+#define ARR_LEN(a) (sizeof((a)) / sizeof((*a)))
 // allow custom memory allocation strategies
 #ifndef CLEAR_NET_ALLOC
 #define CLEAR_NET_ALLOC malloc
-#endif // CLEAR_NET_MALLOC
+#endif // CLEAR_NET_ALLOC
 // allow custom memory free strategies
 #ifndef CLEAR_NET_DEALLOC
 #define CLEAR_NET_DEALLOC free
@@ -61,13 +62,16 @@ void mat_rand(Matrix mat, float lower, float upper);
 // Net
 typedef struct {
     size_t nlayers;
+    Matrix *activations;
+    // number of these is equal to the number of layers -1 (for the output)
     Matrix *weights;
     Matrix *biases;
-    Matrix *activations;
 } Net;
 
-#define NET_INPUT(net) (net).activations[0]
-#define NET_OUTPUT(net) (net).activations[(net).nlayers]
+#define NET_INPUT(net)                                                         \
+    (CLEAR_NET_ASSERT((net).nlayers > 0), (net).activations[0])
+#define NET_OUTPUT(net)                                                        \
+    (CLEAR_NET_ASSERT((net).nlayers > 0), (net).activations[(net).nlayers - 1])
 #define NET_PRINT(net) net_print(net, #net)
 
 Net alloc_net(size_t *shape, size_t nlayers);
@@ -119,7 +123,15 @@ void mat_print(Matrix mat, char *name) {
 }
 
 Matrix mat_row(Matrix giver, size_t row) {
-    return form_mat(1, giver.ncols, giver.stride, &MAT_GET(giver, row, 0));
+    return (Matrix){
+        .nrows = 1,
+        .ncols = giver.ncols,
+        .stride = giver.stride,
+        .elements = &MAT_GET(giver, row, 0),
+    };
+    // TODO use the form_mat function, rename -> mat_form also
+    //    return form_mat(1, giver.ncols, giver.stride, &MAT_GET(giver, row,
+    //    0));
 }
 
 void mat_copy(Matrix dest, Matrix giver) {
@@ -184,8 +196,6 @@ float actf(float x) {
 float dactf(float y) {
     switch (CLEAR_NET_ACT) {
     case Sigmoid:
-        // the y is the result of a sigmoid already so don't need to call it
-        // again
         return y * (1 - y);
     }
     CLEAR_NET_ASSERT(0 && "Invalid Activation");
@@ -207,51 +217,59 @@ float sigmoidf(float x) { return 1.f / (1.f + expf(-x)); }
 // Net
 Net alloc_net(size_t *shape, size_t nlayers) {
     Net net;
-    net.nlayers = nlayers - 1;
+    net.nlayers = nlayers;
 
-    net.weights = CLEAR_NET_ALLOC(sizeof(*net.weights) * net.nlayers);
+    net.weights = CLEAR_NET_ALLOC(sizeof(*net.weights) * (net.nlayers - 1));
     CLEAR_NET_ASSERT(net.weights != NULL);
 
-    net.biases = CLEAR_NET_ALLOC(sizeof(*net.biases) * net.nlayers);
+    net.biases = CLEAR_NET_ALLOC(sizeof(*net.biases) * (net.nlayers - 1));
     CLEAR_NET_ASSERT(net.biases != NULL);
 
-    net.activations =
-        CLEAR_NET_ALLOC(sizeof(*net.activations) * (net.nlayers + 1));
+    net.activations = CLEAR_NET_ALLOC(sizeof(*net.activations) * (net.nlayers));
     CLEAR_NET_ASSERT(net.activations != NULL);
 
-	// allocate the thing that will be the input
-	// one row by the dimensions of the input
+    // allocate the thing that will be the input
+    // one row by the dimensions of the input
     net.activations[0] = alloc_mat(1, shape[0]);
-    for (size_t i = 0; i < nlayers - 1; ++i){
-	  // each weight is a matrix where each column is a neuron
-        net.weights[i] = alloc_mat(net.activations[i].ncols, shape[i + 1]);
-		// some dimensions as the num columns of the weight matrix
-		// a scalar for each neuron
-        net.biases[i] = alloc_mat(1, shape[i + 1]);
-		// prepare for the next layer
-        net.activations[i + 1] = alloc_mat(1, shape[i + 1]);
+    for (size_t i = 1; i < net.nlayers; ++i) {
+        // allocate weights by the columns of previous activation and the
+        // number of neurons of the this layer
+        net.weights[i - 1] = alloc_mat(net.activations[i - 1].ncols, shape[i]);
+        // allocate biases as one row and the shape of this layer
+        net.biases[i - 1] = alloc_mat(1, shape[i]);
+        // allocate activations as one row to add to each
+        net.activations[i] = alloc_mat(1, shape[i]);
     }
-
     return net;
 }
 
 void dealloc_net(Net *net) {
-    for (size_t i = 0; i < net->nlayers - 1; ++i) {
+    // Deallocate matrices within each layer
+    for (size_t i = 0; i < net->nlayers; ++i) {
         dealloc_mat(&net->weights[i]);
         dealloc_mat(&net->biases[i]);
-        dealloc_mat(&net->activations[i + 1]);
+        dealloc_mat(&net->activations[i]);
     }
-    dealloc_mat(&net->activations[0]);
 
+    // Deallocate the activation matrix of the output layer
+    dealloc_mat(&net->activations[net->nlayers]);
+
+    // Deallocate the arrays of matrices
     CLEAR_NET_DEALLOC(net->weights);
     CLEAR_NET_DEALLOC(net->biases);
     CLEAR_NET_DEALLOC(net->activations);
+
+    // Set net properties to NULL and 0
+    net->nlayers = 0;
+    net->activations = NULL;
+    net->weights = NULL;
+    net->biases = NULL;
 }
 
 void net_print(Net net, char *name) {
     char buf[256];
     printf("%s = [\n", name);
-    for (size_t i = 0; i < net.nlayers; ++i) {
+    for (size_t i = 0; i < net.nlayers - 1; ++i) {
         snprintf(buf, sizeof(buf), "weight matrix: %zu", i);
         mat_print(net.weights[i], buf);
         snprintf(buf, sizeof(buf), "bias matrix: %zu", i);
@@ -261,7 +279,7 @@ void net_print(Net net, char *name) {
 }
 
 void net_rand(Net net, float low, float high) {
-    for (size_t i = 0; i < net.nlayers; ++i) {
+    for (size_t i = 0; i < net.nlayers - 1; ++i) {
         mat_rand(net.weights[i], low, high);
         mat_rand(net.biases[i], low, high);
     }
@@ -269,9 +287,11 @@ void net_rand(Net net, float low, float high) {
 
 void net_forward(Net net) {
     // there is one more activation than there are layers
-    for (size_t i = 0; i < net.nlayers; ++i) {
+    for (size_t i = 0; i < net.nlayers - 1; ++i) {
+        // the first activation is the input so we don't set that here
         mat_mul(net.activations[i + 1], net.activations[i], net.weights[i]);
         mat_sum(net.activations[i + 1], net.biases[i]);
+        // TODO this doesn't return a float so get rid of the f
         mat_actf(net.activations[i + 1]);
     }
 }
@@ -282,20 +302,23 @@ float mean_squaredf(Net net, Matrix input, Matrix target) {
     CLEAR_NET_ASSERT(target.ncols == NET_OUTPUT(net).ncols);
 
     float err = 0;
-    size_t num_outputs = input.nrows;
-    for (size_t i = 0; i < input.nrows; ++i) {
+    size_t num_input = input.nrows;
+    size_t dim_output = target.ncols;
+    for (size_t i = 0; i < num_input; ++i) {
         Matrix x = mat_row(input, i);
 
         mat_copy(NET_INPUT(net), x);
         net_forward(net);
 
         // number outputs is the ncols of target
-        for (size_t j = 0; j < num_outputs; ++j) {
-            float t = MAT_GET(NET_OUTPUT(net), 0, j) - MAT_GET(target, i, j);
-            err += t * t;
+        for (size_t j = 0; j < dim_output; ++j) {
+            float difference =
+                MAT_GET(NET_OUTPUT(net), 0, j) - MAT_GET(target, i, j);
+            err += difference * difference;
         }
     }
-    return err / num_outputs;
+
+    return err / num_input;
 }
 
 float net_errorf(Net net, Matrix input, Matrix target) {
@@ -305,61 +328,113 @@ float net_errorf(Net net, Matrix input, Matrix target) {
     }
 }
 
+void mat_fill(Matrix m, float x) {
+    for (size_t i = 0; i < m.nrows; ++i) {
+        for (size_t j = 0; j < m.ncols; ++j) {
+            MAT_GET(m, i, j) = x;
+        }
+    }
+}
+
 void net_backprop(Net net, Matrix input, Matrix target) {
+  //	printf("here\n");
     CLEAR_NET_ASSERT(input.nrows == target.nrows);
+    size_t num_i = input.nrows;
     CLEAR_NET_ASSERT(target.ncols == NET_OUTPUT(net).ncols);
+    size_t dim_o = target.ncols;
+	// size_t shape[] = {2, 2, 1};
+    size_t shape[] = {3, 3, 8, 2};
 
-    size_t num_io = input.nrows;
-    size_t dim_output = target.ncols;
+    // TODO change this so that nlayers is correct
+    // output actually should be included in nlayers so do that
+    // and doesn't need the +1, just allocate an
+    // extra for the activations
+	
+    Net g = alloc_net(shape, net.nlayers);
+	printf("there\n");
+	
+    CLEAR_NET_ASSERT(net.nlayers == g.nlayers);
+  
+    // fill the biases, weights and activations
+    for (size_t i = 0; i < g.nlayers - 1; ++i) {
+        mat_fill(g.weights[i], 0);
+        mat_fill(g.biases[i], 0);
+        mat_fill(g.activations[i], 0);
+    }
+    mat_fill(g.activations[g.nlayers], 0);
 
-	// coefficient found in derivative
-    float coef = 2.0f / num_io;
+    // one more for the output layer
+    mat_fill(g.activations[g.nlayers - 1], 0);
 
-	// for each input
-    for (size_t i = 0; i < num_io; ++i) {
+    for (size_t i = 0; i < num_i; ++i) {
         mat_copy(NET_INPUT(net), mat_row(input, i));
         net_forward(net);
 
-		float prev_act_change;
-		
-		// for each dimension of the output
-        for (size_t j = 0; j < dim_output; ++j) {
-            float pred_out = MAT_GET(NET_OUTPUT(net), 0, j);
-            float change = (pred_out - MAT_GET(target, i, j)) * dactf(pred_out);
-            int change_layer = net.nlayers - 1;
-			
-            MAT_GET(net.biases[change_layer], 0, j) -= change;
+        for (size_t j = 0; j < net.nlayers; ++j) {
+            mat_fill(g.activations[j], 0);
+        }
 
-			// for each neuron of the output layer
-            for (size_t k = 0; k < net.weights[change_layer].ncols; ++k) {
-		         float weight_change =
-                    change * MAT_GET(net.activations[change_layer], 0, j);
-				 float act_change = change * MAT_GET(net.weights[change_layer], j, k);
-				
-                MAT_GET(net.weights[change_layer], k, j) -= coef * weight_change;
-				prev_act_change = act_change;
-                MAT_GET(net.activations[change_layer], 0, j) -= coef * act_change;
+        for (size_t j = 0; j < dim_o; ++j) {
+            MAT_GET(NET_OUTPUT(g), 0, j) =
+                2 * (MAT_GET(NET_OUTPUT(net), 0, j) - MAT_GET(target, i, j));
+        }
+
+        // first is just the output layer, then the hidden
+        // nlayers includes the first to the one before the output layer
+        for (size_t l = net.nlayers - 1; l > 0; --l) {
+            // this layers activation columns is the columns from the previous
+            // matrix
+            for (size_t j = 0; j < net.activations[l].ncols; ++j) {
+                float a = MAT_GET(net.activations[l], 0, j);
+                float da = MAT_GET(g.activations[l], 0, j);
+                float qa = dactf(a);
+                MAT_GET(g.biases[l - 1], 0, j) += da * qa;
+
+                // this activations columns is equal to the rows of the next
+                // matrix
+                for (size_t k = 0; k < net.activations[l - 1].ncols; ++k) {
+                    float pa = MAT_GET(net.activations[l - 1], 0, k);
+                    float w = MAT_GET(net.weights[l - 1], k, j);
+                    MAT_GET(g.weights[l - 1], k, j) += da * qa * pa;
+                    MAT_GET(g.activations[l - 1], 0, k) += da * qa * w;
+                }
             }
         }
-        // for each of the hidden layers
-        for (size_t layer_id = net.nlayers - 1; layer_id > 0; --layer_id) {
+    }
 
-          for (size_t j = 0; j < net.weights[layer_id].ncols; ++j) {
-            float act_out = MAT_GET(net.activations[layer_id], 0, j);
-			float change = prev_act_change;
-			size_t prev_layer_id = layer_id - 1;
-			
-			for (size_t k = 0; k < net.weights[prev_layer_id].ncols; ++k) {
-			  float prev_weight = MAT_GET(net.weights[prev_layer_id], j, k);
-			  MAT_GET(net.weights[prev_layer_id],j, k) -= change * MAT_GET(net.activations[prev_layer_id], 0,k);
-			  
-			  prev_act_change = MAT_GET(net.weights[prev_layer_id], j, k) * change;
-			  MAT_GET(net.activations[prev_layer_id], 0, k) -= prev_weight * change;
-			}
-			MAT_GET(net.biases[prev_layer_id], 0, j) -= change;
-        	}
+    for (size_t i = 0; i < g.nlayers - 1; ++i) {
+        for (size_t j = 0; j < g.weights[i].nrows; ++j) {
+            for (size_t k = 0; k < g.weights[i].ncols; ++k) {
+                MAT_GET(g.weights[i], j, k) /= num_i;
+            }
+        }
+        for (size_t j = 0; j < g.biases[i].nrows; ++j) {
+            for (size_t k = 0; k < g.biases[i].ncols; ++k) {
+                MAT_GET(g.biases[i], j, k) /= num_i;
+            }
         }
     }
+
+    // apply the learning
+    float rate = 1.0f;
+
+    for (size_t i = 0; i < net.nlayers - 1; ++i) {
+        for (size_t j = 0; j < net.weights[i].nrows; ++j) {
+            for (size_t k = 0; k < net.weights[i].ncols; ++k) {
+                MAT_GET(net.weights[i], j, k) -=
+                    rate * MAT_GET(g.weights[i], j, k);
+                        }
+        }
+
+        for (size_t j = 0; j < net.biases[i].nrows; ++j) {
+            for (size_t k = 0; k < net.biases[i].ncols; ++k) {
+                MAT_GET(net.biases[i], j, k) -=
+                    rate * MAT_GET(g.biases[i], j, k);
+            
+            }
+        }
+    }
+	//	dealloc_net(&g);
 }
 
 #endif // CLEAR_NET_IMPLEMENTATION
