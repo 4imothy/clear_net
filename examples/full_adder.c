@@ -27,8 +27,9 @@ int main() {
     size_t num_inputs = 3;
     // sum, cout
     size_t num_outputs = 2;
-	Matrix input = mat_form(num_combinations, num_inputs, 5, data);
-	Matrix output = mat_form(num_combinations, num_outputs, 5, &data[num_inputs]);
+    Matrix input = mat_form(num_combinations, num_inputs, 5, data);
+    Matrix output =
+        mat_form(num_combinations, num_outputs, 5, &data[num_inputs]);
 
     size_t num_epochs = 20000;
     // size_t shape[] = {num_inputs, 3, 8, num_outputs};
@@ -39,9 +40,9 @@ int main() {
         net_backprop(net, input, output);
         // TODO look at why this hangs sometimes probably with the g net that
         // shouldn't exist
-             if (i % (num_epochs / 5) == 0) {
-        printf("Cost at %zu: %f\n", i, net_errorf(net, input, output));
-                }
+        if (i % (num_epochs / 5) == 0) {
+            printf("Cost at %zu: %f\n", i, net_errorf(net, input, output));
+        }
     }
     return 0;
 }
