@@ -3,17 +3,17 @@
 
 int main() {
     srand(0);
-    Matrix t = alloc_mat(4, 3);
+    Matrix data = alloc_mat(4, 3);
     for (size_t i = 0; i < 2; ++i) {
         for (size_t j = 0; j < 2; ++j) {
             size_t row = i * 2 + j;
-            MAT_GET(t, row, 0) = i;
-            MAT_GET(t, row, 1) = j;
-            MAT_GET(t, row, 2) = i ^ j;
+            MAT_GET(data, row, 0) = i;
+            MAT_GET(data, row, 1) = j;
+            MAT_GET(data, row, 2) = i ^ j;
         }
     }
-    Matrix input = mat_form(t.nrows, 2, t.stride, &MAT_GET(t, 0, 0));
-    Matrix output = mat_form(t.nrows, 1, t.stride, &MAT_GET(t, 0, input.ncols));
+    Matrix input = mat_form(data.nrows, 2, data.stride, &MAT_GET(data, 0, 0));
+    Matrix output = mat_form(data.nrows, 1, data.stride, &MAT_GET(data, 0, input.ncols));
 
     size_t shape[] = {2, 2, 1};
     size_t layers = ARR_LEN(shape);
@@ -23,30 +23,21 @@ int main() {
 
     size_t num_epochs = 20000;
     float error;
+	float error_break = 0.001;
     for (size_t i = 0; i < num_epochs; ++i) {
         net_backprop(net, input, output);
         error = net_errorf(net, input, output);
-        if (error < 0.001) {
-            printf("Error bound met at: %zu", i);
-            return 0;
-        }
         if (i % (num_epochs / 5) == 0) {
             printf("Cost at %zu: %f\n", i, error);
         }
-    }
-    printf("Final Cost: %f\n", net_errorf(net, input, output));
+        if (error <= error_break) {
+		  printf("Less than: %f error at epoch %zu\n", error_break, i);
+		  break;
+        }
 
-    for (size_t i = 0; i < output.nrows; ++i) {
-        Matrix in = mat_row(input, i);
-        MAT_PRINT(in);
-        mat_copy(NET_INPUT(net), in);
-        net_forward(net);
-        MAT_PRINT(mat_row(output, i));
-        MAT_PRINT(NET_OUTPUT(net));
-        printf("----------\n");
     }
-
+	net_print_results(net, input, output);
+	
     dealloc_net(&net);
-
     return 0;
 }
