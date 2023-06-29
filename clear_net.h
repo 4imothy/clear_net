@@ -1,4 +1,8 @@
-// implement RELU for hidden functions to combat vanishing gradient
+// TODO implement RELU for hidden functions to combat vanishing gradient
+// TODO function to print inputs vs target vs predicted
+// TODO example on iris, other math functions
+// TODO benchmark againts other neural nets with time and memory used
+
 #ifndef CLEAR_NET
 #define CLEAR_NET
 
@@ -75,6 +79,7 @@ typedef struct {
     // number of these is equal to the number of layers -1 (for the output)
     Matrix *weights;
     Matrix *biases;
+  size_t *shape;
 } Net;
 
 #define NET_INPUT(net)                                                         \
@@ -230,6 +235,7 @@ void mat_fill(Matrix m, float x) {
 Net alloc_net(size_t *shape, size_t nlayers) {
     Net net;
     net.nlayers = nlayers;
+	net.shape = shape;
 
     net.weights = CLEAR_NET_ALLOC(sizeof(*net.weights) * (net.nlayers - 1));
     CLEAR_NET_ASSERT(net.weights != NULL);
@@ -337,19 +343,16 @@ float net_errorf(Net net, Matrix input, Matrix target) {
 }
 
 void net_backprop(Net net, Matrix input, Matrix target) {
-    //	printf("here\n");
     CLEAR_NET_ASSERT(input.nrows == target.nrows);
     size_t num_i = input.nrows;
     CLEAR_NET_ASSERT(target.ncols == NET_OUTPUT(net).ncols);
     size_t dim_o = target.ncols;
-    // size_t shape[] = {2, 2, 1};
-    size_t shape[] = {3, 3, 8, 2};
 
     // output actually should be included in nlayers so do that
     // and doesn't need the +1, just allocate an
     // extra for the activations
 
-    Net g = alloc_net(shape, net.nlayers);
+    Net g = alloc_net(net.shape, net.nlayers);
 
     CLEAR_NET_ASSERT(net.nlayers == g.nlayers);
 
