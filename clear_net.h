@@ -35,8 +35,11 @@
 #define CLEAR_NET_ACT_OUTPUT Sigmoid
 #endif // CLEAR_NET_ACT_OUTPUT
 #ifndef CLEAR_NET_ACT_HIDDEN
-#define CLEAR_NET_ACT_HIDDEN RELU
+#define CLEAR_NET_ACT_HIDDEN LEAKY_RELU
 #endif // CLEAR_NET_ACT_HIDDEN
+#ifndef CLEAR_NET_LEAKY_RELU_NEG_SCALE
+#define CLEAR_NET_LEAKY_RELU_NEG_SCALE 0.01f
+#endif // CLEAR_NET_LEAKY_RELU_NEG_SCALE
 
 /*
 Below are the definitions of structs and enums and the
@@ -48,7 +51,7 @@ keep users' namespace sane.
 // float randf();
 
 /* Activation functions */
-// float sigmoidf(float x);
+// Can add tanh, elu
 // float reluf(float x);
 // float actf(float x, Activation act);
 // float dactf(float y, Activation act);
@@ -56,6 +59,7 @@ keep users' namespace sane.
 typedef enum {
     Sigmoid,
 	RELU,
+	LEAKY_RELU,
 } Activation;
 
 /* Matrices */
@@ -122,6 +126,8 @@ float actf(float x, Activation act) {
 	    return 1.f / (1.f + expf(-x));
     case RELU:
     	return x > 0 ? x : 0.f;
+  case LEAKY_RELU:
+	return x >= 0 ? x : CLEAR_NET_LEAKY_RELU_NEG_SCALE * x;
     }
     CLEAR_NET_ASSERT(0 && "Invalid Activation");
     return 0.0f;
@@ -133,6 +139,8 @@ float dactf(float y, Activation act) {
         return y * (1 - y);
 	case RELU:
 	  return y > 0 ? 1 : 0.f;
+	case LEAKY_RELU:
+	  return y >= 0 ? 1 : CLEAR_NET_LEAKY_RELU_NEG_SCALE;
     }
     CLEAR_NET_ASSERT(0 && "Invalid Activation");
     return 0.0f;
@@ -334,11 +342,10 @@ void net_forward(Net net) {
         // the first activation is the input so we don't set that here
         mat_mul(net.activations[i + 1], net.activations[i], net.weights[i]);
         mat_sum(net.activations[i + 1], net.biases[i]);
-		if (i == net.nlayers - 1) {
+		if (i == net.nlayers - 2) {
 		  mat_act(net.activations[i + 1], CLEAR_NET_ACT_OUTPUT);
 		} else {
-		  // TODO change to hidden
-          mat_act(net.activations[i + 1], CLEAR_NET_ACT_OUTPUT);
+          mat_act(net.activations[i + 1], CLEAR_NET_ACT_HIDDEN);
 		}
     }
 }
@@ -393,8 +400,8 @@ void net_backprop(Net net, Matrix input, Matrix target) {
             for (size_t j = 0; j < net.activations[l].ncols; ++j) {
                 float a = MAT_GET(net.activations[l], 0, j);
                 float da = MAT_GET(net.activation_alters[l], 0, j);
-				// TODO change to hidden if needed
-                float qa = dactf(a, CLEAR_NET_ACT_OUTPUT);
+				float qa;
+    	     	qa = dactf(a, CLEAR_NET_ACT_HIDDEN);
                 // biases are never read in backpropagation so their
                 // change can be done in place
                 MAT_GET(net.biases[l - 1], 0, j) -= coef * da * qa;
@@ -405,10 +412,8 @@ void net_backprop(Net net, Matrix input, Matrix target) {
                     float pa = MAT_GET(net.activations[l - 1], 0, k);
                     float w = MAT_GET(net.weights[l - 1], k, j);
                     MAT_GET(net.activation_alters[l - 1], 0, k) += da * qa * w;
-                    // MAT_GET(g.weights[l - 1], k, j) += coef * da * qa * pa;
                     MAT_GET(net.weight_alters[l - 1], k, j) +=
                         coef * da * qa * pa;
-                    // MAT_GET(net.weights[l - 1], k,j) -= coef * da * qa * pa;
                 }
             }
         }
