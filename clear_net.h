@@ -25,18 +25,24 @@
 #ifndef CLEAR_NET_ACT
 #define CLEAR_NET_ACT Sigmoid
 #endif // CLEAR_NET_ACT
-#ifndef CLEAR_NET_ERR
-#define CLEAR_NET_ERR MeanSquared
-#endif // CLEAR_NET_ERR
 
-// Activation functions
-float sigmoidf(float x);
+/*
+Below are the definitions of structs and enums and the
+declaractions of functions that are defined later.
+Some functions are commented out to abstract and
+keep users' namespace sane.
+*/
+
+// float randf();
+// float actf(float x);
+// float dactf(float y);
+
+/* Activation functions */
+// float sigmoidf(float x);
+
 typedef enum {
     Sigmoid,
 } Activations;
-
-// Error functions
-typedef enum { MeanSquared } Errors;
 
 // Matrices
 typedef struct {
@@ -53,11 +59,14 @@ typedef struct {
 
 Matrix alloc_mat(size_t nrows, size_t ncols);
 void dealloc_mat(Matrix *mat);
-Matrix form_mat(size_t nrows, size_t ncols, size_t stride, float *elements);
+Matrix mat_form(size_t nrows, size_t ncols, size_t stride, float *elements);
 void mat_print(Matrix mat, char *name);
-void mat_mul(Matrix dest, Matrix left, Matrix right);
-void mat_sum(Matrix dest, Matrix toAdd);
-void mat_rand(Matrix mat, float lower, float upper);
+Matrix mat_row(Matrix giver, size_t row);
+void mat_copy(Matrix dest, Matrix giver);
+// void mat_mul(Matrix dest, Matrix left, Matrix right);
+// void mat_sum(Matrix dest, Matrix toAdd);
+// void mat_rand(Matrix mat, float lower, float upper);
+// void mat_act(Matrix mat);
 
 // Net
 typedef struct {
@@ -80,10 +89,17 @@ float net_errorf(Net net, Matrix input, Matrix target);
 void net_print(Net net, char *name);
 void net_rand(Net net, float low, float high);
 void net_backprop(Net net, Matrix input, Matrix output);
+// void net_forward(Net net);
+
+/* Error functions */
+// float mean_squaredf(Net net, Matrix input, Matrix output);
 
 #endif // CLEAR_NET
 
 #ifdef CLEAR_NET_IMPLEMENTATION
+
+// Activation functions
+float sigmoidf(float x) { return 1.f / (1.f + expf(-x)); }
 
 // Matrices
 
@@ -105,7 +121,7 @@ void dealloc_mat(Matrix *mat) {
     mat->stride = 0;
 }
 
-Matrix form_mat(size_t nrows, size_t ncols, size_t stride, float *elements) {
+Matrix mat_form(size_t nrows, size_t ncols, size_t stride, float *elements) {
     return (Matrix){
         .nrows = nrows, .ncols = ncols, .stride = stride, .elements = elements};
 }
@@ -123,15 +139,7 @@ void mat_print(Matrix mat, char *name) {
 }
 
 Matrix mat_row(Matrix giver, size_t row) {
-    return (Matrix){
-        .nrows = 1,
-        .ncols = giver.ncols,
-        .stride = giver.stride,
-        .elements = &MAT_GET(giver, row, 0),
-    };
-    // TODO use the form_mat function, rename -> mat_form also
-    //    return form_mat(1, giver.ncols, giver.stride, &MAT_GET(giver, row,
-    //    0));
+    return mat_form(1, giver.ncols, giver.stride, &MAT_GET(giver, row, 0));
 }
 
 void mat_copy(Matrix dest, Matrix giver) {
@@ -202,19 +210,23 @@ float dactf(float y) {
     return 0.0f;
 }
 
-float mat_actf(Matrix mat) {
+void mat_act(Matrix mat) {
     for (size_t i = 0; i < mat.nrows; ++i) {
         for (size_t j = 0; j < mat.ncols; ++j) {
             MAT_GET(mat, i, j) = actf(MAT_GET(mat, i, j));
         }
     }
-    return 0.0f;
 }
 
-// Activation functions
-float sigmoidf(float x) { return 1.f / (1.f + expf(-x)); }
+void mat_fill(Matrix m, float x) {
+    for (size_t i = 0; i < m.nrows; ++i) {
+        for (size_t j = 0; j < m.ncols; ++j) {
+            MAT_GET(m, i, j) = x;
+        }
+    }
+}
 
-// Net
+// Net functions
 Net alloc_net(size_t *shape, size_t nlayers) {
     Net net;
     net.nlayers = nlayers;
@@ -291,8 +303,7 @@ void net_forward(Net net) {
         // the first activation is the input so we don't set that here
         mat_mul(net.activations[i + 1], net.activations[i], net.weights[i]);
         mat_sum(net.activations[i + 1], net.biases[i]);
-        // TODO this doesn't return a float so get rid of the f
-        mat_actf(net.activations[i + 1]);
+        mat_act(net.activations[i + 1]);
     }
 }
 
@@ -322,39 +333,26 @@ float mean_squaredf(Net net, Matrix input, Matrix target) {
 }
 
 float net_errorf(Net net, Matrix input, Matrix target) {
-    switch (CLEAR_NET_ERR) {
-    case MeanSquared:
-        return mean_squaredf(net, input, target);
-    }
-}
-
-void mat_fill(Matrix m, float x) {
-    for (size_t i = 0; i < m.nrows; ++i) {
-        for (size_t j = 0; j < m.ncols; ++j) {
-            MAT_GET(m, i, j) = x;
-        }
-    }
+    return mean_squaredf(net, input, target);
 }
 
 void net_backprop(Net net, Matrix input, Matrix target) {
-  //	printf("here\n");
+    //	printf("here\n");
     CLEAR_NET_ASSERT(input.nrows == target.nrows);
     size_t num_i = input.nrows;
     CLEAR_NET_ASSERT(target.ncols == NET_OUTPUT(net).ncols);
     size_t dim_o = target.ncols;
-	// size_t shape[] = {2, 2, 1};
+    // size_t shape[] = {2, 2, 1};
     size_t shape[] = {3, 3, 8, 2};
 
-    // TODO change this so that nlayers is correct
     // output actually should be included in nlayers so do that
     // and doesn't need the +1, just allocate an
     // extra for the activations
-	
+
     Net g = alloc_net(shape, net.nlayers);
-	printf("there\n");
-	
+
     CLEAR_NET_ASSERT(net.nlayers == g.nlayers);
-  
+
     // fill the biases, weights and activations
     for (size_t i = 0; i < g.nlayers - 1; ++i) {
         mat_fill(g.weights[i], 0);
@@ -423,18 +421,17 @@ void net_backprop(Net net, Matrix input, Matrix target) {
             for (size_t k = 0; k < net.weights[i].ncols; ++k) {
                 MAT_GET(net.weights[i], j, k) -=
                     rate * MAT_GET(g.weights[i], j, k);
-                        }
+            }
         }
 
         for (size_t j = 0; j < net.biases[i].nrows; ++j) {
             for (size_t k = 0; k < net.biases[i].ncols; ++k) {
                 MAT_GET(net.biases[i], j, k) -=
                     rate * MAT_GET(g.biases[i], j, k);
-            
             }
         }
     }
-	//	dealloc_net(&g);
+    //	dealloc_net(&g);
 }
 
 #endif // CLEAR_NET_IMPLEMENTATION
