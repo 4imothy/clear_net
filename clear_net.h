@@ -1,5 +1,6 @@
 // TODO implement RELU for hidden functions to combat vanishing gradient
 // TODO function to print inputs vs target vs predicted
+// TODO implement save and loading the model
 // TODO example on iris, other math functions
 // TODO benchmark againts other neural nets with time and memory used
 
@@ -30,9 +31,12 @@
 #ifndef CLEAR_NET_RATE
 #define CLEAR_NET_RATE 1.0f
 #endif
-#ifndef CLEAR_NET_ACT
-#define CLEAR_NET_ACT Sigmoid
-#endif // CLEAR_NET_ACT
+#ifndef CLEAR_NET_ACT_OUTPUT
+#define CLEAR_NET_ACT_OUTPUT Sigmoid
+#endif // CLEAR_NET_ACT_OUTPUT
+#ifndef CLEAR_NET_ACT_HIDDEN
+#define CLEAR_NET_ACT_HIDDEN RELU
+#endif // CLEAR_NET_ACT_HIDDEN
 
 /*
 Below are the definitions of structs and enums and the
@@ -42,15 +46,17 @@ keep users' namespace sane.
 */
 
 // float randf();
-// float actf(float x);
-// float dactf(float y);
 
 /* Activation functions */
 // float sigmoidf(float x);
+// float reluf(float x);
+// float actf(float x, Activation act);
+// float dactf(float y, Activation act);
 
 typedef enum {
     Sigmoid,
-} Activations;
+	RELU,
+} Activation;
 
 /* Matrices */
 typedef struct {
@@ -101,21 +107,38 @@ void dealloc_net(Net *net);
 float net_errorf(Net net, Matrix input, Matrix target);
 void net_print(Net net, char *name);
 void net_rand(Net net, float low, float high);
-void net_backprop(Net net, Matrix input, Matrix output);
+void net_backprop(Net net, Matrix input, Matrix target);
+void net_print_results(Net net, Matrix input, Matrix target);
 // void net_forward(Net net);
-
-/* Error functions */
-// float mean_squaredf(Net net, Matrix input, Matrix output);
 
 #endif // CLEAR_NET
 
 #ifdef CLEAR_NET_IMPLEMENTATION
 
-// Activation functions
-float sigmoidf(float x) { return 1.f / (1.f + expf(-x)); }
+/* Activation Functions */
+float actf(float x, Activation act) {
+  switch (act) {
+    case Sigmoid:
+	    return 1.f / (1.f + expf(-x));
+    case RELU:
+    	return x > 0 ? x : 0.f;
+    }
+    CLEAR_NET_ASSERT(0 && "Invalid Activation");
+    return 0.0f;
+}
 
-// Matrices
+float dactf(float y, Activation act) {
+    switch (act) {
+    case Sigmoid:
+        return y * (1 - y);
+	case RELU:
+	  return y > 0 ? 1 : 0.f;
+    }
+    CLEAR_NET_ASSERT(0 && "Invalid Activation");
+    return 0.0f;
+}
 
+/* Matrices */
 Matrix alloc_mat(size_t nrows, size_t ncols) {
     Matrix mat;
     mat.nrows = nrows;
@@ -205,28 +228,10 @@ void mat_sum(Matrix dest, Matrix toAdd) {
     }
 }
 
-float actf(float x) {
-    switch (CLEAR_NET_ACT) {
-    case Sigmoid:
-        return sigmoidf(x);
-    }
-    CLEAR_NET_ASSERT(0 && "Invalid Activation");
-    return 0.0f;
-}
-
-float dactf(float y) {
-    switch (CLEAR_NET_ACT) {
-    case Sigmoid:
-        return y * (1 - y);
-    }
-    CLEAR_NET_ASSERT(0 && "Invalid Activation");
-    return 0.0f;
-}
-
-void mat_act(Matrix mat) {
+void mat_act(Matrix mat, Activation act) {
     for (size_t i = 0; i < mat.nrows; ++i) {
         for (size_t j = 0; j < mat.ncols; ++j) {
-            MAT_GET(mat, i, j) = actf(MAT_GET(mat, i, j));
+		  MAT_GET(mat, i, j) = actf(MAT_GET(mat, i, j), act);
         }
     }
 }
@@ -239,7 +244,7 @@ void mat_fill(Matrix m, float x) {
     }
 }
 
-// Net functions
+/* Net */
 Net alloc_net(size_t *shape, size_t nlayers) {
     Net net;
     net.nlayers = nlayers;
@@ -329,12 +334,17 @@ void net_forward(Net net) {
         // the first activation is the input so we don't set that here
         mat_mul(net.activations[i + 1], net.activations[i], net.weights[i]);
         mat_sum(net.activations[i + 1], net.biases[i]);
-        mat_act(net.activations[i + 1]);
+		if (i == net.nlayers - 1) {
+		  mat_act(net.activations[i + 1], CLEAR_NET_ACT_OUTPUT);
+		} else {
+		  // TODO change to hidden
+          mat_act(net.activations[i + 1], CLEAR_NET_ACT_OUTPUT);
+		}
     }
 }
 
-// Error functions
-float mean_squaredf(Net net, Matrix input, Matrix target) {
+/* Error */
+float net_errorf(Net net, Matrix input, Matrix target) {
     CLEAR_NET_ASSERT(input.nrows == target.nrows);
     CLEAR_NET_ASSERT(target.ncols == NET_OUTPUT(net).ncols);
 
@@ -356,10 +366,6 @@ float mean_squaredf(Net net, Matrix input, Matrix target) {
     }
 
     return err / num_input;
-}
-
-float net_errorf(Net net, Matrix input, Matrix target) {
-    return mean_squaredf(net, input, target);
 }
 
 void net_backprop(Net net, Matrix input, Matrix target) {
@@ -387,7 +393,8 @@ void net_backprop(Net net, Matrix input, Matrix target) {
             for (size_t j = 0; j < net.activations[l].ncols; ++j) {
                 float a = MAT_GET(net.activations[l], 0, j);
                 float da = MAT_GET(net.activation_alters[l], 0, j);
-                float qa = dactf(a);
+				// TODO change to hidden if needed
+                float qa = dactf(a, CLEAR_NET_ACT_OUTPUT);
                 // biases are never read in backpropagation so their
                 // change can be done in place
                 MAT_GET(net.biases[l - 1], 0, j) -= coef * da * qa;
@@ -421,6 +428,34 @@ void net_backprop(Net net, Matrix input, Matrix target) {
             }
         }
     }
+}
+
+void net_print_results(Net net, Matrix input, Matrix target) {
+  CLEAR_NET_ASSERT(input.nrows == target.nrows);
+  CLEAR_NET_ASSERT(NET_OUTPUT(net).ncols == target.ncols);
+  size_t num_i = input.nrows;
+  size_t dim_i = input.ncols;
+  size_t dim_o = target.ncols;
+
+  printf("Final Cost: %f\n", net_errorf(net, input, target));
+  printf("Input | Prediction | Target\n");
+  for (size_t i = 0; i < num_i; ++i) {
+    Matrix in = mat_row(input, i);
+    mat_copy(NET_INPUT(net), in);
+    net_forward(net);
+    for (size_t j = 0; j < dim_i; ++j) {
+      printf("%f ", MAT_GET(input, i, j));
+    }
+    printf(" | ");
+    for (size_t j = 0; j < dim_o; ++j) {
+      printf("%f ", MAT_GET(target, i, j));
+    }
+    printf(" | ");
+    for (size_t j = 0; j < dim_o; ++j) {
+      printf("%f ", MAT_GET(NET_OUTPUT(net), 0, j));
+    }
+    printf("\n");
+  }
 }
 
 #endif // CLEAR_NET_IMPLEMENTATION
