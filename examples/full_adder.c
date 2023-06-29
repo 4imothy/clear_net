@@ -27,19 +27,8 @@ int main() {
     size_t num_inputs = 3;
     // sum, cout
     size_t num_outputs = 2;
-    Matrix input = {
-        .elements = data,
-        .nrows = num_combinations,
-        .ncols = num_inputs,
-        .stride = 5,
-    };
-	// TODO make this use the mat_form function after making sure that is correct
-    Matrix output = {
-        .elements = &data[num_inputs],
-        .nrows = num_combinations,
-        .ncols = num_outputs,
-        .stride = 5,
-    };
+	Matrix input = mat_form(num_combinations, num_inputs, 5, data);
+	Matrix output = mat_form(num_combinations, num_outputs, 5, &data[num_inputs]);
 
     size_t num_epochs = 20000;
     // size_t shape[] = {num_inputs, 3, 8, num_outputs};

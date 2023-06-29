@@ -12,21 +12,9 @@ int main() {
             MAT_GET(t, row, 2) = i ^ j;
         }
     }
-
-    Matrix ti = {
-        .nrows = t.nrows,
-        .ncols = 2,
-        .stride = t.stride,
-        .elements = &MAT_GET(t, 0, 0),
-    };
-
-    Matrix to = {
-        .nrows = t.nrows,
-        .ncols = 1,
-        .stride = t.stride,
-        .elements = &MAT_GET(t, 0, ti.ncols),
-    };
-
+	Matrix input = mat_form(t.nrows, 2, t.stride, &MAT_GET(t,0,0));
+	Matrix output = mat_form(t.nrows, 1, t.stride, &MAT_GET(t,0,input.ncols));
+	
     size_t shape[] = {2, 2, 1};
     size_t layers = ARR_LEN(shape);
     Net net = alloc_net(shape, layers);
@@ -35,20 +23,20 @@ int main() {
 
     size_t num_epochs = 20000;
     for (size_t i = 0; i < num_epochs; ++i) {
-        net_backprop(net, ti, to);
+        net_backprop(net, input, output);
         if (i % (num_epochs / 5) == 0) {
-            printf("Cost at %zu: %f\n", i, net_errorf(net, ti, to));
+            printf("Cost at %zu: %f\n", i, net_errorf(net, input, output));
         }
     }
-    printf("Final Cost: %f\n", net_errorf(net, ti, to));
+    printf("Final Cost: %f\n", net_errorf(net, input, output));
     // net_backprop(net, ti, to);
 
-    for (size_t i = 0; i < to.nrows; ++i) {
-        Matrix in = mat_row(ti, i);
+    for (size_t i = 0; i < output.nrows; ++i) {
+        Matrix in = mat_row(input, i);
         MAT_PRINT(in);
         mat_copy(NET_INPUT(net), in);
         net_forward(net);
-        MAT_PRINT(mat_row(to, i));
+        MAT_PRINT(mat_row(output, i));
         MAT_PRINT(NET_OUTPUT(net));
         printf("----------\n");
     }
