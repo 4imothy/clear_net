@@ -4,6 +4,7 @@ FORMAT := clang-format
 LIB_FILE := clear_net.h
 EXAMPLE_DIR := examples
 EXAMPLE_FILES := $(shell find $(EXAMPLE_DIR) -name '*.c')
+BENCH_FILE := ./bench/bench.py
 
 all: clear_net
 
@@ -21,8 +22,16 @@ adder: clear_net $(EXAMPLE_FILES)
 run_adder: adder
 	./adder
 
+iris: clear_net.h $(EXAMPLE_FILES)
+	$(CC) $(CFLAGS) -o $@ $(EXAMPLE_DIR)/iris.c
+
+run_iris: iris
+	./iris
+
+run_bench: iris adder xor
+	python3 $(BENCH_FILE)
+
 FORMAT_STYLE = -style="{BasedOnStyle: llvm, IndentWidth: 4, TabWidth: 4, UseTab: Never}"
-# FORMAT_STYLE = -style"{IndentWidth: 4}"
 format:
 	$(FORMAT) $(FORMAT_STYLE) -i $(EXAMPLE_FILES) $(LIB_FILE)
 
