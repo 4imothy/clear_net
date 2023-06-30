@@ -1,8 +1,7 @@
-// TODO implement RELU for hidden functions to combat vanishing gradient
-// TODO function to print inputs vs target vs predicted
+// TODO More activation functions: tanh, elu
 // TODO implement save and loading the model
-// TODO example on iris, other math functions
 // TODO benchmark againts other neural nets with time and memory used
+// TODO see what includes can be removed, need size_t and printf others shouldn't be needed much
 
 #ifndef CLEAR_NET
 #define CLEAR_NET
@@ -29,13 +28,13 @@
 #endif // CLEAR_NET_ASSERT
 
 #ifndef CLEAR_NET_RATE
-#define CLEAR_NET_RATE 1.0f
+#define CLEAR_NET_RATE 0.5f
 #endif
 #ifndef CLEAR_NET_ACT_OUTPUT
 #define CLEAR_NET_ACT_OUTPUT Sigmoid
 #endif // CLEAR_NET_ACT_OUTPUT
 #ifndef CLEAR_NET_ACT_HIDDEN
-#define CLEAR_NET_ACT_HIDDEN LEAKY_RELU
+#define CLEAR_NET_ACT_HIDDEN Leaky_RELU
 #endif // CLEAR_NET_ACT_HIDDEN
 #ifndef CLEAR_NET_LEAKY_RELU_NEG_SCALE
 #define CLEAR_NET_LEAKY_RELU_NEG_SCALE 0.01f
@@ -51,15 +50,13 @@ keep users' namespace sane.
 // float randf();
 
 /* Activation functions */
-// Can add tanh, elu
 // float reluf(float x);
 // float actf(float x, Activation act);
 // float dactf(float y, Activation act);
-
 typedef enum {
     Sigmoid,
-	RELU,
-	LEAKY_RELU,
+    RELU,
+    Leaky_RELU,
 } Activation;
 
 /* Matrices */
@@ -121,13 +118,13 @@ void net_print_results(Net net, Matrix input, Matrix target);
 
 /* Activation Functions */
 float actf(float x, Activation act) {
-  switch (act) {
+    switch (act) {
     case Sigmoid:
-	    return 1.f / (1.f + expf(-x));
+        return 1.f / (1.f + expf(-x));
     case RELU:
-    	return x > 0 ? x : 0.f;
-  case LEAKY_RELU:
-	return x >= 0 ? x : CLEAR_NET_LEAKY_RELU_NEG_SCALE * x;
+        return x > 0 ? x : 0.f;
+    case Leaky_RELU:
+        return x >= 0 ? x : CLEAR_NET_LEAKY_RELU_NEG_SCALE * x;
     }
     CLEAR_NET_ASSERT(0 && "Invalid Activation");
     return 0.0f;
@@ -137,10 +134,10 @@ float dactf(float y, Activation act) {
     switch (act) {
     case Sigmoid:
         return y * (1 - y);
-	case RELU:
+    case RELU:
 	  return y > 0 ? 1 : 0.f;
-	case LEAKY_RELU:
-	  return y >= 0 ? 1 : CLEAR_NET_LEAKY_RELU_NEG_SCALE;
+    case Leaky_RELU:
+     return y >= 0 ? 1 : CLEAR_NET_LEAKY_RELU_NEG_SCALE;
     }
     CLEAR_NET_ASSERT(0 && "Invalid Activation");
     return 0.0f;
@@ -239,7 +236,7 @@ void mat_sum(Matrix dest, Matrix toAdd) {
 void mat_act(Matrix mat, Activation act) {
     for (size_t i = 0; i < mat.nrows; ++i) {
         for (size_t j = 0; j < mat.ncols; ++j) {
-		  MAT_GET(mat, i, j) = actf(MAT_GET(mat, i, j), act);
+            MAT_GET(mat, i, j) = actf(MAT_GET(mat, i, j), act);
         }
     }
 }
@@ -337,15 +334,14 @@ void net_rand(Net net, float low, float high) {
 }
 
 void net_forward(Net net) {
-    // there is one more activation than there are layers
     for (size_t i = 0; i < net.nlayers - 1; ++i) {
-        // the first activation is the input so we don't set that here
+	  // net.activations[0] stores the input, net.weghts[0] stores the first weights
         mat_mul(net.activations[i + 1], net.activations[i], net.weights[i]);
         mat_sum(net.activations[i + 1], net.biases[i]);
 		if (i == net.nlayers - 2) {
 		  mat_act(net.activations[i + 1], CLEAR_NET_ACT_OUTPUT);
 		} else {
-          mat_act(net.activations[i + 1], CLEAR_NET_ACT_HIDDEN);
+		  mat_act(net.activations[i + 1], CLEAR_NET_ACT_HIDDEN);
 		}
     }
 }
@@ -389,19 +385,26 @@ void net_backprop(Net net, Matrix input, Matrix target) {
 
         // for the output activation layer
         for (size_t j = 0; j < dim_o; ++j) {
-            MAT_GET(net.activation_alters[net.nlayers - 1], 0, j) =
-                2 * (MAT_GET(NET_OUTPUT(net), 0, j) - MAT_GET(target, i, j));
+		  MAT_GET(net.activation_alters[net.nlayers - 1], 0, j) =
+     			  2 * (MAT_GET(NET_OUTPUT(net), 0, j) - MAT_GET(target, i, j));
         }
 
-        // first layer is the output, make the changes to the one before it
+        // first layer is the output, make the changes to the one before itn
         for (size_t l = net.nlayers - 1; l > 0; --l) {
             // this layers activation columns is the columns from its previous
             // matrix
+		    // TODO better variable names in this function
             for (size_t j = 0; j < net.activations[l].ncols; ++j) {
                 float a = MAT_GET(net.activations[l], 0, j);
-                float da = MAT_GET(net.activation_alters[l], 0, j);
-				float qa;
-    	     	qa = dactf(a, CLEAR_NET_ACT_HIDDEN);
+                float qa;
+				if (l == net.nlayers - 1) {
+				  qa = dactf(a, CLEAR_NET_ACT_OUTPUT);
+				} else {
+				  qa = dactf(a, CLEAR_NET_ACT_HIDDEN);
+				}
+				// qa = dactf(a, CLEAR_NET_ACT_HIDDEN);
+      		    float da = MAT_GET(net.activation_alters[l], 0, j);
+			 
                 // biases are never read in backpropagation so their
                 // change can be done in place
                 MAT_GET(net.biases[l - 1], 0, j) -= coef * da * qa;
@@ -419,7 +422,7 @@ void net_backprop(Net net, Matrix input, Matrix target) {
         }
         // reset for next iteration
         for (size_t j = 0; j < net.nlayers; ++j) {
-            mat_fill(net.activation_alters[j], 0);
+             mat_fill(net.activation_alters[j], 0);
         }
     }
 
@@ -436,31 +439,31 @@ void net_backprop(Net net, Matrix input, Matrix target) {
 }
 
 void net_print_results(Net net, Matrix input, Matrix target) {
-  CLEAR_NET_ASSERT(input.nrows == target.nrows);
-  CLEAR_NET_ASSERT(NET_OUTPUT(net).ncols == target.ncols);
-  size_t num_i = input.nrows;
-  size_t dim_i = input.ncols;
-  size_t dim_o = target.ncols;
+    CLEAR_NET_ASSERT(input.nrows == target.nrows);
+    CLEAR_NET_ASSERT(NET_OUTPUT(net).ncols == target.ncols);
+    size_t num_i = input.nrows;
+    size_t dim_i = input.ncols;
+    size_t dim_o = target.ncols;
 
-  printf("Final Cost: %f\n", net_errorf(net, input, target));
-  printf("Input | Prediction | Target\n");
-  for (size_t i = 0; i < num_i; ++i) {
-    Matrix in = mat_row(input, i);
-    mat_copy(NET_INPUT(net), in);
-    net_forward(net);
-    for (size_t j = 0; j < dim_i; ++j) {
-      printf("%f ", MAT_GET(input, i, j));
+    printf("Final Cost: %f\n", net_errorf(net, input, target));
+    printf("Input | Target | Prediction\n");
+    for (size_t i = 0; i < num_i; ++i) {
+        Matrix in = mat_row(input, i);
+        mat_copy(NET_INPUT(net), in);
+        net_forward(net);
+        for (size_t j = 0; j < dim_i; ++j) {
+            printf("%f ", MAT_GET(input, i, j));
+        }
+        printf(" | ");
+        for (size_t j = 0; j < dim_o; ++j) {
+            printf("%f ", MAT_GET(target, i, j));
+        }
+        printf(" | ");
+        for (size_t j = 0; j < dim_o; ++j) {
+            printf("%f ", MAT_GET(NET_OUTPUT(net), 0, j));
+        }
+        printf("\n");
     }
-    printf(" | ");
-    for (size_t j = 0; j < dim_o; ++j) {
-      printf("%f ", MAT_GET(target, i, j));
-    }
-    printf(" | ");
-    for (size_t j = 0; j < dim_o; ++j) {
-      printf("%f ", MAT_GET(NET_OUTPUT(net), 0, j));
-    }
-    printf("\n");
-  }
 }
 
 #endif // CLEAR_NET_IMPLEMENTATION
