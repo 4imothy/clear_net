@@ -9,6 +9,7 @@ import time
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
+bench_dir = 'benchmarks'
 
 
 def time_command(command):
@@ -41,18 +42,19 @@ def measure_memory_usage(command):
 commands = [
     ['./iris', '-b'],
     # pure python is probably also a pretty bad implementation
-    ['python', './bench/pure_python.py']
+    ['python', f'./{bench_dir}/pure_python_iris.py'],
+    ['python', f'./{bench_dir}/pytorch_iris.py'],
 ]
 
-with open("./bench/times", "w") as file:
+with open(f"./{bench_dir}/times", "w") as file:
     for command in commands:
         # memory_usage, time_used = measure_memory_usage(command)
         text = f"Command: {command} "
-        used = time_command(command)
         print(text)
+        used = time_command(command)
         file.write(text)
         # print(f"Memory Usage: {memory_usage:.2f} Bytes")
         text = f"Time taken: {used}"
         print(text)
-        file.write(text)
+        file.write(text + '\n')
         print("--------------------------")
