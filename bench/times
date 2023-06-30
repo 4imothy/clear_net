@@ -1,0 +1,1 @@
+Command: ['./iris', '-b'] Time taken: 0.12737202644348145Command: ['python', './bench/pure_python.py'] Time taken: 11.75964903831482
