@@ -4,7 +4,7 @@ FORMAT := clang-format
 LIB_FILE := clear_net.h
 EXAMPLE_DIR := examples
 EXAMPLE_FILES := $(shell find $(EXAMPLE_DIR) -name '*.c')
-BENCH_FILE := ./bench/bench.py
+BENCH_FILE := ./benchmarks/bench.py
 
 all: clear_net
 
