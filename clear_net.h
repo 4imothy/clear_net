@@ -1,15 +1,13 @@
 // TODO More activation functions: tanh, elu
 // TODO implement save and loading the model
 // TODO benchmark againts other neural nets with time and memory used
-// TODO see what includes can be removed, need size_t and printf others shouldn't be needed much
 
 #ifndef CLEAR_NET
 #define CLEAR_NET
 
-#include <math.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <stdlib.h> // malloc, free, size_t
+#include <stdio.h>  // printf
+#include <math.h> // expf
 
 #define ARR_LEN(a) (sizeof((a)) / sizeof((*a)))
 
@@ -85,6 +83,14 @@ void mat_copy(Matrix dest, Matrix giver);
 
 /* Net */
 typedef struct {
+  /* Basic Structure
+	 Each layer consists of weights -> biases -> activation.
+	 Each forward takes the previous activation matrix multiply
+	 with the weights, add the bias apply correct activation function.
+	 Each column in the weight matrix is a neuron.
+	 Each activation * weights results in a single column matrix
+	 which the bias is added to.
+   */
     size_t nlayers;
     Matrix *activations;
     // number of these is equal to the number of layers -1 (for the output)
@@ -390,36 +396,36 @@ void net_backprop(Net net, Matrix input, Matrix target) {
         }
 
         // first layer is the output, make the changes to the one before itn
-        for (size_t l = net.nlayers - 1; l > 0; --l) {
+        for (size_t layer = net.nlayers - 1; layer > 0; --layer) {
             // this layers activation columns is the columns from its previous
             // matrix
-		    // TODO better variable names in this function
-            for (size_t j = 0; j < net.activations[l].ncols; ++j) {
-                float a = MAT_GET(net.activations[l], 0, j);
-                float qa;
-				if (l == net.nlayers - 1) {
-				  qa = dactf(a, CLEAR_NET_ACT_OUTPUT);
+            for (size_t j = 0; j < net.activations[layer].ncols; ++j) {
+                float act = MAT_GET(net.activations[layer], 0, j);
+                float dact;
+				if (layer == net.nlayers - 1) {
+				  dact = dactf(act, CLEAR_NET_ACT_OUTPUT);
 				} else {
-				  qa = dactf(a, CLEAR_NET_ACT_HIDDEN);
+				  dact = dactf(act, CLEAR_NET_ACT_HIDDEN);
 				}
-				// qa = dactf(a, CLEAR_NET_ACT_HIDDEN);
-      		    float da = MAT_GET(net.activation_alters[l], 0, j);
+      		    float alter_act = MAT_GET(net.activation_alters[layer], 0, j);
 			 
                 // biases are never read in backpropagation so their
                 // change can be done in place
-                MAT_GET(net.biases[l - 1], 0, j) -= coef * da * qa;
+				size_t prev_layer = layer - 1;
+                MAT_GET(net.biases[prev_layer], 0, j) -= coef * alter_act * dact;
 
                 // this activations columns is equal to the rows of its next
                 // matrix
-                for (size_t k = 0; k < net.activations[l - 1].ncols; ++k) {
-                    float pa = MAT_GET(net.activations[l - 1], 0, k);
-                    float w = MAT_GET(net.weights[l - 1], k, j);
-                    MAT_GET(net.activation_alters[l - 1], 0, k) += da * qa * w;
-                    MAT_GET(net.weight_alters[l - 1], k, j) +=
-                        coef * da * qa * pa;
+                for (size_t k = 0; k < net.activations[prev_layer].ncols; ++k) {
+                    float prev_act = MAT_GET(net.activations[prev_layer], 0, k);
+                    float prev_weight  = MAT_GET(net.weights[prev_layer], k, j);
+                    MAT_GET(net.activation_alters[prev_layer], 0, k) += alter_act * dact * prev_weight;
+                    MAT_GET(net.weight_alters[prev_layer], k, j) +=
+                        coef * alter_act * dact * prev_act;
                 }
             }
         }
+		
         // reset for next iteration
         for (size_t j = 0; j < net.nlayers; ++j) {
              mat_fill(net.activation_alters[j], 0);
