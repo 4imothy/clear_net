@@ -1,5 +1,9 @@
+.DS_Store
+# python env for benching
+env
+# example binaries
 xor
 adder
 iris
-.DS_Store
-env
+# model save files
+model
