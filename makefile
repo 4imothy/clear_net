@@ -6,8 +6,6 @@ EXAMPLE_DIR := examples
 EXAMPLE_FILES := $(shell find $(EXAMPLE_DIR) -name '*.c')
 BENCH_FILE := ./benchmarks/bench.py
 
-all: clear_net
-
 clear_net: $(LIB_FILE)
 
 xor: clear_net $(EXAMPLE_FILES)
@@ -36,4 +34,6 @@ format:
 	$(FORMAT) $(FORMAT_STYLE) -i $(EXAMPLE_FILES) $(LIB_FILE)
 
 clean:
-	rm example
+	rm xor
+	rm adder
+	rm iris
