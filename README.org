@@ -25,16 +25,16 @@ define CLEAR_NET_IMPLEMENTATION
 at the top of the /C/ source file to tell /ClearNet/ to implement its functions.
 *** Defines
 Put these before including the /clear_net.h/ file in your code.
-| Name                           | What it Does                                                | Default                  |
-|--------------------------------+-------------------------------------------------------------+--------------------------|
-| CLEAR_NET                      | The library                                                 | Defined in /clear_net.h/ |
-| CLEAR_NET_ALLOC                | The allocation strategy                                     | /malloc/                 |
-| CLEAR_NET_DEALLOC              | The deallocation strategy                                   | /free/                   |
-| CLEAR_NET_ASSERT               | The assertion strategy                                      | /assert/                 |
-| CLEAR_NET_RATE                 | The learning rate of the model                              | /0.5/                    |
-| CLEAR_NET_ACT_OUTPUT           | The activation function of the output layer                 | /Sigmoid/                |
-| CLEAR_NET_ACT_HIDDEN           | The activation function of the hidden layer                 | /Leaky_RELU/             |
-| CLEAR_NET_ACT_NEG_SCALE          | When using /Leaky RELU/, or /ELU/ this is the scale for negative values | /0.1/                    |
+| Name                    | What it Does                                                            | Default                  |
+|-------------------------+-------------------------------------------------------------------------+--------------------------|
+| CLEAR_NET               | The library                                                             | Defined in /clear_net.h/ |
+| CLEAR_NET_ALLOC         | The allocation strategy                                                 | /malloc/                 |
+| CLEAR_NET_DEALLOC       | The deallocation strategy                                               | /free/                   |
+| CLEAR_NET_ASSERT        | The assertion strategy                                                  | /assert/                 |
+| CLEAR_NET_RATE          | The learning rate of the model                                          | /0.5/                    |
+| CLEAR_NET_ACT_OUTPUT    | The activation function of the output layer                             | /Sigmoid/                |
+| CLEAR_NET_ACT_HIDDEN    | The activation function of the hidden layer                             | /Leaky_RELU/             |
+| CLEAR_NET_ACT_NEG_SCALE | When using /Leaky RELU/, or /ELU/ this is the scale for negative values | /0.1/                    |
 *** Creating, Training and Saving a Neural Net
 **** Define Training Strategy
 Define hidden and output activation function
