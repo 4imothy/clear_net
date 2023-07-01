@@ -1,4 +1,6 @@
 #define CLEAR_NET_IMPLEMENTATION
+#define CLEAR_NET_ACT_OUTPUT ELU
+#define CLEAR_NET_ACT_HIDDEN ELU
 #include "../clear_net.h"
 
 #define BITS_PER_NUM 1
@@ -31,7 +33,7 @@ int main() {
         mat_form(num_combinations, num_outputs, 5, &data[num_inputs]);
 
     size_t num_epochs = 20000;
-    size_t shape[] = {num_inputs, 3, 8, num_outputs};
+	size_t shape[] = {num_inputs, 3, 8, num_outputs};
     Net net = alloc_net(shape, ARR_LEN(shape));
     net_rand(net, -1, 1);
     float error_break = 0.01f;
