@@ -1,5 +1,4 @@
 #define CLEAR_NET_IMPLEMENTATION
-#define CLEAR_NET_ACT_HIDDEN Sigmoid
 #include "../clear_net.h"
 
 #define BITS_PER_NUM 1
@@ -35,11 +34,11 @@ int main() {
     size_t shape[] = {num_inputs, 3, 8, num_outputs};
     Net net = alloc_net(shape, ARR_LEN(shape));
     net_rand(net, -1, 1);
-    float error_break = 0.01;
+    float error_break = 0.01f;
     float error;
     for (size_t i = 0; i < num_epochs; ++i) {
-        error = net_errorf(net, input, target);
         net_backprop(net, input, target);
+        error = net_errorf(net, input, target);
         if (i % (num_epochs / 5) == 0) {
             printf("Cost at %zu: %f\n", i, error);
         }

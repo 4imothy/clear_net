@@ -8,8 +8,7 @@ function
 |
 |0     1
 -----------
-The lines intersect so it is not
-linearly seperable
+The lines intersect so it is not linearly seperable
 */
 #define CLEAR_NET_ACT_HIDDEN Sigmoid
 #include "../clear_net.h"
