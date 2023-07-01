@@ -49,12 +49,13 @@ int main() {
             break;
         }
     }
-    net_print_results(net, input, target);
+	//	float do_nothing(float x){ return x;} 
+    net_print_results(net, input, target, &roundf);
 	net_save_to_file("model", net);
 	dealloc_net(&net);
     net = alloc_net_from_file("model");
     printf("After loading file\n");
-    net_print_results(net, input, target);
+    net_print_results(net, input, target, &roundf);
 	dealloc_net(&net);
         
     return 0;

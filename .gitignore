@@ -6,5 +6,7 @@ xor
 adder
 iris
 full_adder
+lin_reg
 # model save files
 model
+lin_reg_model

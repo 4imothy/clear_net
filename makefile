@@ -20,11 +20,17 @@ full_adder: clear_net $(EXAMPLE_FILES)
 run_adder: full_adder
 	./full_adder
 
-iris: clear_net.h $(EXAMPLE_FILES)
+iris: clear_net $(EXAMPLE_FILES)
 	$(CC) $(CFLAGS) -o $@ $(EXAMPLE_DIR)/iris.c
 
 run_iris: iris
 	./iris
+
+lin_reg: clear_net $(EXAMPLE_FILES)
+	$(CC) $(CFLAGS) -o $@ $(EXAMPLE_DIR)/linear_regression.c
+
+run_lin_reg: lin_reg
+	./lin_reg
 
 run_bench: iris adder xor
 	python3 $(BENCH_FILE)
