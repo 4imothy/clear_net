@@ -7,16 +7,7 @@ Check out some of the examples in the /./examples/ directory.
 - Training through backpropagation
 - Ability to save and load a neural net to a file
 - Customize the activation functions for output and hidden layers
-- Multiple activation functions:
-  #+begin_src C
-    typedef enum {
-      Sigmoid,
-      ReLU,
-      Leaky_ReLU,
-      Tanh,
-      ELU,
-    } Activation;
-  #+end_src
+- Multiple activation functions: /Sigmoid, ReLU, Leaky_ReLU, Tanh, ELU/
 ** How To Use
 Put this code
 #+begin_src C
