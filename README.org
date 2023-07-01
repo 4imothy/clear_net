@@ -7,7 +7,16 @@ Check out some of the examples in the /./examples/ directory.
 - Training through backpropagation
 - Ability to save and load a neural net to a file
 - Customize the activation functions for output and hidden layers
-- Multiple activation functions: /Sigmoid, RELU, Leaky_RELU/
+- Multiple activation functions:
+  #+begin_src C
+    typedef enum {
+      Sigmoid,
+      ReLU,
+      Leaky_ReLU,
+      Tanh,
+      ELU,
+    } Activation;
+  #+end_src
 ** How To Use
 Put this code
 #+begin_src C
@@ -25,7 +34,7 @@ Put these before including the /clear_net.h/ file in your code.
 | CLEAR_NET_RATE                 | The learning rate of the model                              | /0.5/                    |
 | CLEAR_NET_ACT_OUTPUT           | The activation function of the output layer                 | /Sigmoid/                |
 | CLEAR_NET_ACT_HIDDEN           | The activation function of the hidden layer                 | /Leaky_RELU/             |
-| CLEAR_NET_LEAKY_RELU_NEG_SCALE | When using leaky RELU this is the scale for negative values | /0.1/                    |
+| CLEAR_NET_ACT_NEG_SCALE          | When using /Leaky RELU/, or /ELU/ this is the scale for negative values | /0.1/                    |
 *** Creating, Training and Saving a Neural Net
 **** Define Training Strategy
 Define hidden and output activation function
