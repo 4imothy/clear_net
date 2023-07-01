@@ -28,10 +28,9 @@ int main() {
     Matrix input = mat_form(data.nrows, 2, data.stride, &MAT_GET(data, 0, 0));
     Matrix output =
         mat_form(data.nrows, 1, data.stride, &MAT_GET(data, 0, input.ncols));
-
     size_t shape[] = {2, 2, 1};
-    size_t layers = ARR_LEN(shape);
-    Net net = alloc_net(shape, layers);
+    size_t num_layers = ARR_LEN(shape);
+    Net net = alloc_net(shape, num_layers);
     net_rand(net, -1, 1);
 
     size_t num_epochs = 20000;
@@ -49,7 +48,11 @@ int main() {
         }
     }
     net_print_results(net, input, output);
-	NET_PRINT(net);
+    net_save_to_file("model", net);
+    dealloc_net(&net);
+    net = alloc_net_from_file("model");
+    printf("after loading file");
+    net_print_results(net, input, output);
     dealloc_net(&net);
     return 0;
 }

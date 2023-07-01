@@ -162,7 +162,7 @@ int main(int argc, char *argv[]) {
             break;
         }
     }
-	
+
     srand(0);
     size_t data_cols = 5;
     size_t input_dim = 4;
@@ -174,11 +174,11 @@ int main(int argc, char *argv[]) {
         mat_form(test_size, input_dim, test.stride, &MAT_GET(test, 0, 0));
     Matrix target = mat_form(test_size, output_dim, test.stride,
                              &MAT_GET(test, 0, input_dim));
-	for (size_t i = 0; i < target.nrows; ++i) {
+    for (size_t i = 0; i < target.nrows; ++i) {
         for (size_t j = 0; j < target.ncols; ++j) {
             MAT_GET(target, i, j) = MAT_GET(target, i, j) / 2;
         }
-     }
+    }
     Matrix val = mat_form(val_size, data_cols, data_cols, validation_values);
     size_t shape[] = {input_dim, output_dim};
     Net net = alloc_net(shape, ARR_LEN(shape));
@@ -190,29 +190,34 @@ int main(int argc, char *argv[]) {
         net_backprop(net, input, target);
         error = net_errorf(net, input, target);
         if (i % (num_epochs / 5) == 0) {
-		  if (print) {
-            printf("Cost at %zu is %f\n", i, error);
-		  }
+            if (print) {
+                printf("Cost at %zu is %f\n", i, error);
+            }
         }
         if (error < error_break) {
-		  if (print) {
-            printf("Less than %f error at %zu\n", error_break, i);
-		  }
+            if (print) {
+                printf("Less than %f error at %zu\n", error_break, i);
+            }
             break;
         }
     }
-	if (print) {
-    net_print_results(net, input, target);
-    Matrix val_input =
-        mat_form(val_size, input_dim, val.stride, &MAT_GET(val, 0, 0));
-    Matrix val_target =
-        mat_form(val_size, output_dim, val.stride, &MAT_GET(val, 0, input_dim));
-     for (size_t i = 0; i < val_target.nrows; ++i) {
-         for (size_t j = 0; j < val_target.ncols; ++j) {
-             MAT_GET(val_target, i, j) = MAT_GET(val_target, i, j) / 2;
-         }
-     }
-    net_print_results(net, val_input, val_target);
-	}
+    if (print) {
+        net_print_results(net, input, target);
+        Matrix val_input =
+            mat_form(val_size, input_dim, val.stride, &MAT_GET(val, 0, 0));
+        Matrix val_target = mat_form(val_size, output_dim, val.stride,
+                                     &MAT_GET(val, 0, input_dim));
+        for (size_t i = 0; i < val_target.nrows; ++i) {
+            for (size_t j = 0; j < val_target.ncols; ++j) {
+                MAT_GET(val_target, i, j) = MAT_GET(val_target, i, j) / 2;
+            }
+        }
+        net_print_results(net, val_input, val_target);
+        net_save_to_file("model", net);
+        dealloc_net(&net);
+        net = alloc_net_from_file("model");
+        printf("After loading file\n");
+        net_print_results(net, val_input, val_target);
+    }
     return 0;
 }

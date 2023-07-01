@@ -43,11 +43,18 @@ int main() {
         if (i % (num_epochs / 5) == 0) {
             printf("Cost at %zu: %f\n", i, error);
         }
-		if (error < error_break) {
-		  printf("Error less than %f at %zu\n", error_break, i);
-		  break;
-		}
+        if (error < error_break) {
+            printf("Error less than %f at %zu\n", error_break, i);
+            break;
+        }
     }
     net_print_results(net, input, target);
+	net_save_to_file("model", net);
+	dealloc_net(&net);
+    net = alloc_net_from_file("model");
+    printf("After loading file\n");
+    net_print_results(net, input, target);
+	dealloc_net(&net);
+        
     return 0;
 }

@@ -1,13 +1,13 @@
 // TODO More activation functions: tanh, elu
-// TODO implement save and loading the model
-// TODO benchmark againts other neural nets with time and memory used
+// TODO dealloc causing issue: heap corruption detected, free list damaged
 
 #ifndef CLEAR_NET
 #define CLEAR_NET
 
-#include <stdlib.h> // malloc, free, size_t
+#include <math.h>   // expf
 #include <stdio.h>  // printf
-#include <math.h> // expf
+#include <stdlib.h> // malloc, free, size_t
+#include <string.h> // strtok
 
 #define ARR_LEN(a) (sizeof((a)) / sizeof((*a)))
 
@@ -76,21 +76,22 @@ Matrix mat_form(size_t nrows, size_t ncols, size_t stride, float *elements);
 void mat_print(Matrix mat, char *name);
 Matrix mat_row(Matrix giver, size_t row);
 void mat_copy(Matrix dest, Matrix giver);
+// void mat_write_to_file(FILE *f, Matrix mat);
 // void mat_mul(Matrix dest, Matrix left, Matrix right);
 // void mat_sum(Matrix dest, Matrix toAdd);
 // void mat_rand(Matrix mat, float lower, float upper);
 // void mat_act(Matrix mat);
 
-/* Net */
+/* Net
+Basic Structure
+Each layer consists of weights -> biases -> activation.
+Each forward takes the previous activation matrix multiply
+with the weights, add the bias apply correct activation function.
+Each column in the weight matrix is a neuron.
+Each activation * weights results in a single column matrix
+which the bias is added to.
+*/
 typedef struct {
-  /* Basic Structure
-	 Each layer consists of weights -> biases -> activation.
-	 Each forward takes the previous activation matrix multiply
-	 with the weights, add the bias apply correct activation function.
-	 Each column in the weight matrix is a neuron.
-	 Each activation * weights results in a single column matrix
-	 which the bias is added to.
-   */
     size_t nlayers;
     Matrix *activations;
     // number of these is equal to the number of layers -1 (for the output)
@@ -111,6 +112,8 @@ typedef struct {
 
 Net alloc_net(size_t *shape, size_t nlayers);
 void dealloc_net(Net *net);
+Net alloc_net_from_file(char *file_name);
+void net_save_to_file(char *file_name, Net net);
 float net_errorf(Net net, Matrix input, Matrix target);
 void net_print(Net net, char *name);
 void net_rand(Net net, float low, float high);
@@ -141,9 +144,9 @@ float dactf(float y, Activation act) {
     case Sigmoid:
         return y * (1 - y);
     case RELU:
-	  return y > 0 ? 1 : 0.f;
+        return y > 0 ? 1 : 0.f;
     case Leaky_RELU:
-     return y >= 0 ? 1 : CLEAR_NET_LEAKY_RELU_NEG_SCALE;
+        return y >= 0 ? 1 : CLEAR_NET_LEAKY_RELU_NEG_SCALE;
     }
     CLEAR_NET_ASSERT(0 && "Invalid Activation");
     return 0.0f;
@@ -255,6 +258,14 @@ void mat_fill(Matrix m, float x) {
     }
 }
 
+void mat_write_to_file(FILE *fp, Matrix mat) {
+    for (size_t i = 0; i < mat.nrows; ++i) {
+        for (size_t j = 0; j < mat.ncols; ++j) {
+            fwrite(&MAT_GET(mat, i, j), sizeof(*mat.elements), 1, fp);
+        }
+    }
+}
+
 /* Net */
 Net alloc_net(size_t *shape, size_t nlayers) {
     Net net;
@@ -299,20 +310,23 @@ Net alloc_net(size_t *shape, size_t nlayers) {
 
 void dealloc_net(Net *net) {
     // Deallocate matrices within each layer
-    for (size_t i = 0; i < net->nlayers; ++i) {
+    for (size_t i = 0; i < net->nlayers - 1; ++i) {
         dealloc_mat(&net->weights[i]);
         dealloc_mat(&net->biases[i]);
         dealloc_mat(&net->activations[i]);
+		dealloc_mat(&net->activation_alters[i]);
+		dealloc_mat(&net->weight_alters[i]);
+        // NOTE: Since shape is most likely created with {}
+        // by users and is created with allocation when
+        // reading from file, cannot consistently call
+        // some deallocation on it
+        net->shape[i] = 0;
     }
 
     // Deallocate the activation matrix of the output layer
-    dealloc_mat(&net->activations[net->nlayers]);
-
-    // Deallocate the arrays of matrices
-    CLEAR_NET_DEALLOC(net->weights);
-    CLEAR_NET_DEALLOC(net->biases);
-    CLEAR_NET_DEALLOC(net->activations);
-
+    dealloc_mat(&net->activations[net->nlayers - 1]);
+	dealloc_mat(&net->activation_alters[net->nlayers - 1]);
+	
     // Set net properties to NULL and 0
     net->nlayers = 0;
     net->activations = NULL;
@@ -341,14 +355,15 @@ void net_rand(Net net, float low, float high) {
 
 void net_forward(Net net) {
     for (size_t i = 0; i < net.nlayers - 1; ++i) {
-	  // net.activations[0] stores the input, net.weghts[0] stores the first weights
+        // net.activations[0] stores the input, net.weghts[0] stores the first
+        // weights
         mat_mul(net.activations[i + 1], net.activations[i], net.weights[i]);
         mat_sum(net.activations[i + 1], net.biases[i]);
-		if (i == net.nlayers - 2) {
-		  mat_act(net.activations[i + 1], CLEAR_NET_ACT_OUTPUT);
-		} else {
-		  mat_act(net.activations[i + 1], CLEAR_NET_ACT_HIDDEN);
-		}
+        if (i == net.nlayers - 2) {
+            mat_act(net.activations[i + 1], CLEAR_NET_ACT_OUTPUT);
+        } else {
+            mat_act(net.activations[i + 1], CLEAR_NET_ACT_HIDDEN);
+        }
     }
 }
 
@@ -391,8 +406,8 @@ void net_backprop(Net net, Matrix input, Matrix target) {
 
         // for the output activation layer
         for (size_t j = 0; j < dim_o; ++j) {
-		  MAT_GET(net.activation_alters[net.nlayers - 1], 0, j) =
-     			  2 * (MAT_GET(NET_OUTPUT(net), 0, j) - MAT_GET(target, i, j));
+            MAT_GET(net.activation_alters[net.nlayers - 1], 0, j) =
+                2 * (MAT_GET(NET_OUTPUT(net), 0, j) - MAT_GET(target, i, j));
         }
 
         // first layer is the output, make the changes to the one before itn
@@ -402,33 +417,35 @@ void net_backprop(Net net, Matrix input, Matrix target) {
             for (size_t j = 0; j < net.activations[layer].ncols; ++j) {
                 float act = MAT_GET(net.activations[layer], 0, j);
                 float dact;
-				if (layer == net.nlayers - 1) {
-				  dact = dactf(act, CLEAR_NET_ACT_OUTPUT);
-				} else {
-				  dact = dactf(act, CLEAR_NET_ACT_HIDDEN);
-				}
-      		    float alter_act = MAT_GET(net.activation_alters[layer], 0, j);
-			 
+                if (layer == net.nlayers - 1) {
+                    dact = dactf(act, CLEAR_NET_ACT_OUTPUT);
+                } else {
+                    dact = dactf(act, CLEAR_NET_ACT_HIDDEN);
+                }
+                float alter_act = MAT_GET(net.activation_alters[layer], 0, j);
+
                 // biases are never read in backpropagation so their
                 // change can be done in place
-				size_t prev_layer = layer - 1;
-                MAT_GET(net.biases[prev_layer], 0, j) -= coef * alter_act * dact;
+                size_t prev_layer = layer - 1;
+                MAT_GET(net.biases[prev_layer], 0, j) -=
+                    coef * alter_act * dact;
 
                 // this activations columns is equal to the rows of its next
                 // matrix
                 for (size_t k = 0; k < net.activations[prev_layer].ncols; ++k) {
                     float prev_act = MAT_GET(net.activations[prev_layer], 0, k);
-                    float prev_weight  = MAT_GET(net.weights[prev_layer], k, j);
-                    MAT_GET(net.activation_alters[prev_layer], 0, k) += alter_act * dact * prev_weight;
+                    float prev_weight = MAT_GET(net.weights[prev_layer], k, j);
+                    MAT_GET(net.activation_alters[prev_layer], 0, k) +=
+                        alter_act * dact * prev_weight;
                     MAT_GET(net.weight_alters[prev_layer], k, j) +=
                         coef * alter_act * dact * prev_act;
                 }
             }
         }
-		
+
         // reset for next iteration
         for (size_t j = 0; j < net.nlayers; ++j) {
-             mat_fill(net.activation_alters[j], 0);
+            mat_fill(net.activation_alters[j], 0);
         }
     }
 
@@ -470,6 +487,66 @@ void net_print_results(Net net, Matrix input, Matrix target) {
         }
         printf("\n");
     }
+}
+
+void net_save_to_file(char *file_name, Net net) {
+    // with a shape and a list of floats the entire model can be derived
+    FILE *fp;
+    fp = fopen(file_name, "wb");
+    fwrite(&net.nlayers, sizeof(net.nlayers), 1, fp);
+    for (size_t i = 0; i < net.nlayers; ++i) {
+        fwrite(&net.shape[i], sizeof(*net.shape), 1, fp);
+    }
+
+    for (size_t i = 0; i < net.nlayers - 1; ++i) {
+        mat_write_to_file(fp, net.weights[i]);
+        mat_write_to_file(fp, net.biases[i]);
+    }
+    fclose(fp);
+}
+
+Net alloc_net_from_file(char *file_name) {
+    FILE *fp = fopen(file_name, "rb");
+	if (fp == NULL) {
+	  fclose(fp);
+	}
+	CLEAR_NET_ASSERT(fp != NULL);
+
+    size_t nlayers = 0;
+    fread(&nlayers, sizeof(nlayers), 1, fp);
+
+    // if it is less than two than there is no io
+    CLEAR_NET_ASSERT(nlayers >= 2);
+
+    size_t *shape = (size_t *)CLEAR_NET_ALLOC(nlayers * sizeof(nlayers));
+    CLEAR_NET_ASSERT(shape != NULL);
+    fread(shape, sizeof(*shape), nlayers, fp);
+	printf("bef\n");
+    Net net = alloc_net(shape, nlayers);
+	printf("after\n");
+    size_t num_rows;
+    size_t num_cols;
+    Matrix weight;
+    Matrix bias;
+    for (size_t layer = 0; layer < net.nlayers - 1; ++layer) {
+        weight = net.weights[layer];
+        num_rows = weight.nrows;
+        num_cols = weight.ncols;
+        for (size_t j = 0; j < num_rows; ++j) {
+            for (size_t k = 0; k < num_cols; ++k) {
+                // check if i can read numcols
+                fread(&MAT_GET(weight, j, k), sizeof(*weight.elements), 1, fp);
+            }
+        }
+        bias = net.biases[layer];
+        for (size_t k = 0; k < num_cols; ++k) {
+            // check if i can read numcols
+            fread(&MAT_GET(bias, 0, k), sizeof(*bias.elements), 1, fp);
+        }
+    }
+
+    fclose(fp);
+    return net;
 }
 
 #endif // CLEAR_NET_IMPLEMENTATION
