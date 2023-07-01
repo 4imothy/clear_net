@@ -1,44 +1,30 @@
+* [[https://en.wikipedia.org/wiki/C_(programming_language)][C]]learNet
+** [[https://en.wikipedia.org/wiki/C_(programming_language)][C]] + Learn + Net
+A neural net framework for the creation and training of arbitrarily sized neural nets.
+Check out some of the examples in the /./examples/ directory.
+** Features
+- Simple interface to interact with the code
+- Training through backpropagation
+- Ability to save and load a neural net to a file
+- Customize the activation functions for output and hidden layers
 #+begin_html
   <details>
     <summary>
-    Click me
+    - Supported activation functions
     </summary>
-     And this stuff will be collapsed.
-
-    <code>
-Matrix data = alloc_mat(4, 3);
-for (size_t i = 0; i < 2; ++i) {
-    for (size_t j = 0; j < 2; ++j) {
-        size_t row = i * 2 + j;
-        MAT_GET(data, row, 0) = i;
-        MAT_GET(data, row, 1) = j;
-        MAT_GET(data, row, 2) = i ^ j;
-    }
-}
-Matrix input = mat_form(data.nrows, 2, data.stride, &MAT_GET(data, 0, 0));
-Matrix output = mat_form(data.nrows, 1, data.stride, &MAT_GET(data, 0, input.ncols));
-    </code>
-    
+    - Sigmoid
+    - RELU
+    - Leaky RELU
   </details>
 #+end_html
-* [[https://en.wikipedia.org/wiki/C_(programming_language)][C]]learNet
-*** [[https://en.wikipedia.org/wiki/C_(programming_language)][C]] + Learn + Net
 
-A neural net framework for the creation and training of arbitrarily sized neural nets.
-Check out some of the examples in the /./examples/ directory.
-
-*** Features
-- Simple interface to interact with the code
-- Training through backpropagation
-- Ability to save and load nets to a file
-- Customize the activation functios for output and hidden layers
-*** How To Use
+** How To Use
 Put this code
 #+begin_src C
 define CLEAR_NET_IMPLEMENTATION
 #+end_src C
 at the top of the /C/ source file to tell /ClearNet/ to implement its functions.
-**** Defines
+*** Defines
 Put these before including the /clear_net.h/ file in your code.
 | Name                           | What it Does                                                | Default                  |
 |--------------------------------+-------------------------------------------------------------+--------------------------|
@@ -50,57 +36,67 @@ Put these before including the /clear_net.h/ file in your code.
 | CLEAR_NET_ACT_OUTPUT           | The activation function of the output layer                 | /Sigmoid/                |
 | CLEAR_NET_ACT_HIDDEN           | The activation function of the hidden layer                 | /Leaky_RELU/             |
 | CLEAR_NET_LEAKY_RELU_NEG_SCALE | When using leaky RELU this is the scale for negative values | /0.1/                    |
-**** Creating Neural Net
-***** Define the Shape
+*** Using Clear Net
+**** Define Training Strategy
+Define hidden and output activation function
 #+begin_src C
-size_t* shape = {2,2,1};
-size_t* nlayers = ARR_LEN(shape);
+#define CLEAR_NET_ACT_OUTPUT Sigmoid
+#define CLEAR_NET_ACT_HIDDEN RELU
+#+end_src C
+Define learning rate
+#+begin_src C
+#define CLEAR_NET_RATE 0.1f
+#+end_src C
+**** Define the Shape
+#+begin_src C
+  size_t* shape = {2,2,1};
+  size_t* nlayers = ARR_LEN(shape);
 #+end_src
-***** Create the Input and Target Data
+**** Create the Input and Target Data
 This code is from /xor.c/.
 #+begin_src C
-Matrix data = alloc_mat(4, 3);
-for (size_t i = 0; i < 2; ++i) {
+  Matrix data = alloc_mat(4, 3);
+  for (size_t i = 0; i < 2; ++i) {
     for (size_t j = 0; j < 2; ++j) {
-        size_t row = i * 2 + j;
-        MAT_GET(data, row, 0) = i;
-        MAT_GET(data, row, 1) = j;
-        MAT_GET(data, row, 2) = i ^ j;
+      size_t row = i * 2 + j;
+      MAT_GET(data, row, 0) = i;
+      MAT_GET(data, row, 1) = j;
+      MAT_GET(data, row, 2) = i ^ j;
     }
-}
-Matrix input = mat_form(data.nrows, 2, data.stride, &MAT_GET(data, 0, 0));
-Matrix output = mat_form(data.nrows, 1, data.stride, &MAT_GET(data, 0, input.ncols));
+   }
+  Matrix input = mat_form(data.nrows, 2, data.stride, &MAT_GET(data, 0, 0));
+  Matrix output = mat_form(data.nrows, 1, data.stride, &MAT_GET(data, 0, input.ncols));
 #+end_src
-***** Train the Model
+**** Train the Model
 #+begin_src C
-size_t num_epochs = 20000;
-float error;
-float error_break = 0.01;
-for (size_t i = 0; i < num_epochs; ++i) {
+  size_t num_epochs = 20000;
+  float error;
+  float error_break = 0.01;
+  for (size_t i = 0; i < num_epochs; ++i) {
     net_backprop(net, input, output);
     error = net_errorf(net, input, output);
     if (i % (num_epochs / 5) == 0) {
-        printf("Cost at %zu: %f\n", i, error);
+      printf("Cost at %zu: %f\n", i, error);
     }
     if (error < error_break) {
-        printf("Less than: %f error at epoch %zu\n", error_break, i);
-        break;
+      printf("Less than: %f error at epoch %zu\n", error_break, i);
+      break;
     }
-}
+   }
 #+end_src
-***** Once Model is Trained
+**** Once Model is Trained
 Print the results
 #+begin_src C
-net_print_results(net, input, output);
+  net_print_results(net, input, output);
 #+end_src
 Save to file
 #+begin_src C 
-net_save_to_file("model", net);
-// can be loaded again with
-Net net = alloc_net_from_file("model");
+  net_save_to_file("model", net);
+  // can be loaded again with
+  Net net = alloc_net_from_file("model");
 #+end_src
 Deallocate
 #+begin_src C
-dealloc_net(&net);
+  dealloc_net(&net);
 #+end_src
 
