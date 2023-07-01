@@ -1,6 +1,3 @@
-// TODO More activation functions: tanh, elu
-// TODO dealloc causing issue: heap corruption detected, free list damaged
-
 #ifndef CLEAR_NET
 #define CLEAR_NET
 
@@ -32,11 +29,11 @@
 #define CLEAR_NET_ACT_OUTPUT Sigmoid
 #endif // CLEAR_NET_ACT_OUTPUT
 #ifndef CLEAR_NET_ACT_HIDDEN
-#define CLEAR_NET_ACT_HIDDEN Leaky_RELU
+#define CLEAR_NET_ACT_HIDDEN Leaky_ReLU
 #endif // CLEAR_NET_ACT_HIDDEN
-#ifndef CLEAR_NET_LEAKY_RELU_NEG_SCALE
-#define CLEAR_NET_LEAKY_RELU_NEG_SCALE 0.1f
-#endif // CLEAR_NET_LEAKY_RELU_NEG_SCALE
+#ifndef CLEAR_NET_ACT_NEG_SCALE
+#define CLEAR_NET_ACT_NEG_SCALE 0.1f
+#endif // CLEAR_NET_NEG_SCALE
 
 /*
 Below are the definitions of structs and enums and the
@@ -53,8 +50,10 @@ keep users' namespace sane.
 // float dactf(float y, Activation act);
 typedef enum {
     Sigmoid,
-    RELU,
-    Leaky_RELU,
+    ReLU,
+    Leaky_ReLU,
+	Tanh,
+	ELU,
 } Activation;
 
 /* Matrices */
@@ -130,10 +129,17 @@ float actf(float x, Activation act) {
     switch (act) {
     case Sigmoid:
         return 1.f / (1.f + expf(-x));
-    case RELU:
+    case ReLU:
         return x > 0 ? x : 0.f;
-    case Leaky_RELU:
-        return x >= 0 ? x : CLEAR_NET_LEAKY_RELU_NEG_SCALE * x;
+    case Leaky_ReLU:
+        return x >= 0 ? x : CLEAR_NET_ACT_NEG_SCALE * x;
+	case Tanh: {
+	  float e_to_x = expf(x);
+	  float e_to_neg_x = expf(-x);
+	  return (e_to_x - e_to_neg_x) / (e_to_x + e_to_neg_x);
+	}
+	case ELU:
+	  return x > 0 ? x : CLEAR_NET_ACT_NEG_SCALE * (expf(x) - 1);
     }
     CLEAR_NET_ASSERT(0 && "Invalid Activation");
     return 0.0f;
@@ -143,10 +149,19 @@ float dactf(float y, Activation act) {
     switch (act) {
     case Sigmoid:
         return y * (1 - y);
-    case RELU:
+    case ReLU:
         return y > 0 ? 1 : 0.f;
-    case Leaky_RELU:
-        return y >= 0 ? 1 : CLEAR_NET_LEAKY_RELU_NEG_SCALE;
+    case Leaky_ReLU:
+        return y >= 0 ? 1 : CLEAR_NET_ACT_NEG_SCALE;
+	case Tanh:
+	  return 1 - y * y;
+	case ELU:
+	  // if result is negative then
+	  // y = CLEAR_NET_ACT_NEG_SCALE * (expf(x) - 1)
+	  // y = CLEAR_NET_ACT_NEG_SCALE(expf(x)) - CLEAR_NET_ACT_NEG_SCALE
+	  // y + CLEAR_NET_ACT_NEG_SLACE = CLEAR_NET_ACT_NEG_SCALE(expf(x))
+	  // otherwise it is 1
+	  return y > 0 ? 1 : y + CLEAR_NET_ACT_NEG_SCALE;
     }
     CLEAR_NET_ASSERT(0 && "Invalid Activation");
     return 0.0f;
