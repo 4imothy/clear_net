@@ -1,3 +1,26 @@
+#+begin_html
+  <details>
+    <summary>
+    Click me
+    </summary>
+     And this stuff will be collapsed.
+
+    <code>
+Matrix data = alloc_mat(4, 3);
+for (size_t i = 0; i < 2; ++i) {
+    for (size_t j = 0; j < 2; ++j) {
+        size_t row = i * 2 + j;
+        MAT_GET(data, row, 0) = i;
+        MAT_GET(data, row, 1) = j;
+        MAT_GET(data, row, 2) = i ^ j;
+    }
+}
+Matrix input = mat_form(data.nrows, 2, data.stride, &MAT_GET(data, 0, 0));
+Matrix output = mat_form(data.nrows, 1, data.stride, &MAT_GET(data, 0, input.ncols));
+    </code>
+    
+  </details>
+#+end_html
 * [[https://en.wikipedia.org/wiki/C_(programming_language)][C]]learNet
 *** [[https://en.wikipedia.org/wiki/C_(programming_language)][C]] + Learn + Net
 
@@ -5,13 +28,16 @@ A neural net framework for the creation and training of arbitrarily sized neural
 Check out some of the examples in the /./examples/ directory.
 
 *** Features
-TODO make this a link to the using header
 - Simple interface to interact with the code
 - Training through backpropagation
 - Ability to save and load nets to a file
 - Customize the activation functios for output and hidden layers
 *** How To Use
-Put this code /#define CLEAR_NET_IMPLEMENTATION/ at the top of the /C/ source file to tell /ClearNet/ to implement its functions.
+Put this code
+#+begin_src C
+define CLEAR_NET_IMPLEMENTATION
+#+end_src C
+at the top of the /C/ source file to tell /ClearNet/ to implement its functions.
 **** Defines
 Put these before including the /clear_net.h/ file in your code.
 | Name                           | What it Does                                                | Default                  |
