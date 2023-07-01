@@ -7,17 +7,7 @@ Check out some of the examples in the /./examples/ directory.
 - Training through backpropagation
 - Ability to save and load a neural net to a file
 - Customize the activation functions for output and hidden layers
-#+begin_html
-  <details>
-    <summary>
-    - Supported activation functions
-    </summary>
-    - Sigmoid
-    - RELU
-    - Leaky RELU
-  </details>
-#+end_html
-
+- Multiple activation functions: /Sigmoid, RELU, Leaky_RELU/
 ** How To Use
 Put this code
 #+begin_src C
@@ -36,7 +26,7 @@ Put these before including the /clear_net.h/ file in your code.
 | CLEAR_NET_ACT_OUTPUT           | The activation function of the output layer                 | /Sigmoid/                |
 | CLEAR_NET_ACT_HIDDEN           | The activation function of the hidden layer                 | /Leaky_RELU/             |
 | CLEAR_NET_LEAKY_RELU_NEG_SCALE | When using leaky RELU this is the scale for negative values | /0.1/                    |
-*** Using Clear Net
+*** Creating, Training and Saving a Neural Net
 **** Define Training Strategy
 Define hidden and output activation function
 #+begin_src C
