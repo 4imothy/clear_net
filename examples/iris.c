@@ -151,6 +151,10 @@ float validation_values[] = {
     5.7, 2.8, 4.1, 1.3, 1, 6.7, 3.0, 5.2, 2.3, 2, 6.3, 2.5, 5.0, 1.9, 2,
     6.5, 3.0, 5.2, 2.0, 2, 6.2, 3.4, 5.4, 2.3, 2, 5.9, 3.0, 5.1, 1.8, 2};
 
+float fix_output(float out) {
+  return roundf(out * 2);
+}
+
 int main(int argc, char *argv[]) {
     bool print = true;
 
@@ -202,7 +206,7 @@ int main(int argc, char *argv[]) {
         }
     }
     if (print) {
-        net_print_results(net, input, target);
+	  net_print_results(net, input, target, &fix_output);
         Matrix val_input =
             mat_form(val_size, input_dim, val.stride, &MAT_GET(val, 0, 0));
         Matrix val_target = mat_form(val_size, output_dim, val.stride,
@@ -212,12 +216,12 @@ int main(int argc, char *argv[]) {
                 MAT_GET(val_target, i, j) = MAT_GET(val_target, i, j) / 2;
             }
         }
-        net_print_results(net, val_input, val_target);
+        net_print_results(net, val_input, val_target, &fix_output);
         net_save_to_file("model", net);
         dealloc_net(&net);
         net = alloc_net_from_file("model");
         printf("After loading file\n");
-        net_print_results(net, val_input, val_target);
+        net_print_results(net, val_input, val_target, &fix_output);
     }
     return 0;
 }

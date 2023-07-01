@@ -46,12 +46,12 @@ int main() {
             break;
         }
     }
-    net_print_results(net, input, output);
+    net_print_results(net, input, output, &roundf);
     net_save_to_file("model", net);
     dealloc_net(&net);
     net = alloc_net_from_file("model");
     printf("after loading file");
-    net_print_results(net, input, output);
+    net_print_results(net, input, output, &roundf);
     dealloc_net(&net);
     return 0;
 }

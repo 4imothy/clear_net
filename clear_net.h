@@ -117,7 +117,7 @@ float net_errorf(Net net, Matrix input, Matrix target);
 void net_print(Net net, char *name);
 void net_rand(Net net, float low, float high);
 void net_backprop(Net net, Matrix input, Matrix target);
-void net_print_results(Net net, Matrix input, Matrix target);
+void net_print_results(Net net, Matrix input, Matrix target, float (*fix_output)(float));
 // void net_forward(Net net);
 
 #endif // CLEAR_NET
@@ -476,7 +476,7 @@ void net_backprop(Net net, Matrix input, Matrix target) {
     }
 }
 
-void net_print_results(Net net, Matrix input, Matrix target) {
+void net_print_results(Net net, Matrix input, Matrix target, float (*fix_output)(float)) {
     CLEAR_NET_ASSERT(input.nrows == target.nrows);
     CLEAR_NET_ASSERT(NET_OUTPUT(net).ncols == target.ncols);
     size_t num_i = input.nrows;
@@ -494,11 +494,11 @@ void net_print_results(Net net, Matrix input, Matrix target) {
         }
         printf(" | ");
         for (size_t j = 0; j < dim_o; ++j) {
-            printf("%f ", MAT_GET(target, i, j));
+		  printf("%f ", fix_output(MAT_GET(target, i, j)));
         }
         printf(" | ");
         for (size_t j = 0; j < dim_o; ++j) {
-            printf("%f ", MAT_GET(NET_OUTPUT(net), 0, j));
+		  printf("%f ", fix_output(MAT_GET(NET_OUTPUT(net), 0, j)));
         }
         printf("\n");
     }
