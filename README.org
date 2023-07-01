@@ -1,0 +1,13 @@
+* Hello
+### [C](https://en.wikipedia.org/wiki/C_(programming_language))lear Net
+**([C](https://en.wikipedia.org/wiki/C_(programming_language)) + Learn + Net)**
+
+A neural net framework for the creation and training of arbitrarily sized neural nets.
+
+### Features
+TODO make this a link to the using header
+- Simple interface to interact with the code
+- Training through backpropagation
+- Ability to save and load nets to a file
+- Multiple activation functions that can be customized to be for hidden or output layers
+
