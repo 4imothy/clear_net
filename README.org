@@ -77,7 +77,7 @@ This code is from /xor.c/.
 **** Once Model is Trained
 Print the results
 #+begin_src C
-  net_print_results(net, input, output);
+  net_print_results(net, input, output, &roundf);
 #+end_src
 Save to file
 #+begin_src C 
