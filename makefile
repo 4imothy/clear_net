@@ -14,11 +14,11 @@ xor: clear_net $(EXAMPLE_FILES)
 run_xor: xor
 	./xor
 
-adder: clear_net $(EXAMPLE_FILES)
+full_adder: clear_net $(EXAMPLE_FILES)
 	$(CC) $(CFLAGS) -o $@ $(EXAMPLE_DIR)/full_adder.c
 
-run_adder: adder
-	./adder
+run_adder: full_adder
+	./full_adder
 
 iris: clear_net.h $(EXAMPLE_FILES)
 	$(CC) $(CFLAGS) -o $@ $(EXAMPLE_DIR)/iris.c
