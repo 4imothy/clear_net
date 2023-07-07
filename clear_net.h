@@ -42,7 +42,7 @@ Some functions are commented out to abstract and
 keep users' namespace sane.
 */
 
-// float randf();
+// float randf(void);
 
 /* Activation functions */
 // float reluf(float x);
@@ -217,7 +217,7 @@ void mat_copy(Matrix dest, Matrix giver) {
     }
 }
 
-float randf() { return (float)rand() / (float)RAND_MAX; }
+float randf(void) { return (float)rand() / (float)RAND_MAX; }
 
 void mat_rand(Matrix mat, float lower, float upper) {
     for (size_t i = 0; i < mat.nrows; ++i) {

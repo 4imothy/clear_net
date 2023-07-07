@@ -26,7 +26,7 @@ float mul_max(float x) {
   return (x * 2 *  max) - max;
 }
 
-int main() {
+int main(void) {
   srand(0);
   float lower = -100;
   float upper = 100;
