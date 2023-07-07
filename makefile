@@ -35,7 +35,7 @@ run_lin_reg: lin_reg
 run_bench: iris adder xor
 	python3 $(BENCH_FILE)
 
-FORMAT_STYLE = -style="{BasedOnStyle: llvm, IndentWidth: 4, TabWidth: 4, UseTab: Never}"
+FORMAT_STYLE := -style="{BasedOnStyle: llvm, IndentWidth: 4, TabWidth: 4, UseTab: Never}"
 format:
 	$(FORMAT) $(FORMAT_STYLE) -i $(EXAMPLE_FILES) $(LIB_FILE)
 
