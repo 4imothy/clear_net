@@ -4,7 +4,6 @@
 #include <math.h>   // expf
 #include <stdio.h>  // printf
 #include <stdlib.h> // malloc, free, size_t
-#include <string.h> // strtok
 
 #define ARR_LEN(a) (sizeof((a)) / sizeof((*a)))
 
@@ -18,7 +17,7 @@
 #endif // CLEAR_NET_MALLOC
 // allow custom assertion strategies
 #ifndef CLEAR_NET_ASSERT
-#include "assert.h"
+#include "assert.h" // assert
 #define CLEAR_NET_ASSERT assert
 #endif // CLEAR_NET_ASSERT
 
@@ -99,7 +98,7 @@ typedef struct {
     // this stores the changes to be done to the weihts
     Matrix *weight_alters;
     // stores changes in activation results
-    Matrix *activation_alters;
+    Matrix *buffer;
     size_t *shape;
 } Net;
 
@@ -137,7 +136,7 @@ float actf(float x, Activation act) {
     case Tanh: {
         float e_to_x = expf(x);
         float e_to_neg_x = expf(-x);
-        return (e_to_x - e_to_neg_x) / (e_to_x + e_to_neg_x);
+		return (e_to_x - e_to_neg_x) / (e_to_x + e_to_neg_x);
     }
     case ELU:
         return x > 0 ? x : CLEAR_NET_ACT_NEG_SCALE * (expf(x) - 1);
@@ -301,14 +300,14 @@ Net alloc_net(size_t *shape, size_t nlayers) {
     net.activations = CLEAR_NET_ALLOC(sizeof(*net.activations) * (net.nlayers));
     CLEAR_NET_ASSERT(net.activations != NULL);
 
-    net.activation_alters =
-        CLEAR_NET_ALLOC(sizeof(*net.activation_alters) * (net.nlayers));
-    CLEAR_NET_ASSERT(net.activation_alters != NULL);
+    net.buffer =
+        CLEAR_NET_ALLOC(sizeof(*net.buffer) * (net.nlayers));
+    CLEAR_NET_ASSERT(net.buffer != NULL);
 
     // allocate the thing that will be the input
     // one row by the dimensions of the input
     net.activations[0] = alloc_mat(1, shape[0]);
-    net.activation_alters[0] = alloc_mat(1, shape[0]);
+    net.buffer[0] = alloc_mat(1, shape[0]);
     for (size_t i = 1; i < net.nlayers; ++i) {
         // allocate weights by the columns of previous activation and the
         // number of neurons of the this layer
@@ -319,7 +318,7 @@ Net alloc_net(size_t *shape, size_t nlayers) {
         net.biases[i - 1] = alloc_mat(1, shape[i]);
         // allocate activations as one row to add to each
         net.activations[i] = alloc_mat(1, shape[i]);
-        net.activation_alters[i] = alloc_mat(1, shape[i]);
+        net.buffer[i] = alloc_mat(1, shape[i]);
     }
     return net;
 }
@@ -330,7 +329,7 @@ void dealloc_net(Net *net) {
         dealloc_mat(&net->weights[i]);
         dealloc_mat(&net->biases[i]);
         dealloc_mat(&net->activations[i]);
-        dealloc_mat(&net->activation_alters[i]);
+        dealloc_mat(&net->buffer[i]);
         dealloc_mat(&net->weight_alters[i]);
         // NOTE: Since shape is most likely created with {}
         // by users and is created with allocation when
@@ -341,7 +340,7 @@ void dealloc_net(Net *net) {
 
     // Deallocate the activation matrix of the output layer
     dealloc_mat(&net->activations[net->nlayers - 1]);
-    dealloc_mat(&net->activation_alters[net->nlayers - 1]);
+    dealloc_mat(&net->buffer[net->nlayers - 1]);
 
     // Set net properties to NULL and 0
     net->nlayers = 0;
@@ -397,7 +396,6 @@ float net_errorf(Net net, Matrix input, Matrix target) {
         mat_copy(NET_INPUT(net), x);
         net_forward(net);
 
-        // number outputs is the ncols of target
         for (size_t j = 0; j < dim_output; ++j) {
             float difference =
                 MAT_GET(NET_OUTPUT(net), 0, j) - MAT_GET(target, i, j);
@@ -422,7 +420,7 @@ void net_backprop(Net net, Matrix input, Matrix target) {
 
         // for the output activation layer
         for (size_t j = 0; j < dim_o; ++j) {
-            MAT_GET(net.activation_alters[net.nlayers - 1], 0, j) =
+            MAT_GET(net.buffer[net.nlayers - 1], 0, j) =
                 2 * (MAT_GET(NET_OUTPUT(net), 0, j) - MAT_GET(target, i, j));
         }
 
@@ -438,7 +436,7 @@ void net_backprop(Net net, Matrix input, Matrix target) {
                 } else {
                     dact = dactf(act, CLEAR_NET_ACT_HIDDEN);
                 }
-                float alter_act = MAT_GET(net.activation_alters[layer], 0, j);
+                float alter_act = MAT_GET(net.buffer[layer], 0, j);
 
                 // biases are never read in backpropagation so their
                 // change can be done in place
@@ -451,7 +449,7 @@ void net_backprop(Net net, Matrix input, Matrix target) {
                 for (size_t k = 0; k < net.activations[prev_layer].ncols; ++k) {
                     float prev_act = MAT_GET(net.activations[prev_layer], 0, k);
                     float prev_weight = MAT_GET(net.weights[prev_layer], k, j);
-                    MAT_GET(net.activation_alters[prev_layer], 0, k) +=
+                    MAT_GET(net.buffer[prev_layer], 0, k) +=
                         alter_act * dact * prev_weight;
                     MAT_GET(net.weight_alters[prev_layer], k, j) +=
                         coef * alter_act * dact * prev_act;
@@ -461,7 +459,7 @@ void net_backprop(Net net, Matrix input, Matrix target) {
 
         // reset for next iteration
         for (size_t j = 0; j < net.nlayers; ++j) {
-            mat_fill(net.activation_alters[j], 0);
+            mat_fill(net.buffer[j], 0);
         }
     }
 
@@ -538,9 +536,7 @@ Net alloc_net_from_file(char *file_name) {
     size_t *shape = (size_t *)CLEAR_NET_ALLOC(nlayers * sizeof(nlayers));
     CLEAR_NET_ASSERT(shape != NULL);
     fread(shape, sizeof(*shape), nlayers, fp);
-    printf("bef\n");
     Net net = alloc_net(shape, nlayers);
-    printf("after\n");
     size_t num_rows;
     size_t num_cols;
     Matrix weight;
