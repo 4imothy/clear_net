@@ -27,6 +27,7 @@ Put these before including the /clear_net.h/ file in your code.
 | CLEAR_NET_ACT_HIDDEN    | The activation function of the hidden layer                             | /Leaky_RELU/             |
 | CLEAR_NET_ACT_NEG_SCALE | When using /Leaky RELU/, or /ELU/ this is the scale for negative values | /0.1/                    |
 *** Creating, Training and Saving a Neural Net
+This code is from [[./examples/xor.c][xor.c]].
 **** Define Training Strategy
 Define hidden and output activation function
 #+begin_src C
@@ -43,7 +44,6 @@ Define learning rate
   size_t* nlayers = ARR_LEN(shape);
 #+end_src
 **** Create the Input and Target Data
-This code is from [[./examples/xor.c][xor.c]].
 #+begin_src C
   Matrix data = alloc_mat(4, 3);
   for (size_t i = 0; i < 2; ++i) {
