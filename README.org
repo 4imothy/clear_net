@@ -1,7 +1,7 @@
 * [[https://en.wikipedia.org/wiki/C_(programming_language)][C]]learNet
 ** [[https://en.wikipedia.org/wiki/C_(programming_language)][C]] + Learn + Net
 A neural net framework for the creation and training of arbitrarily sized neural nets.
-Check out some of the examples in the /./examples/ directory.
+Check out some of the examples in the [[./examples][examples]] directory.
 ** Features
 - Simple interface to interact with the code
 - Training through backpropagation
@@ -43,7 +43,7 @@ Define learning rate
   size_t* nlayers = ARR_LEN(shape);
 #+end_src
 **** Create the Input and Target Data
-This code is from /xor.c/.
+This code is from [[./examples/xor.c][xor.c]].
 #+begin_src C
   Matrix data = alloc_mat(4, 3);
   for (size_t i = 0; i < 2; ++i) {
