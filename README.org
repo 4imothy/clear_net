@@ -11,7 +11,7 @@ Check out some of the examples in the [[./examples][examples]] directory.
 ** How To Use
 Put this code
 #+begin_src C
-define CLEAR_NET_IMPLEMENTATION
+#define CLEAR_NET_IMPLEMENTATION
 #+end_src C
 at the top of the /C/ source file to tell /ClearNet/ to implement its functions.
 *** Defines
