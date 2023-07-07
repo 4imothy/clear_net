@@ -75,9 +75,7 @@ int main(void) {
     Matrix output = mat_form(num_train, 1, num_var, &train[dim_input]);
     Matrix val_in = mat_form(num_train, dim_input, num_var, val);
     Matrix val_out = mat_form(num_train, 1, num_var, &val[dim_input]);
-    // size_t  shape[] = {dim_input, 16, 5, 5, 1};
-	// this shape should work 
-    size_t shape[] = {dim_input, 1};
+    size_t  shape[] = {dim_input, 16, 5, 5, 1};
     Net net = alloc_net(shape, ARR_LEN(shape));
     net_rand(net, -1, 1);
     size_t num_epochs = 200000;
