@@ -52,8 +52,8 @@ typedef enum {
     Sigmoid,
     ReLU,
     Leaky_ReLU,
-	Tanh,
-	ELU,
+    Tanh,
+    ELU,
 } Activation;
 
 /* Matrices */
@@ -117,7 +117,8 @@ float net_errorf(Net net, Matrix input, Matrix target);
 void net_print(Net net, char *name);
 void net_rand(Net net, float low, float high);
 void net_backprop(Net net, Matrix input, Matrix target);
-void net_print_results(Net net, Matrix input, Matrix target, float (*fix_output)(float));
+void net_print_results(Net net, Matrix input, Matrix target,
+                       float (*fix_output)(float));
 // void net_forward(Net net);
 
 #endif // CLEAR_NET
@@ -133,13 +134,13 @@ float actf(float x, Activation act) {
         return x > 0 ? x : 0.f;
     case Leaky_ReLU:
         return x >= 0 ? x : CLEAR_NET_ACT_NEG_SCALE * x;
-	case Tanh: {
-	  float e_to_x = expf(x);
-	  float e_to_neg_x = expf(-x);
-	  return (e_to_x - e_to_neg_x) / (e_to_x + e_to_neg_x);
-	}
-	case ELU:
-	  return x > 0 ? x : CLEAR_NET_ACT_NEG_SCALE * (expf(x) - 1);
+    case Tanh: {
+        float e_to_x = expf(x);
+        float e_to_neg_x = expf(-x);
+        return (e_to_x - e_to_neg_x) / (e_to_x + e_to_neg_x);
+    }
+    case ELU:
+        return x > 0 ? x : CLEAR_NET_ACT_NEG_SCALE * (expf(x) - 1);
     }
     CLEAR_NET_ASSERT(0 && "Invalid Activation");
     return 0.0f;
@@ -153,15 +154,15 @@ float dactf(float y, Activation act) {
         return y > 0 ? 1 : 0.f;
     case Leaky_ReLU:
         return y >= 0 ? 1 : CLEAR_NET_ACT_NEG_SCALE;
-	case Tanh:
-	  return 1 - y * y;
-	case ELU:
-	  // if result is negative then
-	  // y = CLEAR_NET_ACT_NEG_SCALE * (expf(x) - 1)
-	  // y = CLEAR_NET_ACT_NEG_SCALE(expf(x)) - CLEAR_NET_ACT_NEG_SCALE
-	  // y + CLEAR_NET_ACT_NEG_SLACE = CLEAR_NET_ACT_NEG_SCALE(expf(x))
-	  // otherwise it is 1
-	  return y > 0 ? 1 : y + CLEAR_NET_ACT_NEG_SCALE;
+    case Tanh:
+        return 1 - y * y;
+    case ELU:
+        // if result is negative then
+        // y = CLEAR_NET_ACT_NEG_SCALE * (expf(x) - 1)
+        // y = CLEAR_NET_ACT_NEG_SCALE(expf(x)) - CLEAR_NET_ACT_NEG_SCALE
+        // y + CLEAR_NET_ACT_NEG_SLACE = CLEAR_NET_ACT_NEG_SCALE(expf(x))
+        // otherwise it is 1
+        return y > 0 ? 1 : y + CLEAR_NET_ACT_NEG_SCALE;
     }
     CLEAR_NET_ASSERT(0 && "Invalid Activation");
     return 0.0f;
@@ -329,8 +330,8 @@ void dealloc_net(Net *net) {
         dealloc_mat(&net->weights[i]);
         dealloc_mat(&net->biases[i]);
         dealloc_mat(&net->activations[i]);
-		dealloc_mat(&net->activation_alters[i]);
-		dealloc_mat(&net->weight_alters[i]);
+        dealloc_mat(&net->activation_alters[i]);
+        dealloc_mat(&net->weight_alters[i]);
         // NOTE: Since shape is most likely created with {}
         // by users and is created with allocation when
         // reading from file, cannot consistently call
@@ -340,8 +341,8 @@ void dealloc_net(Net *net) {
 
     // Deallocate the activation matrix of the output layer
     dealloc_mat(&net->activations[net->nlayers - 1]);
-	dealloc_mat(&net->activation_alters[net->nlayers - 1]);
-	
+    dealloc_mat(&net->activation_alters[net->nlayers - 1]);
+
     // Set net properties to NULL and 0
     net->nlayers = 0;
     net->activations = NULL;
@@ -476,7 +477,8 @@ void net_backprop(Net net, Matrix input, Matrix target) {
     }
 }
 
-void net_print_results(Net net, Matrix input, Matrix target, float (*fix_output)(float)) {
+void net_print_results(Net net, Matrix input, Matrix target,
+                       float (*fix_output)(float)) {
     CLEAR_NET_ASSERT(input.nrows == target.nrows);
     CLEAR_NET_ASSERT(NET_OUTPUT(net).ncols == target.ncols);
     size_t num_i = input.nrows;
@@ -494,11 +496,11 @@ void net_print_results(Net net, Matrix input, Matrix target, float (*fix_output)
         }
         printf(" | ");
         for (size_t j = 0; j < dim_o; ++j) {
-		  printf("%f ", fix_output(MAT_GET(target, i, j)));
+            printf("%f ", fix_output(MAT_GET(target, i, j)));
         }
         printf(" | ");
         for (size_t j = 0; j < dim_o; ++j) {
-		  printf("%f ", fix_output(MAT_GET(NET_OUTPUT(net), 0, j)));
+            printf("%f ", fix_output(MAT_GET(NET_OUTPUT(net), 0, j)));
         }
         printf("\n");
     }
@@ -522,10 +524,10 @@ void net_save_to_file(char *file_name, Net net) {
 
 Net alloc_net_from_file(char *file_name) {
     FILE *fp = fopen(file_name, "rb");
-	if (fp == NULL) {
-	  fclose(fp);
-	}
-	CLEAR_NET_ASSERT(fp != NULL);
+    if (fp == NULL) {
+        fclose(fp);
+    }
+    CLEAR_NET_ASSERT(fp != NULL);
 
     size_t nlayers = 0;
     fread(&nlayers, sizeof(nlayers), 1, fp);
@@ -536,9 +538,9 @@ Net alloc_net_from_file(char *file_name) {
     size_t *shape = (size_t *)CLEAR_NET_ALLOC(nlayers * sizeof(nlayers));
     CLEAR_NET_ASSERT(shape != NULL);
     fread(shape, sizeof(*shape), nlayers, fp);
-	printf("bef\n");
+    printf("bef\n");
     Net net = alloc_net(shape, nlayers);
-	printf("after\n");
+    printf("after\n");
     size_t num_rows;
     size_t num_cols;
     Matrix weight;

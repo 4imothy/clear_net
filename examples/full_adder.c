@@ -33,7 +33,7 @@ int main() {
         mat_form(num_combinations, num_outputs, 5, &data[num_inputs]);
 
     size_t num_epochs = 20000;
-	size_t shape[] = {num_inputs, 3, 8, num_outputs};
+    size_t shape[] = {num_inputs, 3, 8, num_outputs};
     Net net = alloc_net(shape, ARR_LEN(shape));
     net_rand(net, -1, 1);
     float error_break = 0.01f;
@@ -49,14 +49,14 @@ int main() {
             break;
         }
     }
-	//	float do_nothing(float x){ return x;} 
+    //	float do_nothing(float x){ return x;}
     net_print_results(net, input, target, &roundf);
-	net_save_to_file("model", net);
-	dealloc_net(&net);
+    net_save_to_file("model", net);
+    dealloc_net(&net);
     net = alloc_net_from_file("model");
     printf("After loading file\n");
     net_print_results(net, input, target, &roundf);
-	dealloc_net(&net);
-        
+    dealloc_net(&net);
+
     return 0;
 }
