@@ -15,16 +15,16 @@ float rand_rangef(float lower, float upper) {
 }
 
 #define do_func(a, b, c, d, e, f, g, h)                                        \
-  (2 + 4 * (a) - 3 * (b) + 5 * (c) + 6 * (d) -2 * (e) + 7 * (f)-8 * (g) + \
+    (2 + 4 * (a)-3 * (b) + 5 * (c) + 6 * (d)-2 * (e) + 7 * (f)-8 * (g) +       \
      9 * (h))
 
 const float len = 1;
 const float lower = -1.0f * len;
 const float upper = len;
 
-// const float max = do_func(upper, upper, upper, upper, upper, upper, upper, upper);
-const float max =
-    do_func(1, 1, 1, 1, 1, 1, 1, 1);
+// const float max = do_func(upper, upper, upper, upper, upper, upper, upper,
+// upper);
+const float max = do_func(1, 1, 1, 1, 1, 1, 1, 1);
 
 const size_t dim_input = num_var - 1;
 
@@ -42,8 +42,8 @@ int main(void) {
     float h;
     for (size_t i = 0; i < num_train; ++i) {
         for (size_t j = 0; j < num_var; ++j) {
-		  train[i * num_var + j] = rand_rangef(lower, upper);
-		  val[i * num_var + j] = rand_rangef(lower, upper);
+            train[i * num_var + j] = rand_rangef(lower, upper);
+            val[i * num_var + j] = rand_rangef(lower, upper);
             if (j == num_var - 1) {
                 a = train[i * num_var];
                 b = train[i * num_var + 1];
@@ -54,9 +54,9 @@ int main(void) {
                 g = train[i * num_var + 6];
                 h = train[i * num_var + 7];
                 train[i * num_var + num_var - 1] =
-				  do_func(a, b, c, d, e, f, g, h) / max;
-				
-	    	    a = val[i * num_var];
+                    do_func(a, b, c, d, e, f, g, h) / max;
+
+                a = val[i * num_var];
                 b = val[i * num_var + 1];
                 c = val[i * num_var + 2];
                 d = val[i * num_var + 3];
@@ -65,7 +65,7 @@ int main(void) {
                 g = val[i * num_var + 6];
                 h = val[i * num_var + 7];
                 val[i * num_var + num_var - 1] =
-				  do_func(a, b, c, d, e, f, g, h) / max;
+                    do_func(a, b, c, d, e, f, g, h) / max;
             }
         }
     }

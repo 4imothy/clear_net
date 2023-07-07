@@ -136,7 +136,7 @@ float actf(float x, Activation act) {
     case Tanh: {
         float e_to_x = expf(x);
         float e_to_neg_x = expf(-x);
-		return (e_to_x - e_to_neg_x) / (e_to_x + e_to_neg_x);
+        return (e_to_x - e_to_neg_x) / (e_to_x + e_to_neg_x);
     }
     case ELU:
         return x > 0 ? x : CLEAR_NET_ACT_NEG_SCALE * (expf(x) - 1);
@@ -300,8 +300,7 @@ Net alloc_net(size_t *shape, size_t nlayers) {
     net.activations = CLEAR_NET_ALLOC(sizeof(*net.activations) * (net.nlayers));
     CLEAR_NET_ASSERT(net.activations != NULL);
 
-    net.buffer =
-        CLEAR_NET_ALLOC(sizeof(*net.buffer) * (net.nlayers));
+    net.buffer = CLEAR_NET_ALLOC(sizeof(*net.buffer) * (net.nlayers));
     CLEAR_NET_ASSERT(net.buffer != NULL);
 
     // allocate the thing that will be the input
