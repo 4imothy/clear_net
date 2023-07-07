@@ -22,8 +22,7 @@ const float len = 1;
 const float lower = -1.0f * len;
 const float upper = len;
 
-// const float max = do_func(upper, upper, upper, upper, upper, upper, upper,
-// upper);
+// data is normalized
 const float max = do_func(1, 1, 1, 1, 1, 1, 1, 1);
 
 const size_t dim_input = num_var - 1;
