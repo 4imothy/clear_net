@@ -27,7 +27,7 @@ const float max = do_func(1, 1, 1, 1, 1, 1, 1, 1);
 
 const size_t dim_input = num_var - 1;
 
-float mul_max(float x) { return (x * max * upper - (2 * upper)); }
+float mul_max(float x) { return (x * max); }
 
 int main(void) {
     srand(0);
