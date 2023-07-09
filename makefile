@@ -3,43 +3,33 @@ CFLAGS := -Wall -Wextra -pedantic
 FORMAT := clang-format
 LIB_FILE := clear_net.h
 EXAMPLE_DIR := examples
-EXAMPLE_FILES := $(shell find $(EXAMPLE_DIR) -name '*.c')
+EXAMPLE_FILES := $(wildcard $(EXAMPLE_DIR)/*.c)
 BENCH_FILE := ./benchmarks/bench.py
+BENCH_MAT_MUL_FILE := ./benchmarks/bench_mat_mul.c
+
+.PHONY: all clean format
+
+all: xor full_adder iris lin_reg bench_mul
 
 clear_net: $(LIB_FILE)
 
-xor: clear_net $(EXAMPLE_FILES)
-	$(CC) $(CFLAGS) -o $@ $(EXAMPLE_DIR)/xor.c
+xor full_adder iris lin_reg: clear_net $(EXAMPLE_FILES)
+	$(CC) $(CFLAGS) -o $@ $(EXAMPLE_DIR)/$@.c
 
-run_xor: xor
-	./xor
+run_%: %
+	./$<
 
-full_adder: clear_net $(EXAMPLE_FILES)
-	$(CC) $(CFLAGS) -o $@ $(EXAMPLE_DIR)/full_adder.c
-
-run_adder: full_adder
-	./full_adder
-
-iris: clear_net $(EXAMPLE_FILES)
-	$(CC) $(CFLAGS) -o $@ $(EXAMPLE_DIR)/iris.c
-
-run_iris: iris
-	./iris
-
-lin_reg: clear_net $(EXAMPLE_FILES)
-	$(CC) $(CFLAGS) -o $@ $(EXAMPLE_DIR)/linear_regression.c
-
-run_lin_reg: lin_reg
-	./lin_reg
-
-run_bench: iris adder xor
+run_bench: iris full_adder xor
 	python3 $(BENCH_FILE)
 
-FORMAT_STYLE := -style="{BasedOnStyle: llvm, IndentWidth: 4, TabWidth: 4, UseTab: Never}"
+bench_mul: $(BENCH_MAT_MUL_FILE)
+	$(CC) $(CFLAGS) -o $@ $<
+
+run_bench_mul: clear_net bench_mul
+	./$<
+
 format:
-	$(FORMAT) $(FORMAT_STYLE) -i $(EXAMPLE_FILES) $(LIB_FILE)
+	$(FORMAT) -style="{BasedOnStyle: llvm, IndentWidth: 4, TabWidth: 4, UseTab: Never}" -i $(EXAMPLE_FILES) $(LIB_FILE)
 
 clean:
-	rm xor
-	rm adder
-	rm iris
+	rm -f xor full_adder iris lin_reg bench_mul
