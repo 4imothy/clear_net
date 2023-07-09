@@ -49,11 +49,11 @@ int main() {
             break;
         }
     }
-    //	float do_nothing(float x){ return x;}
     net_print_results(net, input, target, &roundf);
-    net_save_to_file("model", net);
+	char* name = "adder_model";
+    net_save_to_file(name, net);
     dealloc_net(&net);
-    net = alloc_net_from_file("model");
+    net = alloc_net_from_file(name);
     printf("After loading file\n");
     net_print_results(net, input, target, &roundf);
     dealloc_net(&net);
