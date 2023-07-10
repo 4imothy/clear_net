@@ -1,6 +1,4 @@
 #define CLEAR_NET_IMPLEMENTATION
-#define CLEAR_NET_ACT_OUTPUT ELU
-#define CLEAR_NET_ACT_HIDDEN ELU
 #include "../clear_net.h"
 
 #define BITS_PER_NUM 1
