@@ -19,17 +19,18 @@ xor full_adder iris lin_reg: clear_net $(EXAMPLE_FILES)
 run_%: %
 	./$<
 
-run_bench: iris full_adder xor
+# benching only implemented for iris examples
+run_bench: iris
 	python3 $(BENCH_FILE)
 
 bench_mul: $(BENCH_MAT_MUL_FILE)
 	$(CC) $(CFLAGS) -o $@ $<
 
-run_bench_mul: clear_net bench_mul
+run_bench_mul: bench_mul clear_net
 	./$<
 
 format:
-	$(FORMAT) -style="{BasedOnStyle: llvm, IndentWidth: 4, TabWidth: 4, UseTab: Never}" -i $(EXAMPLE_FILES) $(LIB_FILE)
+	$(FORMAT) -style="{BasedOnStyle: llvm, IndentWidth: 4, TabWidth: 4, UseTab: Never}" -i $(EXAMPLE_FILES) $(LIB_FILE) $(BENCH_MAT_MUL_FILE)
 
 clean:
 	rm -f xor full_adder iris lin_reg bench_mul
