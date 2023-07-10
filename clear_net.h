@@ -1,3 +1,4 @@
+// TODO implement strassen and other faster matrix multiplication algorithms
 #ifndef CLEAR_NET
 #define CLEAR_NET
 
@@ -227,26 +228,6 @@ void mat_rand(Matrix mat, float lower, float upper) {
     }
 }
 
-void mat_mul(Matrix dest, Matrix left, Matrix right) {
-    // ensure that the inner dimensions are equal
-    CLEAR_NET_ASSERT(left.ncols == right.nrows);
-    size_t inner = left.ncols;
-    // assert that destination has the outer dimensions
-    CLEAR_NET_ASSERT(dest.nrows == left.nrows);
-    CLEAR_NET_ASSERT(dest.ncols == right.ncols);
-    // iterate over outer size
-    for (size_t i = 0; i < left.nrows; ++i) {
-        for (size_t j = 0; j < right.ncols; ++j) {
-            MAT_GET(dest, i, j) = 0;
-            // iterater over the inner size
-            for (size_t k = 0; k < inner; ++k) {
-                MAT_GET(dest, i, j) +=
-                    MAT_GET(left, i, k) * MAT_GET(right, k, j);
-            }
-        }
-    }
-}
-
 void mat_sum(Matrix dest, Matrix toAdd) {
     CLEAR_NET_ASSERT(dest.nrows == toAdd.nrows);
     CLEAR_NET_ASSERT(dest.ncols == toAdd.ncols);
@@ -269,6 +250,23 @@ void mat_fill(Matrix m, float x) {
     for (size_t i = 0; i < m.nrows; ++i) {
         for (size_t j = 0; j < m.ncols; ++j) {
             MAT_GET(m, i, j) = x;
+        }
+    }
+}
+
+void mat_mul(Matrix dest, Matrix left, Matrix right) {
+    CLEAR_NET_ASSERT(left.ncols == right.nrows);
+    CLEAR_NET_ASSERT(dest.nrows == left.nrows);
+    CLEAR_NET_ASSERT(dest.ncols == right.ncols);
+	
+    mat_fill(dest, 0);
+
+    for (size_t i = 0; i < dest.nrows; ++i) {
+        for (size_t k = 0; k < left.ncols; ++k) {
+            for (size_t j = 0; j < dest.ncols; ++j) {
+                MAT_GET(dest, i, j) +=
+                    MAT_GET(left, i, k) * MAT_GET(right, k, j);
+            }
         }
     }
 }
