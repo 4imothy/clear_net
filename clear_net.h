@@ -1,4 +1,3 @@
-// TODO implement strassen and other faster matrix multiplication algorithms
 #ifndef CLEAR_NET
 #define CLEAR_NET
 
@@ -258,7 +257,7 @@ void mat_mul(Matrix dest, Matrix left, Matrix right) {
     CLEAR_NET_ASSERT(left.ncols == right.nrows);
     CLEAR_NET_ASSERT(dest.nrows == left.nrows);
     CLEAR_NET_ASSERT(dest.ncols == right.ncols);
-	
+
     mat_fill(dest, 0);
 
     for (size_t i = 0; i < dest.nrows; ++i) {
