@@ -1,12 +1,14 @@
 .DS_Store
 # python env for benching
 env
-# example binaries
+# binaries
 xor
 adder
 iris
 full_adder
 lin_reg
+bench_mul
 # model save files
 model
+adder_model
 lin_reg_model
