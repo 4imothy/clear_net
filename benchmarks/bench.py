@@ -16,7 +16,8 @@ def time_command(command):
     """Time the given command by running it."""
     start = time.time()
     subprocess.call(command, stdout=subprocess.DEVNULL,
-                    stderr=subprocess.STDOUT)
+                    stderr=subprocess.STDOUT, cwd=parent_dir)
+    # subprocess.call(command)
     end = time.time()
     return end - start
 
@@ -41,7 +42,6 @@ def measure_memory_usage(command):
 
 commands = [
     ['./iris', '-b'],
-    # pure python is probably also a pretty bad implementation
     ['python', f'./{bench_dir}/pure_python_iris.py'],
     ['python', f'./{bench_dir}/pytorch_iris.py'],
 ]
