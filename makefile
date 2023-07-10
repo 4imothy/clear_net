@@ -6,10 +6,8 @@ EXAMPLE_DIR := examples
 EXAMPLE_FILES := $(wildcard $(EXAMPLE_DIR)/*.c)
 BENCH_FILE := ./benchmarks/bench.py
 BENCH_MAT_MUL_FILE := ./benchmarks/bench_mat_mul.c
-
-.PHONY: all clean format
-
-all: xor full_adder iris lin_reg bench_mul
+C_FILES := $(shell find . -name '*.c' -not -path "./env/*")
+H_FILES := $(shell find . -name '*.h' -not -path "./env/*")
 
 clear_net: $(LIB_FILE)
 
@@ -29,8 +27,8 @@ bench_mul: $(BENCH_MAT_MUL_FILE)
 run_bench_mul: bench_mul clear_net
 	./$<
 
-format:
-	$(FORMAT) -style="{BasedOnStyle: llvm, IndentWidth: 4, TabWidth: 4, UseTab: Never}" -i $(EXAMPLE_FILES) $(LIB_FILE) $(BENCH_MAT_MUL_FILE)
+format: $(C_FILES) $(H_FILES)
+	$(FORMAT) -style="{BasedOnStyle: llvm, IndentWidth: 4, TabWidth: 4, UseTab: Never}" -i $(C_FILES) $(H_FILES)
 
 clean:
-	rm -f xor full_adder iris lin_reg bench_mul
+	rm -f xor full_adder iris lin_reg bench_mul model lin_reg_model adder_model
