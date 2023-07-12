@@ -119,7 +119,8 @@ void net_rand(Net net, float low, float high);
 void net_backprop(Net net, Matrix input, Matrix target);
 void net_print_results(Net net, Matrix input, Matrix target,
                        float (*fix_output)(float));
-void net_get_batch(Matrix *batch_input, Matrix* batch_output, Matrix input, Matrix output, size_t batch_num, size_t batch_size);
+void net_get_batch(Matrix *batch_input, Matrix *batch_output, Matrix input,
+                   Matrix output, size_t batch_num, size_t batch_size);
 // void net_forward(Net net);
 
 #endif // CLEAR_NET
@@ -132,7 +133,7 @@ float actf(float x, Activation act) {
     case Sigmoid:
         return 1 / (1 + expf(-x));
     case ReLU:
-	  return x > 0 ? x : 0;
+        return x > 0 ? x : 0;
     case Leaky_ReLU:
         return x >= 0 ? x : CLEAR_NET_ACT_NEG_SCALE * x;
     case Tanh: {
@@ -273,16 +274,16 @@ void mat_mul(Matrix dest, Matrix left, Matrix right) {
 }
 
 void mat_randomize_rows(Matrix mat) {
-  for (size_t i = 0; i < mat.nrows; ++i) {
-    size_t j = i + rand() % (mat.nrows - i);
-    if (i != j) {
-      for (size_t k = 0; k < mat.ncols; ++k) {
-        float t = MAT_GET(mat, i, k);
-        MAT_GET(mat, i, k) = MAT_GET(mat, j, k);
-        MAT_GET(mat, j, k) = t;
-      }
+    for (size_t i = 0; i < mat.nrows; ++i) {
+        size_t j = i + rand() % (mat.nrows - i);
+        if (i != j) {
+            for (size_t k = 0; k < mat.ncols; ++k) {
+                float t = MAT_GET(mat, i, k);
+                MAT_GET(mat, i, k) = MAT_GET(mat, j, k);
+                MAT_GET(mat, j, k) = t;
+            }
+        }
     }
-  }
 }
 
 void mat_write_to_file(FILE *fp, Matrix mat) {
@@ -325,8 +326,8 @@ Net alloc_net(size_t *shape, size_t nlayers) {
         net.weights[i - 1] = alloc_mat(net.activations[i - 1].ncols, shape[i]);
         net.weight_alters[i - 1] =
             alloc_mat(net.activations[i - 1].ncols, shape[i]);
-		// this is to avoid nan errors
-		mat_fill(net.weight_alters[i-1],0);
+        // this is to avoid nan errors
+        mat_fill(net.weight_alters[i - 1], 0);
         // allocate biases as one row and the shape of this layer
         net.biases[i - 1] = alloc_mat(1, shape[i]);
         // allocate activations as one row to add to each
@@ -474,11 +475,11 @@ void net_backprop(Net net, Matrix input, Matrix target) {
             mat_fill(net.buffer[j], 0);
         }
     }
-	
+
     for (size_t i = 0; i < net.nlayers - 1; ++i) {
         for (size_t j = 0; j < net.weights[i].nrows; ++j) {
             for (size_t k = 0; k < net.weights[i].ncols; ++k) {
-			    MAT_GET(net.weights[i], j, k) -=
+                MAT_GET(net.weights[i], j, k) -=
                     MAT_GET(net.weight_alters[i], j, k);
                 // reset for next backpropagation
                 MAT_GET(net.weight_alters[i], j, k) = 0;
@@ -487,9 +488,12 @@ void net_backprop(Net net, Matrix input, Matrix target) {
     }
 }
 
-void net_get_batch(Matrix *batch_input, Matrix* batch_output, Matrix input, Matrix output, size_t batch_num, size_t batch_size) {
-  *batch_input = mat_form(batch_size, input.ncols, input.stride, &MAT_GET(input, batch_num * batch_size, 0));
-  *batch_output = mat_form(batch_size, output.ncols, output.stride, &MAT_GET(output, batch_num * batch_size, 0));
+void net_get_batch(Matrix *batch_input, Matrix *batch_output, Matrix input,
+                   Matrix output, size_t batch_num, size_t batch_size) {
+    *batch_input = mat_form(batch_size, input.ncols, input.stride,
+                            &MAT_GET(input, batch_num * batch_size, 0));
+    *batch_output = mat_form(batch_size, output.ncols, output.stride,
+                             &MAT_GET(output, batch_num * batch_size, 0));
 }
 
 void net_print_results(Net net, Matrix input, Matrix target,
