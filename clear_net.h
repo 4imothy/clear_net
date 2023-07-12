@@ -130,9 +130,9 @@ void net_get_batch(Matrix *batch_input, Matrix* batch_output, Matrix input, Matr
 float actf(float x, Activation act) {
     switch (act) {
     case Sigmoid:
-        return 1.f / (1.f + expf(-x));
+        return 1 / (1 + expf(-x));
     case ReLU:
-        return x > 0 ? x : 0.f;
+	  return x > 0 ? x : 0;
     case Leaky_ReLU:
         return x >= 0 ? x : CLEAR_NET_ACT_NEG_SCALE * x;
     case Tanh: {
@@ -144,7 +144,7 @@ float actf(float x, Activation act) {
         return x > 0 ? x : CLEAR_NET_ACT_NEG_SCALE * (expf(x) - 1);
     }
     CLEAR_NET_ASSERT(0 && "Invalid Activation");
-    return 0.0f;
+    return 0;
 }
 
 float dactf(float y, Activation act) {
@@ -152,7 +152,7 @@ float dactf(float y, Activation act) {
     case Sigmoid:
         return y * (1 - y);
     case ReLU:
-        return y > 0 ? 1 : 0.f;
+        return y > 0 ? 1.f : 0.f;
     case Leaky_ReLU:
         return y >= 0 ? 1 : CLEAR_NET_ACT_NEG_SCALE;
     case Tanh:
@@ -325,6 +325,8 @@ Net alloc_net(size_t *shape, size_t nlayers) {
         net.weights[i - 1] = alloc_mat(net.activations[i - 1].ncols, shape[i]);
         net.weight_alters[i - 1] =
             alloc_mat(net.activations[i - 1].ncols, shape[i]);
+		// this is to avoid nan errors
+		mat_fill(net.weight_alters[i-1],0);
         // allocate biases as one row and the shape of this layer
         net.biases[i - 1] = alloc_mat(1, shape[i]);
         // allocate activations as one row to add to each
@@ -413,7 +415,6 @@ float net_errorf(Net net, Matrix input, Matrix target) {
             err += difference * difference;
         }
     }
-
     return err / num_input;
 }
 
@@ -477,7 +478,7 @@ void net_backprop(Net net, Matrix input, Matrix target) {
     for (size_t i = 0; i < net.nlayers - 1; ++i) {
         for (size_t j = 0; j < net.weights[i].nrows; ++j) {
             for (size_t k = 0; k < net.weights[i].ncols; ++k) {
-                MAT_GET(net.weights[i], j, k) -=
+			    MAT_GET(net.weights[i], j, k) -=
                     MAT_GET(net.weight_alters[i], j, k);
                 // reset for next backpropagation
                 MAT_GET(net.weight_alters[i], j, k) = 0;
