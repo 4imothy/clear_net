@@ -11,7 +11,7 @@ H_FILES := $(shell find . -name '*.h' -not -path "./env/*")
 
 clear_net: $(LIB_FILE)
 
-xor full_adder iris lin_reg: clear_net $(EXAMPLE_FILES)
+mnist xor full_adder iris lin_reg: clear_net $(EXAMPLE_FILES)
 	$(CC) $(CFLAGS) -o $@ $(EXAMPLE_DIR)/$@.c
 
 run_%: %
@@ -31,4 +31,5 @@ format: $(C_FILES) $(H_FILES)
 	$(FORMAT) -style="{BasedOnStyle: llvm, IndentWidth: 4, TabWidth: 4, UseTab: Never}" -i $(C_FILES) $(H_FILES)
 
 clean:
-	rm -f xor full_adder iris lin_reg bench_mul model lin_reg_model adder_model
+	rm -f xor full_adder iris lin_reg mnist bench_mul
+	rm -f model lin_reg_model adder_model
