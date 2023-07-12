@@ -8,6 +8,7 @@ Check out some of the examples in the [[./examples][examples]] directory.
 - Ability to save and load a neural net to a file
 - Customize the activation functions for output and hidden layers
 - Multiple activation functions: /Sigmoid, ReLU, Leaky_ReLU, Tanh, ELU/
+- An easy way to implement stochastic gradient descent, see the [[./examples/mnist.c][mnist example]]
 ** How To Use
 Put this code
 #+begin_src C
