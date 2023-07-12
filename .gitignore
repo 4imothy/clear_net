@@ -12,3 +12,5 @@ bench_mul
 model
 adder_model
 lin_reg_model
+# ignore file of youtube demo
+resources/youtube_demo.mov
