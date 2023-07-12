@@ -99,7 +99,7 @@ int main(void) {
     net_rand(net, -1, 1);
     size_t num_epochs = 20000;
     float error;
-    float error_break = 0.01;
+    float error_break = 0.007;
     // Use stochastic gradient descent
     Matrix batch_input;
     Matrix batch_output;
@@ -132,6 +132,14 @@ int main(void) {
            net_errorf(net, train_input, train_output));
     printf("After Loading, Error on testing set: %f\n",
            net_errorf(net, test_input, test_output));
+	printf("Actual | Prediction\n");
+	for (size_t i = 0; i < num_test_files; ++i) {
+	  Matrix in = mat_row(test_input, i);
+	  mat_copy(NET_INPUT(net), in);
+	  net_forward(net);
+	  printf("%f | ", MAT_GET(test_output, i, 0));
+	  printf("%f\n", MAT_GET(NET_OUTPUT(net), 0, 0));
+	}
     dealloc_mat(&train);
     dealloc_mat(&test);
 }
