@@ -3,8 +3,13 @@
 A neural net framework for the creation and training of arbitrarily sized neural nets.
 Check out some of the examples in the [[./examples][examples]] directory.
 ** Features
-- Simple interface to interact with the code
-- Training through backpropagation
+- Training with gradient descent and backpropagation
+  - Momentum is optionally enabled and uses these equations
+    #+begin_src latex
+      v_{dw} = \Beta v_{dw} + (1-\Beta)dw
+      v_{db} = \Beta v_{db} + (1-\Beta)db
+    #+end_src
+- Simple interface for hyperparameter tuning
 - Ability to save and load a neural net to a file
 - Customize the activation functions for output and hidden layers
 - Multiple activation functions: /Sigmoid, ReLU, Leaky_ReLU, Tanh, ELU/
