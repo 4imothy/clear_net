@@ -8,8 +8,9 @@ Check out some of the examples in the [[./examples][examples]] directory.
     
     \begin{equation}
 
-      $v_{dw} = \Beta v_{dw} + (1-\Beta)dw$
-      $v_{db} = \Beta v_{db} + (1-\Beta)db$
+      v_{dw} = \Beta v_{dw} + (1-\Beta)dw
+
+      v_{db} = \Beta v_{db} + (1-\Beta)db
 
     \end{equation}
     
