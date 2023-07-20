@@ -1,10 +1,9 @@
 #define CLEAR_NET_IMPLEMENTATION
 #include "../clear_net.h"
-
 #define BITS_PER_NUM 1
 
 // a full adder with carry in and carry out
-int main() {
+int main(void) {
     srand(0);
     // clang-format off
     float data[] = {
