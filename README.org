@@ -5,17 +5,10 @@ Check out some of the examples in the [[./examples][examples]] directory.
 ** Features
 - Training with gradient descent and backpropagation
   - Momentum is optionally enabled and uses these equations
-    
-    \begin{equation}
-
-      v_{dw} = \Beta v_{dw} + (1-\Beta)dw
-
-      v_{db} = \Beta v_{db} + (1-\Beta)db
-
-    \end{equation}
-    
-      - $v_{dw} = \Beta v_{dw} + (1-\Beta)dw$
-      - $v_{db} = \Beta v_{db} + (1-\Beta)db$
+    #+begin_src latex
+      v_{dw} = \beta v_{dw} + (1-\beta)dw
+      v_{db} = \beta v_{db} + (1-\beta)db
+    #+end_src
 - Simple interface for hyperparameter tuning
 - Ability to save and load a neural net to a file
 - Customize the activation functions for output and hidden layers
