@@ -5,10 +5,14 @@ Check out some of the examples in the [[./examples][examples]] directory.
 ** Features
 - Training with gradient descent and backpropagation
   - Momentum is optionally enabled and uses these equations
+    
     \begin{equation}
+
       $v_{dw} = \Beta v_{dw} + (1-\Beta)dw$
       $v_{db} = \Beta v_{db} + (1-\Beta)db$
+
     \end{equation}
+    
       - $v_{dw} = \Beta v_{dw} + (1-\Beta)dw$
       - $v_{db} = \Beta v_{db} + (1-\Beta)db$
 - Simple interface for hyperparameter tuning
