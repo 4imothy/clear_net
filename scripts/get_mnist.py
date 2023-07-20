@@ -1,4 +1,8 @@
-# Code mostly copied from: https://huggingface.co/datasets/mnist/blob/main/mnist.py
+"""Python script to get the mnist data set.
+
+Mostly copied from: https://huggingface.co/datasets/mnist/blob/main/mnist.py
+"""
+
 import os
 import requests
 import gzip
@@ -36,7 +40,7 @@ for key, url in urls_to_download.items():
 
     # Remove the gzipped file
     os.remove(file_path)
-    
+
     if "images" in key:
         label_key = key.replace("images", "labels")
         label_file_path = os.path.join(download_dir, label_key)
@@ -47,7 +51,8 @@ for key, url in urls_to_download.items():
         out_dir = os.path.join(download_dir, out_dir)
         os.makedirs(out_dir, exist_ok=True)
 
-        with open(unzipped_file_path, "rb") as image_file, open(label_file_path, "rb") as label_file:
+        with open(unzipped_file_path, "rb") as image_file, \
+             open(label_file_path, "rb") as label_file:
             magic_number = int.from_bytes(image_file.read(4), byteorder="big")
             num_images = int.from_bytes(image_file.read(4), byteorder="big")
             num_rows = int.from_bytes(image_file.read(4), byteorder="big")

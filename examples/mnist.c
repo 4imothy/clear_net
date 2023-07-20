@@ -1,6 +1,5 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "../external/stb_image.h"
-
 #define CLEAR_NET_IMPLEMENTATION
 #include "../clear_net.h"
 
@@ -99,7 +98,7 @@ int main(void) {
     net_rand(net, -1, 1);
     size_t num_epochs = 20000;
     float error;
-    float error_break = 0.007;
+    float error_break = 0.01;
     // Use stochastic gradient descent
     Matrix batch_input;
     Matrix batch_output;
