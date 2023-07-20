@@ -103,7 +103,7 @@ int main(void) {
     // Use stochastic gradient descent
     Matrix batch_input;
     Matrix batch_output;
-    size_t batch_size = 20;
+    size_t batch_size = 10;
     CLEAR_NET_ASSERT(num_train_files % batch_size == 0);
     printf("Beginning Training\n");
     printf("Initial Cost: %f\n", net_errorf(net, train_input, train_output));
