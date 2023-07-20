@@ -1,4 +1,31 @@
-// TODO add a nice header to the file with information
+/* Clear Net
+  A framework for the creation and training of arbitrarily sized neural nets.
+  Features:
+    - Training with gradient descent and backpropagation
+    - Optionall can utilize gradient descent with momentum with these equations
+        - v_{dw} = \beta v_{dw} + (1-\beta)dw
+        - W = W - \alpha v_{dw}
+        - v_{db} = \beta v_{db} + (1-\beta)db
+        - b = b - \alpha v_{db}
+    - Simple interface for hyperparameter tuning (see macros below)
+    - Ability to save and load a neural net to a file
+    - Customize the activation functions for output and hidden layers
+    - Multiple activation functions: Sigmoid, ReLU, Leaky_ReLU, Tanh, ELU
+	
+  Basic Structure of a Net:
+    Each layer consists of weights -> biases -> activation.
+    In each forward, each layer takes the previous activation matrix and multiplies it
+    with the weights, then adds the bias and then applies the correct activation function.
+    Each column in the weight matrix is a neuron.
+    Each activation * weights results in a single column matrix
+    which the bias is added to.
+
+  Below are the definitions of structs, enums, macros and the
+  declaractions of functions that are defined later.
+  Some functions are commented out to abstract and
+  keep users' namespace sane.
+*/
+
 // TODO see if all the extra buffer stores are really necessary
 #ifndef CLEAR_NET
 #define CLEAR_NET
@@ -43,12 +70,6 @@
 #define CLEAR_NET_MOMENTUM_BETA 0.9
 #endif // CLEAR_NET_MOMENTUM_BETA
 
-/*
-Below are the definitions of structs and enums and the
-declaractions of functions that are defined later.
-Some functions are commented out to abstract and
-keep users' namespace sane.
-*/
 
 // float randf(void);
 
@@ -88,14 +109,6 @@ void mat_randomize_rows(Matrix mat);
 // void mat_rand(Matrix mat, float lower, float upper);
 // void mat_act(Matrix mat);
 
-/* Basic Structure:
-Each layer consists of weights -> biases -> activation.
-Each forward takes the previous activation matrix multiply
-with the weights, add the bias apply correct activation function.
-Each column in the weight matrix is a neuron.
-Each activation * weights results in a single column matrix
-which the bias is added to.
-*/
 typedef struct {
     size_t nlayers;
     Matrix *activations;
@@ -309,7 +322,6 @@ void mat_write_to_file(FILE *fp, Matrix mat) {
 /*******/
 /* Net */
 /*******/
-
 Net alloc_net(size_t *shape, size_t nlayers) {
     Net net;
     net.nlayers = nlayers;
