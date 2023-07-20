@@ -1,6 +1,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "../external/stb_image.h"
 #define CLEAR_NET_IMPLEMENTATION
+#define CLEAR_NET_MOMENTUM 1
 #include "../clear_net.h"
 
 #include <dirent.h>
@@ -102,7 +103,7 @@ int main(void) {
     // Use stochastic gradient descent
     Matrix batch_input;
     Matrix batch_output;
-    size_t batch_size = 10;
+    size_t batch_size = 20;
     CLEAR_NET_ASSERT(num_train_files % batch_size == 0);
     printf("Beginning Training\n");
     printf("Initial Cost: %f\n", net_errorf(net, train_input, train_output));
