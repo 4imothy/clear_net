@@ -1,3 +1,5 @@
+// TODO add a nice header to the file with information
+// TODO see if all the extra buffer stores are really necessary
 #ifndef CLEAR_NET
 #define CLEAR_NET
 
@@ -34,6 +36,13 @@
 #define CLEAR_NET_ACT_NEG_SCALE 0.1f
 #endif // CLEAR_NET_NEG_SCALE
 
+#ifndef CLEAR_NET_MOMENTUM
+#define CLEAR_NET_MOMENTUM 0
+#endif // CLEAR_NET_MOMENTUM
+#ifndef CLEAR_NET_MOMENTUM_BETA
+#define CLEAR_NET_MOMENTUM_BETA 0.9
+#endif // CLEAR_NET_MOMENTUM_BETA
+
 /*
 Below are the definitions of structs and enums and the
 declaractions of functions that are defined later.
@@ -43,7 +52,6 @@ keep users' namespace sane.
 
 // float randf(void);
 
-/* Activation functions */
 // float reluf(float x);
 // float actf(float x, Activation act);
 // float dactf(float y, Activation act);
@@ -55,7 +63,6 @@ typedef enum {
     ELU,
 } Activation;
 
-/* Matrices */
 typedef struct {
     // define the shape
     size_t nrows;
@@ -81,8 +88,7 @@ void mat_randomize_rows(Matrix mat);
 // void mat_rand(Matrix mat, float lower, float upper);
 // void mat_act(Matrix mat);
 
-/* Net
-Basic Structure
+/* Basic Structure:
 Each layer consists of weights -> biases -> activation.
 Each forward takes the previous activation matrix multiply
 with the weights, add the bias apply correct activation function.
@@ -100,6 +106,8 @@ typedef struct {
     Matrix *weight_alters;
     // stores changes in activation results
     Matrix *buffer;
+    Matrix *momentum_weight_store;
+    Matrix *momentum_bias_store;
     size_t *shape;
 } Net;
 
@@ -127,7 +135,9 @@ void net_get_batch(Matrix *batch_input, Matrix *batch_output, Matrix input,
 
 #ifdef CLEAR_NET_IMPLEMENTATION
 
+/************************/
 /* Activation Functions */
+/************************/
 float actf(float x, Activation act) {
     switch (act) {
     case Sigmoid:
@@ -170,7 +180,9 @@ float dactf(float y, Activation act) {
     return 0.0f;
 }
 
+/************/
 /* Matrices */
+/************/
 Matrix alloc_mat(size_t nrows, size_t ncols) {
     Matrix mat;
     mat.nrows = nrows;
@@ -294,7 +306,10 @@ void mat_write_to_file(FILE *fp, Matrix mat) {
     }
 }
 
+/*******/
 /* Net */
+/*******/
+
 Net alloc_net(size_t *shape, size_t nlayers) {
     Net net;
     net.nlayers = nlayers;
@@ -316,18 +331,36 @@ Net alloc_net(size_t *shape, size_t nlayers) {
     net.buffer = CLEAR_NET_ALLOC(sizeof(*net.buffer) * (net.nlayers));
     CLEAR_NET_ASSERT(net.buffer != NULL);
 
+    if (CLEAR_NET_MOMENTUM) {
+        net.momentum_weight_store = CLEAR_NET_ALLOC(
+            sizeof(*net.momentum_weight_store) * (net.nlayers - 1));
+        CLEAR_NET_ASSERT(net.momentum_weight_store != NULL);
+
+        net.momentum_bias_store = CLEAR_NET_ALLOC(
+            sizeof(*net.momentum_bias_store) * (net.nlayers - 1));
+        CLEAR_NET_ASSERT(net.momentum_bias_store != NULL);
+    }
+
     // allocate the thing that will be the input
     // one row by the dimensions of the input
     net.activations[0] = alloc_mat(1, shape[0]);
     net.buffer[0] = alloc_mat(1, shape[0]);
+    // matrices are filled if they are read before set
     for (size_t i = 1; i < net.nlayers; ++i) {
         // allocate weights by the columns of previous activation and the
         // number of neurons of the this layer
         net.weights[i - 1] = alloc_mat(net.activations[i - 1].ncols, shape[i]);
         net.weight_alters[i - 1] =
             alloc_mat(net.activations[i - 1].ncols, shape[i]);
-        // this is to avoid nan errors
         mat_fill(net.weight_alters[i - 1], 0);
+        if (CLEAR_NET_MOMENTUM) {
+            net.momentum_weight_store[i - 1] =
+                alloc_mat(net.activations[i - 1].ncols, shape[i]);
+            mat_fill(net.momentum_weight_store[i - 1], 0);
+            net.momentum_bias_store[i - 1] = alloc_mat(1, shape[i]);
+            mat_fill(net.momentum_bias_store[i - 1], 0);
+        }
+
         // allocate biases as one row and the shape of this layer
         net.biases[i - 1] = alloc_mat(1, shape[i]);
         // allocate activations as one row to add to each
@@ -341,15 +374,20 @@ void dealloc_net(Net *net) {
     // Deallocate matrices within each layer
     for (size_t i = 0; i < net->nlayers - 1; ++i) {
         dealloc_mat(&net->weights[i]);
+        dealloc_mat(&net->weight_alters[i]);
         dealloc_mat(&net->biases[i]);
         dealloc_mat(&net->activations[i]);
         dealloc_mat(&net->buffer[i]);
-        dealloc_mat(&net->weight_alters[i]);
         // NOTE: Since shape is most likely created with {}
         // by users and is created with allocation when
         // reading from file, cannot consistently call
         // some deallocation on it
         net->shape[i] = 0;
+
+        if (CLEAR_NET_MOMENTUM) {
+            dealloc_mat(&net->momentum_weight_store[i]);
+            dealloc_mat(&net->momentum_bias_store[i]);
+        }
     }
 
     // Deallocate the activation matrix of the output layer
@@ -360,6 +398,8 @@ void dealloc_net(Net *net) {
     net->nlayers = 0;
     net->activations = NULL;
     net->weights = NULL;
+    net->weight_alters = NULL;
+    net->momentum_weight_store = NULL;
     net->biases = NULL;
 }
 
@@ -454,8 +494,15 @@ void net_backprop(Net net, Matrix input, Matrix target) {
                 // biases are never read in backpropagation so their
                 // change can be done in place
                 size_t prev_layer = layer - 1;
-                MAT_GET(net.biases[prev_layer], 0, j) -=
-                    coef * alter_act * dact;
+                float change = alter_act * dact;
+                if (CLEAR_NET_MOMENTUM) {
+                    MAT_GET(net.momentum_bias_store[prev_layer], 0, j) =
+                        CLEAR_NET_MOMENTUM_BETA *
+                            MAT_GET(net.momentum_bias_store[prev_layer], 0, j) +
+                        (1 - CLEAR_NET_MOMENTUM_BETA) * change;
+                    change = MAT_GET(net.momentum_bias_store[prev_layer], 0, j);
+                }
+                MAT_GET(net.biases[prev_layer], 0, j) -= coef * change;
 
                 // this activations columns is equal to the rows of its next
                 // matrix
@@ -465,7 +512,7 @@ void net_backprop(Net net, Matrix input, Matrix target) {
                     MAT_GET(net.buffer[prev_layer], 0, k) +=
                         alter_act * dact * prev_weight;
                     MAT_GET(net.weight_alters[prev_layer], k, j) +=
-                        coef * alter_act * dact * prev_act;
+                        alter_act * dact * prev_act;
                 }
             }
         }
@@ -476,11 +523,20 @@ void net_backprop(Net net, Matrix input, Matrix target) {
         }
     }
 
+    float change;
     for (size_t i = 0; i < net.nlayers - 1; ++i) {
         for (size_t j = 0; j < net.weights[i].nrows; ++j) {
             for (size_t k = 0; k < net.weights[i].ncols; ++k) {
-                MAT_GET(net.weights[i], j, k) -=
-                    MAT_GET(net.weight_alters[i], j, k);
+                change = MAT_GET(net.weight_alters[i], j, k);
+                if (CLEAR_NET_MOMENTUM) {
+                    MAT_GET(net.momentum_weight_store[i], j, k) =
+                        CLEAR_NET_MOMENTUM_BETA *
+                            MAT_GET(net.momentum_weight_store[i], j, k) +
+                        (1 - CLEAR_NET_MOMENTUM_BETA) * change;
+                    change = MAT_GET(net.momentum_weight_store[i], j, k);
+                }
+                MAT_GET(net.weights[i], j, k) -= coef * change;
+
                 // reset for next backpropagation
                 MAT_GET(net.weight_alters[i], j, k) = 0;
             }
