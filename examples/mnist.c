@@ -92,7 +92,6 @@ int main(void) {
     Matrix test_output =
         mat_form(num_test_files, 1, test.ncols, &MAT_GET(test, 0, num_pixels));
 
-    // size_t shape[] = {num_pixels, 20, 16, 1};
     size_t shape[] = {num_pixels, 16, 16, 1};
     size_t num_layers = ARR_LEN(shape);
     Net net = alloc_net(shape, num_layers);
