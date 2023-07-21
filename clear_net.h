@@ -11,12 +11,12 @@
     - Ability to save and load a neural net to a file
     - Customize the activation functions for output and hidden layers
     - Multiple activation functions: Sigmoid, ReLU, Leaky_ReLU, Tanh, ELU
-	
+
   Basic Structure of a Net:
     Each layer consists of weights -> biases -> activation.
-    In each forward, each layer takes the previous activation matrix and multiplies it
-    with the weights, then adds the bias and then applies the correct activation function.
-    Each column in the weight matrix is a neuron.
+    In each forward, each layer takes the previous activation matrix and
+  multiplies it with the weights, then adds the bias and then applies the
+  correct activation function. Each column in the weight matrix is a neuron.
     Each activation * weights results in a single column matrix
     which the bias is added to.
 
@@ -69,7 +69,6 @@
 #ifndef CLEAR_NET_MOMENTUM_BETA
 #define CLEAR_NET_MOMENTUM_BETA 0.9
 #endif // CLEAR_NET_MOMENTUM_BETA
-
 
 // float randf(void);
 
@@ -411,10 +410,10 @@ void dealloc_net(Net *net, size_t shape_allocated) {
     net->weight_alters = NULL;
     net->momentum_weight_store = NULL;
     net->biases = NULL;
-	if (shape_allocated) {
-	  CLEAR_NET_DEALLOC(net->shape);
-	  net->shape = NULL;
-	}
+    if (shape_allocated) {
+        CLEAR_NET_DEALLOC(net->shape);
+        net->shape = NULL;
+    }
 }
 
 void net_print(Net net, char *name) {
