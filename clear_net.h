@@ -26,7 +26,6 @@
   keep users' namespace sane.
 */
 
-// TODO see if all the extra buffer stores are really necessary
 #ifndef CLEAR_NET
 #define CLEAR_NET
 
@@ -114,13 +113,13 @@ typedef struct {
     // number of these is equal to the number of layers -1 (for the output)
     Matrix *weights;
     Matrix *biases;
-    // this stores the changes to be done to the weihts
-    Matrix *weight_alters;
-    // stores changes in activation results
-    Matrix *buffer;
+    size_t *shape;
+    // below are extra stores for backprop
+    Matrix *weight_alters; // store differences in weights
+    Matrix *act_alters;    // store differences in activations
+    // these are only allocated if momentum is enabled
     Matrix *momentum_weight_store;
     Matrix *momentum_bias_store;
-    size_t *shape;
 } Net;
 
 #define NET_INPUT(net)                                                         \
@@ -339,8 +338,8 @@ Net alloc_net(size_t *shape, size_t nlayers) {
     net.activations = CLEAR_NET_ALLOC(sizeof(*net.activations) * (net.nlayers));
     CLEAR_NET_ASSERT(net.activations != NULL);
 
-    net.buffer = CLEAR_NET_ALLOC(sizeof(*net.buffer) * (net.nlayers));
-    CLEAR_NET_ASSERT(net.buffer != NULL);
+    net.act_alters = CLEAR_NET_ALLOC(sizeof(*net.act_alters) * (net.nlayers));
+    CLEAR_NET_ASSERT(net.act_alters != NULL);
 
     if (CLEAR_NET_MOMENTUM) {
         net.momentum_weight_store = CLEAR_NET_ALLOC(
@@ -355,7 +354,7 @@ Net alloc_net(size_t *shape, size_t nlayers) {
     // allocate the thing that will be the input
     // one row by the dimensions of the input
     net.activations[0] = alloc_mat(1, shape[0]);
-    net.buffer[0] = alloc_mat(1, shape[0]);
+    net.act_alters[0] = alloc_mat(1, shape[0]);
     // matrices are filled if they are read before set
     for (size_t i = 1; i < net.nlayers; ++i) {
         // allocate weights by the columns of previous activation and the
@@ -376,7 +375,7 @@ Net alloc_net(size_t *shape, size_t nlayers) {
         net.biases[i - 1] = alloc_mat(1, shape[i]);
         // allocate activations as one row to add to each
         net.activations[i] = alloc_mat(1, shape[i]);
-        net.buffer[i] = alloc_mat(1, shape[i]);
+        net.act_alters[i] = alloc_mat(1, shape[i]);
     }
     return net;
 }
@@ -388,7 +387,7 @@ void dealloc_net(Net *net, size_t shape_allocated) {
         dealloc_mat(&net->weight_alters[i]);
         dealloc_mat(&net->biases[i]);
         dealloc_mat(&net->activations[i]);
-        dealloc_mat(&net->buffer[i]);
+        dealloc_mat(&net->act_alters[i]);
         // NOTE: Since shape is most likely created with {}
         // by users and is created with allocation when
         // reading from file, cannot consistently call
@@ -401,7 +400,7 @@ void dealloc_net(Net *net, size_t shape_allocated) {
 
     // Deallocate the activation matrix of the output layer
     dealloc_mat(&net->activations[net->nlayers - 1]);
-    dealloc_mat(&net->buffer[net->nlayers - 1]);
+    dealloc_mat(&net->act_alters[net->nlayers - 1]);
 
     // Set net properties to NULL and 0
     net->nlayers = 0;
@@ -486,7 +485,7 @@ void net_backprop(Net net, Matrix input, Matrix target) {
 
         // for the output activation layer
         for (size_t j = 0; j < dim_o; ++j) {
-            MAT_GET(net.buffer[net.nlayers - 1], 0, j) =
+            MAT_GET(net.act_alters[net.nlayers - 1], 0, j) =
                 2 * (MAT_GET(NET_OUTPUT(net), 0, j) - MAT_GET(target, i, j));
         }
 
@@ -502,12 +501,12 @@ void net_backprop(Net net, Matrix input, Matrix target) {
                 } else {
                     dact = dactf(act, CLEAR_NET_ACT_HIDDEN);
                 }
-                float alter_act = MAT_GET(net.buffer[layer], 0, j);
+                float alter = MAT_GET(net.act_alters[layer], 0, j);
 
                 // biases are never read in backpropagation so their
                 // change can be done in place
                 size_t prev_layer = layer - 1;
-                float change = alter_act * dact;
+                float change = alter * dact;
                 if (CLEAR_NET_MOMENTUM) {
                     MAT_GET(net.momentum_bias_store[prev_layer], 0, j) =
                         CLEAR_NET_MOMENTUM_BETA *
@@ -522,25 +521,24 @@ void net_backprop(Net net, Matrix input, Matrix target) {
                 for (size_t k = 0; k < net.activations[prev_layer].ncols; ++k) {
                     float prev_act = MAT_GET(net.activations[prev_layer], 0, k);
                     float prev_weight = MAT_GET(net.weights[prev_layer], k, j);
-                    MAT_GET(net.buffer[prev_layer], 0, k) +=
-                        alter_act * dact * prev_weight;
+                    MAT_GET(net.act_alters[prev_layer], 0, k) +=
+                        alter * dact * prev_weight;
                     MAT_GET(net.weight_alters[prev_layer], k, j) +=
-                        alter_act * dact * prev_act;
+                        alter * dact * prev_act;
                 }
             }
         }
 
         // reset for next iteration
         for (size_t j = 0; j < net.nlayers; ++j) {
-            mat_fill(net.buffer[j], 0);
+            mat_fill(net.act_alters[j], 0);
         }
     }
 
-    float change;
     for (size_t i = 0; i < net.nlayers - 1; ++i) {
         for (size_t j = 0; j < net.weights[i].nrows; ++j) {
             for (size_t k = 0; k < net.weights[i].ncols; ++k) {
-                change = MAT_GET(net.weight_alters[i], j, k);
+                float change = MAT_GET(net.weight_alters[i], j, k);
                 if (CLEAR_NET_MOMENTUM) {
                     MAT_GET(net.momentum_weight_store[i], j, k) =
                         CLEAR_NET_MOMENTUM_BETA *
