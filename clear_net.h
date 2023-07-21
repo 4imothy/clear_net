@@ -131,7 +131,7 @@ typedef struct {
 #define NET_PRINT(net) net_print(net, #net)
 
 Net alloc_net(size_t *shape, size_t nlayers);
-void dealloc_net(Net *net);
+void dealloc_net(Net *net, size_t shape_allocated);
 Net alloc_net_from_file(char *file_name);
 void net_save_to_file(char *file_name, Net net);
 float net_errorf(Net net, Matrix input, Matrix target);
@@ -382,7 +382,7 @@ Net alloc_net(size_t *shape, size_t nlayers) {
     return net;
 }
 
-void dealloc_net(Net *net) {
+void dealloc_net(Net *net, size_t shape_allocated) {
     // Deallocate matrices within each layer
     for (size_t i = 0; i < net->nlayers - 1; ++i) {
         dealloc_mat(&net->weights[i]);
@@ -394,8 +394,6 @@ void dealloc_net(Net *net) {
         // by users and is created with allocation when
         // reading from file, cannot consistently call
         // some deallocation on it
-        net->shape[i] = 0;
-
         if (CLEAR_NET_MOMENTUM) {
             dealloc_mat(&net->momentum_weight_store[i]);
             dealloc_mat(&net->momentum_bias_store[i]);
@@ -413,6 +411,10 @@ void dealloc_net(Net *net) {
     net->weight_alters = NULL;
     net->momentum_weight_store = NULL;
     net->biases = NULL;
+	if (shape_allocated) {
+	  CLEAR_NET_DEALLOC(net->shape);
+	  net->shape = NULL;
+	}
 }
 
 void net_print(Net net, char *name) {
