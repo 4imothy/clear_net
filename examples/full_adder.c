@@ -49,11 +49,11 @@ int main(void) {
     net_print_results(net, input, target, &roundf);
     char *name = "adder_model";
     net_save_to_file(name, net);
-    dealloc_net(&net);
+    dealloc_net(&net, 0);
     net = alloc_net_from_file(name);
     printf("After loading file\n");
     net_print_results(net, input, target, &roundf);
-    dealloc_net(&net);
+    dealloc_net(&net, 1);
 
     return 0;
 }

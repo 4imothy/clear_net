@@ -13,7 +13,7 @@ The lines intersect so it is not linearly seperable
 #define CLEAR_NET_ACT_HIDDEN Sigmoid
 #include "../clear_net.h"
 
-int main() {
+int main(void) {
     srand(0);
     Matrix data = alloc_mat(4, 3);
     for (size_t i = 0; i < 2; ++i) {
@@ -48,10 +48,10 @@ int main() {
     }
     net_print_results(net, input, output, &roundf);
     net_save_to_file("model", net);
-    dealloc_net(&net);
+    dealloc_net(&net, 0);
     net = alloc_net_from_file("model");
     printf("after loading file");
     net_print_results(net, input, output, &roundf);
-    dealloc_net(&net);
+    dealloc_net(&net, 1);
     return 0;
 }

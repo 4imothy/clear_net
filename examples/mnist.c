@@ -126,7 +126,7 @@ int main(void) {
            net_errorf(net, train_input, train_output));
     char *file = "mnist_model";
     net_save_to_file(file, net);
-    dealloc_net(&net);
+    dealloc_net(&net, 0);
     net = alloc_net_from_file(file);
     printf("After Loading, Error on training set: %f\n",
            net_errorf(net, train_input, train_output));
@@ -140,6 +140,7 @@ int main(void) {
         printf("%f | ", MAT_GET(test_output, i, 0));
         printf("%f\n", MAT_GET(NET_OUTPUT(net), 0, 0));
     }
+    dealloc_net(&net, 1);
     dealloc_mat(&train);
     dealloc_mat(&test);
 }

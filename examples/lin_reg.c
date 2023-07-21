@@ -1,6 +1,7 @@
 #define CLEAR_NET_IMPLEMENTATION
 // need negative outputs
 #define CLEAR_NET_ACT_OUTPUT Tanh
+#define CLEAR_NET_MOMENTUM 1
 #include "../clear_net.h"
 // function to learn
 // y = 2 + 4a - 3b + 5c + 6d - 2e + 7f - 8g + 9h
@@ -73,7 +74,6 @@ int main(void) {
     Matrix output = mat_form(num_train, 1, num_var, &train[dim_input]);
     Matrix val_in = mat_form(num_train, dim_input, num_var, val);
     Matrix val_out = mat_form(num_train, 1, num_var, &val[dim_input]);
-    // size_t  shape[] = {dim_input, 16, 5, 5, 1};
     size_t shape[] = {dim_input, 1};
     Net net = alloc_net(shape, ARR_LEN(shape));
     net_rand(net, -1, 1);
@@ -94,9 +94,10 @@ int main(void) {
     net_print_results(net, input, output, &mul_max);
     char *file_name = "lin_reg_model";
     net_save_to_file(file_name, net);
-    dealloc_net(&net);
+    dealloc_net(&net, 0);
     net = alloc_net_from_file(file_name);
     printf("After Loading From File\n");
     net_print_results(net, val_in, val_out, &mul_max);
+    dealloc_net(&net, 1);
     return 0;
 }

@@ -216,10 +216,11 @@ int main(int argc, char *argv[]) {
         }
         net_print_results(net, val_input, val_target, &fix_output);
         net_save_to_file("model", net);
-        dealloc_net(&net);
+        dealloc_net(&net, 0);
         net = alloc_net_from_file("model");
         printf("After loading file\n");
         net_print_results(net, val_input, val_target, &fix_output);
+        dealloc_net(&net, 1);
     }
     return 0;
 }
