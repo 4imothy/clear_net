@@ -1,6 +1,6 @@
 """Python script to get the mnist data set.
 
-Mostly copied from: https://huggingface.co/datasets/mnist/blob/main/mnist.py
+Homepage: http://yann.lecun.com/exdb/mnist/
 """
 
 import os
@@ -9,7 +9,7 @@ import gzip
 import shutil
 from PIL import Image
 
-_URL = "https://storage.googleapis.com/cvdf-datasets/mnist/"
+_URL = "http://yann.lecun.com/exdb/mnist/"
 _URLS = {
     "train_labels": "train-labels-idx1-ubyte.gz",
     "train_images": "train-images-idx3-ubyte.gz",
@@ -19,7 +19,6 @@ _URLS = {
 
 urls_to_download = {key: _URL + fname for key, fname in _URLS.items()}
 
-print(urls_to_download)
 script_dir = os.path.dirname(os.path.abspath(__file__))
 download_dir = os.path.join(script_dir, "..", "datasets", "mnist")
 os.makedirs(download_dir, exist_ok=True)
@@ -27,7 +26,7 @@ os.makedirs(download_dir, exist_ok=True)
 for key, url in urls_to_download.items():
     # Download the file
     file_path = os.path.join(download_dir, key + ".gz")
-    print(f"Downloading {key}...")
+    print(f"Downloading {key} from {url}...")
     response = requests.get(url, stream=True)
     with open(file_path, "wb") as file:
         shutil.copyfileobj(response.raw, file)
