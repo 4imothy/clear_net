@@ -1,7 +1,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "../external/stb_image.h"
 #define CLEAR_NET_IMPLEMENTATION
-// #define CLEAR_NET_MOMENTUM 1
+#define CLEAR_NET_MOMENTUM 1
+#define CLEAR_NET_ACT_HIDDEN Sigmoid
 #include "../clear_net.h"
 
 #include <dirent.h>
