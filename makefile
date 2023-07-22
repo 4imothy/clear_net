@@ -9,7 +9,7 @@ H_FILES := $(shell find . -name '*.h' -not -path "./env/*")
 BENCH_LEARN_FILE := ./benchmarks/bench_learn.py
 BENCH_MAT_MUL_FILE := ./benchmarks/bench_mat_mul.c
 
-examples := mnist xor full_adder iris lin_reg bench_mul
+examples := mnist xor full_adder iris lin_reg
 clear_net: $(LIB_FILE)
 
 $(examples): clear_net $(EXAMPLE_FILES)
