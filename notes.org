@@ -1,0 +1,41 @@
+* Optim Algorithms
+- Should implement autograd before I think
+- [[https://en.wikipedia.org/wiki/Stochastic_gradient_descent][See Extensions and Variants (wikipedia)]]
+* Autograd
+* CNN Ideas
+Filter consists of multiple kernels stacked on top of eachother.
+[[https://www.youtube.com/watch?v=Lakz2MoHy6o][Convolutional Neural Network from Scratch | Mathematics & Python Code]]
+[[https://www.youtube.com/watch?v=z9hJzduHToc&t=2s][Backpropagation in Convolutional Neural Networks from Scratch | The Weights]]
+** Concepts
+- In convolution, get the size of each layer and when they change do
+  downsampling (maxpool, avgpool)
+- Each pixel resulting from a filter goes through an activation
+*** To turn conv -> dense use global pooling
+  - Global Max Pooling:
+    - we take the maximum value and return that as an individual element
+    in the vector representation of interest
+  - Global Average Pooling:
+    - compute the average of all pixels in each feature map and return
+    that as a single element
+  - Always go from conv layers to dense layers, doing convolutions on one dimensional data is meaningless
+*** Definitions
+- Stride: the amount of pixels between each movement of the filter over the image
+** Code Ideas
+*** Dense Layer Struct
+- Make a DenseLayer struct with activations, biases, weights, and there
+  buffers
+  - Allows for mixing of Convolutional layers with dense layers
+  - How does backprop work with this
+  - Instead of net.weights[idx] do net.layers[idx].weights
+  - The net has a *DenseLayer, *ConvLayer, num when conv -> dense
+*** Conv Layer Struct
+- Number of filters is arbitrary but the number of channels is the number of filters of the previous layer
+  - Each filter has number of channel layers with one bias term
+  - Multiply each kernel with its channel's values and then add the values of each channel and sum up all the values, repeat that for each pixel
+  - Repeat that for each filter
+- The filters and the bias terms
+- Values are altered during backpropagation, filter coefficients
+*** Pooling
+- When changing the size the next image should be /1/n/ the size of the image before, where /n % 2 == 0/
+** Things to Do Later
+- Stride, dilation, transpose, padding to be changed in the implementation
