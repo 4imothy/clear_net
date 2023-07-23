@@ -12,6 +12,9 @@ BENCH_MAT_MUL_FILE := ./benchmarks/bench_mat_mul.c
 examples := mnist xor full_adder iris lin_reg
 clear_net: $(LIB_FILE)
 
+run_%: %
+	./$<
+
 $(examples): clear_net $(EXAMPLE_FILES)
 	$(CC) $(CFLAGS) -o $@ $(EXAMPLE_DIR)/$@.c
 
