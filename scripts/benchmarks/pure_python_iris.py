@@ -27,7 +27,8 @@ params = {
     "bias": bias,
 }
 
-params['weights'] = np.random.uniform(low=-0.5, high=0.5, size=params['input_size'])
+params['weights'] = np.random.uniform(
+    low=-0.5, high=0.5, size=params['input_size'])
 
 
 def predict(x, weights, bias):
@@ -75,8 +76,9 @@ def main():
     params['weights'] = bad_weights
     mse, classes, predictions = get_data(x, params, target)
 
-    all_weights, all_classes, all_biases, good_weights, bias, err = train(x, params, target)
-    
+    all_weights, all_classes, all_biases, good_weights, bias, err = train(
+        x, params, target)
+
 
 def train(x, params, target):
     all_weights = []
@@ -87,7 +89,8 @@ def train(x, params, target):
     itr = 0
     while True:
         mse, classes, predictions = get_data(x, params, target)
-        delta_w, delta_b = getChangers(params['learning_rate'], weights, predictions)
+        delta_w, delta_b = getChangers(
+            params['learning_rate'], weights, predictions)
         for i in range(len(weights)):
             weights[i] -= delta_w[i][0]
         bias -= delta_b
@@ -112,13 +115,15 @@ def getChangers(learning_rate, weights, predictions):
     for i in range(len(x[0])):
         sum = 0
         for j in range(len(x)):
-            sum += (target[j] - 1 - predictions[j]) * (1 - predictions[j]) * predictions[j] * x[j][i]
+            sum += (target[j] - 1 - predictions[j]) * \
+                (1 - predictions[j]) * predictions[j] * x[j][i]
         sum *= alter
         delta_w.append(sum)
 
     sum = 0
     for i in range(len(x)):
-        sum += (target[i] - 1 - predictions[i]) * predictions[i] * (1 - predictions[i])
+        sum += (target[i] - 1 - predictions[i]) * \
+            predictions[i] * (1 - predictions[i])
 
     return delta_w, alter * sum
 

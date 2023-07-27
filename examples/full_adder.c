@@ -47,7 +47,7 @@ int main(void) {
         }
     }
     net_print_results(net, input, target, &roundf);
-    char *name = "adder_model";
+    char *name = "model";
     net_save_to_file(name, net);
     dealloc_net(&net, 0);
     net = alloc_net_from_file(name);

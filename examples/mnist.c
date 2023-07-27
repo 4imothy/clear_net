@@ -1,5 +1,5 @@
 #define STB_IMAGE_IMPLEMENTATION
-#include "../external/stb_image.h"
+#include "./external/stb_image.h"
 #define CLEAR_NET_IMPLEMENTATION
 #define CLEAR_NET_MOMENTUM 1
 #define CLEAR_NET_ACT_HIDDEN Sigmoid
@@ -58,8 +58,8 @@ int get_data_from_dir(Matrix *data, char *path, int num_files) {
                 MAT_GET(*data, count, j) = img_pixels[j] / 255.f;
             }
             // the python script set it up so the first character is the label
-			size_t label = (entry->d_name[0] - '0');
-	        MAT_GET(*data, count, num_pixels + label) = 1;
+            size_t label = (entry->d_name[0] - '0');
+            MAT_GET(*data, count, num_pixels + label) = 1;
             count++;
         }
     }
@@ -71,7 +71,7 @@ int get_data_from_dir(Matrix *data, char *path, int num_files) {
 
 int main(void) {
     srand(0);
-	
+
     char *train_path = "./datasets/mnist/train";
     Matrix train = alloc_mat(num_train_files, num_pixels + dim_output);
     int res = get_data_from_dir(&train, train_path, num_train_files);
@@ -93,8 +93,8 @@ int main(void) {
     }
     Matrix test_input =
         mat_form(num_test_files, num_pixels, test.ncols, &MAT_GET(test, 0, 0));
-    Matrix test_output =
-        mat_form(num_test_files, dim_output, test.ncols, &MAT_GET(test, 0, num_pixels));
+    Matrix test_output = mat_form(num_test_files, dim_output, test.ncols,
+                                  &MAT_GET(test, 0, num_pixels));
 
     size_t shape[] = {num_pixels, 16, 16, dim_output};
     size_t num_layers = ARR_LEN(shape);
@@ -136,20 +136,20 @@ int main(void) {
     printf("After Loading, Error on testing set: %f\n",
            net_errorf(net, test_input, test_output));
     printf("Actual\n");
-	printf("Prediction\n");
-	printf("-----------\n");
+    printf("Prediction\n");
+    printf("-----------\n");
     for (size_t i = 0; i < num_test_files; ++i) {
         Matrix in = mat_row(test_input, i);
         mat_copy(NET_INPUT(net), in);
         net_forward(net);
         for (size_t j = 0; j < dim_output; ++j) {
-          printf("%f |", MAT_GET(test_output, i, j));
+            printf("%f |", MAT_GET(test_output, i, j));
         }
-		printf("\n");
+        printf("\n");
         for (size_t j = 0; j < dim_output; ++j) {
-          printf("%f |", MAT_GET(NET_OUTPUT(net), 0, j));
+            printf("%f |", MAT_GET(NET_OUTPUT(net), 0, j));
         }
-		printf("\n------------------------------\n");
+        printf("\n------------------------------\n");
     }
     dealloc_net(&net, 1);
     dealloc_mat(&train);

@@ -11,7 +11,8 @@ features = iris.data
 labels = iris.target
 
 # Split the dataset into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    features, labels, test_size=0.2, random_state=42)
 
 # Scale the features
 scaler = StandardScaler()
@@ -25,6 +26,8 @@ X_test = torch.tensor(X_test, dtype=torch.float32)
 y_test = torch.tensor(y_test, dtype=torch.float32).view(-1, 1)
 
 # Define the neural network
+
+
 class Net(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(Net, self).__init__()
@@ -35,6 +38,7 @@ class Net(nn.Module):
         x = torch.relu(self.fc1(x))
         x = self.fc2(x)
         return x
+
 
 # Set hyperparameters
 input_size = X_train.shape[1]

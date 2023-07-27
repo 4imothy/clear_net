@@ -1,5 +1,5 @@
 #define CLEAR_NET_IMPLEMENTATION
-#include "../clear_net.h"
+#include "../../clear_net.h"
 #include <stdio.h>
 #include <time.h>
 

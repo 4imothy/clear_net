@@ -1,7 +1,16 @@
+* TODO Short
+- Make sure can compile with clang, cc too
+- Move autodiff to a testing dir and test with pytorch
+- Rewrite tanh to use e^(2x) simplification, [[https://en.wikipedia.org/wiki/Hyperbolic_functions][link]], actually tanh is in <math.h>
 * Optim Algorithms
 - Should implement autograd before I think
 - [[https://en.wikipedia.org/wiki/Stochastic_gradient_descent][See Extensions and Variants (wikipedia)]]
-* Autograd
+* Autodiff
+- Using reverse mode
+- Tells us how the editing of one variable affects another through a mathematical DAG
+- If /dy/dx = 10/ (derivative of y with respect to x) then when changing /x/ the slope of the growth on /y/ is /10/
+  - Tells us how /y/ will respond if /x/ is tweaked in a positive direction
+** Benefits
 * CNN Ideas
 Filter consists of multiple kernels stacked on top of eachother.
 [[https://www.youtube.com/watch?v=Lakz2MoHy6o][Convolutional Neural Network from Scratch | Mathematics & Python Code]]

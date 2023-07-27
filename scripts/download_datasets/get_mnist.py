@@ -19,8 +19,7 @@ _URLS = {
 
 urls_to_download = {key: _URL + fname for key, fname in _URLS.items()}
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-download_dir = os.path.join(script_dir, "..", "datasets", "mnist")
+download_dir = os.path.join(os.getcwd(), "datasets", "mnist")
 os.makedirs(download_dir, exist_ok=True)
 
 for key, url in urls_to_download.items():
@@ -51,7 +50,7 @@ for key, url in urls_to_download.items():
         os.makedirs(out_dir, exist_ok=True)
 
         with open(unzipped_file_path, "rb") as image_file, \
-             open(label_file_path, "rb") as label_file:
+                open(label_file_path, "rb") as label_file:
             magic_number = int.from_bytes(image_file.read(4), byteorder="big")
             num_images = int.from_bytes(image_file.read(4), byteorder="big")
             num_rows = int.from_bytes(image_file.read(4), byteorder="big")

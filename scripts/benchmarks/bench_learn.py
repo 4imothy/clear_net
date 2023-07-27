@@ -6,17 +6,16 @@ import psutil
 import os
 import time
 
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-bench_dir = 'benchmarks'
+# current_dir = os.path.dirname(os.path.abspath(__file__))
+# parent_dir = os.path.dirname(current_dir)
+# bench_dir = 'benchmarks'
 
 
 def time_command(command):
     """Time the given command by running it."""
     start = time.time()
     subprocess.call(command, stdout=subprocess.DEVNULL,
-                    stderr=subprocess.STDOUT, cwd=parent_dir)
+                    stderr=subprocess.STDOUT, cwd=os.getcwd())
     # subprocess.call(command)
     end = time.time()
     return end - start
@@ -40,13 +39,16 @@ def measure_memory_usage(command):
     return memory_usage, end_time - start_time
 
 
+bench_dir = 'benchmarks'
+scripts_dir = 'scripts'
+
 commands = [
     ['./iris', '-b'],
-    ['python', f'./{bench_dir}/pure_python_iris.py'],
-    ['python', f'./{bench_dir}/pytorch_iris.py'],
+    ['python', f'./{scripts_dir}/{bench_dir}/pure_python_iris.py'],
+    ['python', f'./{scripts_dir}/{bench_dir}/pytorch_iris.py'],
 ]
 
-with open(f"./{bench_dir}/times", "w") as file:
+with open(f"./{scripts_dir}/{bench_dir}/times", "w") as file:
     for command in commands:
         # memory_usage, time_used = measure_memory_usage(command)
         text = f"Command: {command} "

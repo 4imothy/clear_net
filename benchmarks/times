@@ -1,3 +1,0 @@
-Command: ['./iris', '-b'] Time taken: 0.38407206535339355
-Command: ['python', './benchmarks/pure_python_iris.py'] Time taken: 50.033475160598755
-Command: ['python', './benchmarks/pytorch_iris.py'] Time taken: 8.474195957183838
