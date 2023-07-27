@@ -49,6 +49,9 @@
 #ifndef CLEAR_NET_ALLOC
 #define CLEAR_NET_ALLOC malloc
 #endif // CLEAR_NET_ALLOC
+#ifndef CLEAR_NET_REALLOC
+#define CLEAR_NET_REALLOC realloc
+#endif // CLEAR_NET_REALLOC
 // allow custom memory free strategies
 #ifndef CLEAR_NET_DEALLOC
 #define CLEAR_NET_DEALLOC free
@@ -197,6 +200,7 @@ float dactf(float y, Activation act) {
         // otherwise it is 1
         return y > 0 ? 1 : y + CLEAR_NET_ACT_NEG_SCALE;
     }
+    // TODO Don't think this is necessary
     CLEAR_NET_ASSERT(0 && "Invalid Activation");
     return 0.0f;
 }
