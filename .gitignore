@@ -9,11 +9,9 @@ full_adder
 lin_reg
 bench_mul
 mnist
+autodiff
 # model save files
 model
-adder_model
-lin_reg_model
-mnist_model
 # ignore file of youtube demo
 resources/youtube_demo.mov
 # ignore large datasets
