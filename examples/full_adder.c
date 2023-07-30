@@ -1,5 +1,6 @@
 #define CLEAR_NET_IMPLEMENTATION
-#include "../clear_net.h"
+#define CLEAR_NET_ACT_HIDDEN Sigmoid
+#include "../clear_net_new.h"
 #define BITS_PER_NUM 1
 
 // a full adder with carry in and carry out
@@ -17,7 +18,6 @@ int main(void) {
         1,  1,  0,   0,   1,
         1,  1,  1,   1,   1,
     };
-    // clang-format on
 
     // 2^3
     size_t num_combinations = 8;
@@ -25,35 +25,31 @@ int main(void) {
     size_t num_inputs = 3;
     // sum, cout
     size_t num_outputs = 2;
-    Matrix input = mat_form(num_combinations, num_inputs, 5, data);
+    size_t stride = 5;
+    Matrix input = matrix_form(num_combinations, num_inputs, stride, data);
     Matrix target =
-        mat_form(num_combinations, num_outputs, 5, &data[num_inputs]);
-
+        matrix_form(num_combinations, num_outputs, stride, &data[num_inputs]);
     size_t num_epochs = 20000;
     size_t shape[] = {num_inputs, 3, 8, num_outputs};
-    Net net = alloc_net(shape, ARR_LEN(shape));
-    net_rand(net, -1, 1);
+    size_t nlayers = sizeof(shape) / sizeof(*shape);
+    Net net = alloc_net(shape, nlayers);
+    printf("%zu\n", net.nlayers);
+    net_randomize(net, -1, 1);
     float error_break = 0.01f;
-    float error;
+    float loss;
     for (size_t i = 0; i < num_epochs; ++i) {
-        net_backprop(net, input, target);
-        error = net_errorf(net, input, target);
-        if (i % (num_epochs / 5) == 0) {
-            printf("Cost at %zu: %f\n", i, error);
-        }
-        if (error < error_break) {
-            printf("Error less than %f at %zu\n", error_break, i);
-            break;
-        }
+        loss = net_learn(&net, input, target);
+        printf("Average loss: %g\n", loss);
     }
-    net_print_results(net, input, target, &roundf);
-    char *name = "model";
-    net_save_to_file(name, net);
-    dealloc_net(&net, 0);
-    net = alloc_net_from_file(name);
-    printf("After loading file\n");
-    net_print_results(net, input, target, &roundf);
-    dealloc_net(&net, 1);
+    printf("Final loss: %g\n", loss);
+    net_print_results(net, input, target);
+    /* char *name = "model"; */
+    /* net_save_to_file(name, net); */
+    /* dealloc_net(&net, 0); */
+    /* net = alloc_net_from_file(name); */
+    /* printf("After loading file\n"); */
+    /* net_print_results(net, input, target, &roundf); */
+    /* dealloc_net(&net, 1); */
 
     return 0;
 }
