@@ -25,19 +25,20 @@ examples := mnist xor full_adder iris lin_reg
 downloaders := get_mnist
 clear_net: $(LIB_FILE)
 
+$(examples): clear_net $(EXAMPLE_FILES) ./clear_net_new.h
+	$(CC) $(CFLAGS) -o $@ $(EXAMPLE_DIR)/$@.c
+
 run_%: %
 	./$<
 
 AUTODIFF_FILE := $(TEST_DIR)/autodiff.c
 
-autodiff: $(AUTODIFF_FILE)
+autodiff: $(AUTODIFF_FILE) ./clear_net_new.h
 	$(CC) $(CFLAGS) -o $@ $(AUTODIFF_FILE)
 
 test_%: %
 	$(PY) $(TEST_DIR)/$<.py
 
-$(examples): clear_net $(EXAMPLE_FILES)
-	$(CC) $(CFLAGS) -o $@ $(EXAMPLE_DIR)/$@.c
 
 $(downloaders): $(DOWNLOAD_SCRIPTS)
 	$(PY) $(DOWNLOAD_DATA_DIR)/$@.py
