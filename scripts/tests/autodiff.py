@@ -59,8 +59,8 @@ def check_res(my_res, torch_res):
             print_diff(mres, tres, "grad")
             exit(1)
 
-        # print(f"Clear: name: {mres[0]} val: {mres[1]} grad: {mres[2]}")
-        # rprint(f"Torch: name: {tres[0]} val: {tres[1]} grad: {tres[2]}")
+        print(f"Clear: name: {mres[0]} val: {mres[1]} grad: {mres[2]}")
+        print(f"Torch: name: {tres[0]} val: {tres[1]} grad: {tres[2]}")
 
 
 def test_against_cn(code):
@@ -144,6 +144,24 @@ def do_test_two():
     add_val(e, 'e')
     add_val(f, 'f')
     test_against_cn("2")
+
+
+def do_test_pow():
+    """Test raising things to a power."""
+    global torch_res
+    torch_res = []
+    a = torch.Tensor([5.0])
+    a.requires_grad = True
+    b = torch.Tensor([10.0])
+    b.requires_grad = True
+    c = a**b
+    c = c**2
+    c.retain_grad()
+    c.backward()
+    add_val(a, 'a')
+    add_val(b, 'b')
+    add_val(c, 'c')
+    test_against_cn("pow")
 
 
 def do_test_on_itself():
@@ -253,8 +271,8 @@ def do_test_sigmoid():
 
 do_test_one()
 do_test_two()
+do_test_pow()
 do_test_on_itself()
 do_test_tanh()
 do_test_relu()
 do_test_sigmoid()
-# TODO do a test on multiple activation functions
