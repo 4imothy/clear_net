@@ -25,7 +25,7 @@ examples := mnist xor full_adder iris lin_reg
 downloaders := get_mnist
 clear_net: $(LIB_FILE)
 
-$(examples): clear_net $(EXAMPLE_FILES) ./clear_net_new.h
+$(examples): clear_net $(EXAMPLE_FILES)
 	$(CC) $(CFLAGS) -o $@ $(EXAMPLE_DIR)/$@.c
 
 run_%: %

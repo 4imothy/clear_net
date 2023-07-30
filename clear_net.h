@@ -1,10 +1,23 @@
 /*
+   Clear Net by Timothy Cronin
+
+   To the extent possible under law, the person who associated CC0 with
+   Clear Net has waived all copyright and related or neighboring rights
+   to Clear Net.
+
+   You should have received a copy of the CC0 legalcode along with this
+   work.  If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
+
+   See end of file for full license.
+*/
+
+/*
   TODO add a name space to things, cn_ for public _cn for private
   TODO Activation for: elu, Leak_Relu
   TODO momentum
   TODO stochastic gradient descent
   TODO save and load a net
- */
+*/
 #ifndef CLEAR_NET
 #define CLEAR_NET
 
@@ -91,14 +104,13 @@ typedef enum {
 typedef struct Matrix Matrix;
 
 Matrix alloc_matrix(size_t nrows, size_t ncols);
-void dealloc_matrix(Matrix* mat);
-Matrix matrix_form(size_t nrows, size_t ncols, size_t stride,
-                       float *elements);
+void dealloc_matrix(Matrix *mat);
+Matrix matrix_form(size_t nrows, size_t ncols, size_t stride, float *elements);
 void matrix_print(Matrix mat, char *name);
 
 typedef struct Vector Vector;
 Vector alloc_vector(size_t nelem);
-void dealloc_vector(Vector* vec);
+void dealloc_vector(Vector *vec);
 void vector_print(Vector vec, char *name);
 void _vec_print_res(Vector vec);
 
@@ -234,9 +246,7 @@ void relu_backward(NodeStore *ns, VarNode *var) {
     }
 }
 
-float relu(float x) {
-    return x > 0 ? x : 0;
-}
+float relu(float x) { return x > 0 ? x : 0; }
 
 size_t reluv(NodeStore *ns, size_t x) {
     float val = relu(GET_NODE(x).num);
@@ -248,9 +258,7 @@ void tanh_backward(NodeStore *ns, VarNode *var) {
     GET_NODE(var->prev_left).grad += (1 - powf(var->num, 2)) * var->grad;
 }
 
-float hyper_tan(float x) {
-    return tanhf(x);
-}
+float hyper_tan(float x) { return tanhf(x); }
 
 size_t hyper_tanv(NodeStore *ns, size_t x) {
     float val = hyper_tan(GET_NODE(x).num);
@@ -262,9 +270,7 @@ void sigmoid_backward(NodeStore *ns, VarNode *var) {
     GET_NODE(var->prev_left).grad += var->num * (1 - var->num) * var->grad;
 }
 
-float sigmoid(float x) {
-    return 1 / (1 + expf(-x));
-}
+float sigmoid(float x) { return 1 / (1 + expf(-x)); }
 
 size_t sigmoidv(NodeStore *ns, size_t x) {
     float val = sigmoid(GET_NODE(x).num);
@@ -289,7 +295,7 @@ void backward(NodeStore *ns, size_t y) {
 #define VEC_ID(vec, i) (vec).ns_id + (i)
 #define VEC_AT(vec, i) (vec).elements[i]
 #define MATRIX_PRINT(mat) matrix_print((mat), #mat)
-#define VECTOR_PRINT(vec) vector_print((vec),#vec)
+#define VECTOR_PRINT(vec) vector_print((vec), #vec)
 
 struct Matrix {
     float *elements;
@@ -309,7 +315,7 @@ Matrix alloc_matrix(size_t nrows, size_t ncols) {
     return mat;
 }
 
-void dealloc_matrix(Matrix* mat) {
+void dealloc_matrix(Matrix *mat) {
     CLEAR_NET_DEALLOC(mat->elements);
     mat->nrows = 0;
     mat->ncols = 0;
@@ -318,10 +324,12 @@ void dealloc_matrix(Matrix* mat) {
     mat->elements = NULL;
 }
 
-Matrix matrix_form(size_t nrows, size_t ncols, size_t stride,
-                            float *elements) {
-    return (Matrix){
-        .ns_id = 0, .nrows = nrows, .ncols = ncols, .stride = stride, .elements = elements};
+Matrix matrix_form(size_t nrows, size_t ncols, size_t stride, float *elements) {
+    return (Matrix){.ns_id = 0,
+                    .nrows = nrows,
+                    .ncols = ncols,
+                    .stride = stride,
+                    .elements = elements};
 }
 
 void matrix_print(Matrix mat, char *name) {
@@ -350,7 +358,7 @@ Vector alloc_vector(size_t nelem) {
     return vec;
 }
 
-void dealloc_vector(Vector* vec) {
+void dealloc_vector(Vector *vec) {
     CLEAR_NET_DEALLOC(vec->elements);
     vec->nelem = 0;
     vec->ns_id = 0;
@@ -365,7 +373,6 @@ Vector vector_form(size_t nelem, float *elements) {
     };
 }
 
-
 void vector_print(Vector vec, char *name) {
     printf("%s = [\n", name);
     printf("    ");
@@ -375,6 +382,12 @@ void vector_print(Vector vec, char *name) {
     printf("\n]\n");
 }
 
+void _vec_print_res(Vector vec) {
+    for (size_t j = 0; j < vec.nelem; ++j) {
+        printf("%f ", VEC_AT(vec, j));
+    }
+    printf("| ");
+}
 
 /* Implement: Net */
 struct DenseLayer {
@@ -414,7 +427,8 @@ Net alloc_net(size_t *shape, size_t nlayers) {
         mat.nrows = shape[i];
         mat.ncols = shape[i + 1];
         mat.stride = mat.ncols;
-        mat.elements = CLEAR_NET_ALLOC(mat.nrows * mat.ncols * sizeof(*mat.elements));
+        mat.elements =
+            CLEAR_NET_ALLOC(mat.nrows * mat.ncols * sizeof(*mat.elements));
         layer.weights = mat;
         nparam += (layer.weights.nrows * layer.weights.ncols);
 
@@ -425,9 +439,11 @@ Net alloc_net(size_t *shape, size_t nlayers) {
         layer.biases = vec;
         nparam += layer.biases.nelem;
 
-        layer.output_ns_ids = CLEAR_NET_ALLOC(layer.biases.nelem * sizeof(*layer.output_ns_ids));
-        layer.output = (Vector) {
-            .elements = CLEAR_NET_ALLOC(layer.biases.nelem * sizeof(*layer.output.elements)),
+        layer.output_ns_ids =
+            CLEAR_NET_ALLOC(layer.biases.nelem * sizeof(*layer.output_ns_ids));
+        layer.output = (Vector){
+            .elements = CLEAR_NET_ALLOC(layer.biases.nelem *
+                                        sizeof(*layer.output.elements)),
             .nelem = layer.biases.nelem,
             .ns_id = 0,
         };
@@ -476,8 +492,7 @@ void net_randomize(Net net, float lower, float upper) {
         DenseLayer layer = net.layers[i];
         for (size_t j = 0; j < layer.weights.nrows; ++j) {
             for (size_t k = 0; k < layer.weights.ncols; ++k) {
-                MAT_AT(layer.weights, j, k) =
-                    randf() * (upper - lower) + lower;
+                MAT_AT(layer.weights, j, k) = randf() * (upper - lower) + lower;
             }
         }
         for (size_t j = 0; j < layer.biases.nelem; ++j) {
@@ -503,17 +518,15 @@ Vector _net_predict_layer(DenseLayer layer, NodeStore *ns, Vector prev_output) {
         size_t res = init_leaf_var(ns, 0);
         for (size_t j = 0; j < prev_output.nelem; ++j) {
             res = add(ns, res,
-                      multiply(ns,
-                               MAT_ID(layer.weights, j, i),
-                               VEC_ID(prev_output, j)
-                               ));
+                      multiply(ns, MAT_ID(layer.weights, j, i),
+                               VEC_ID(prev_output, j)));
         }
         res = add(ns, res, VEC_ID(layer.biases, i));
         res = _activate(ns, res, layer.act);
         layer.output_ns_ids[i] = res;
     }
 
-    Vector out = (Vector) {
+    Vector out = (Vector){
         .ns_id = ns->length,
         .nelem = layer.weights.ncols,
     };
@@ -530,13 +543,14 @@ Vector _net_predict(Net *net, NodeStore *ns, Vector input) {
     Vector guess = input;
     for (size_t i = 0; i < net->nlayers - 1; ++i) {
         guess = _net_predict_layer(net->layers[i], ns, guess);
-     }
+    }
 
     return guess;
 }
 
-float net_learn_one_input(Net *net, NodeStore *ns, Matrix input, Matrix target) {
-    Vector input_vec = (Vector) {
+float net_learn_one_input(Net *net, NodeStore *ns, Matrix input,
+                          Matrix target) {
+    Vector input_vec = (Vector){
         .ns_id = ns->length,
         .nelem = input.ncols,
     };
@@ -545,7 +559,7 @@ float net_learn_one_input(Net *net, NodeStore *ns, Matrix input, Matrix target) 
     }
 
     Vector prediction = _net_predict(net, ns, input_vec);
-    Vector target_vec = (Vector) {
+    Vector target_vec = (Vector){
         .ns_id = ns->length,
         .nelem = target.ncols,
     };
@@ -554,12 +568,11 @@ float net_learn_one_input(Net *net, NodeStore *ns, Matrix input, Matrix target) 
     }
     size_t loss = init_leaf_var(ns, 0);
     for (size_t i = 0; i < target.ncols; ++i) {
-        loss = add(ns, loss,
+        loss = add(
+                   ns, loss,
                    raise(ns,
-                         subtract(ns,
-                         VEC_ID(target_vec, i),
-                         VEC_ID(prediction, i)),
-                                  init_leaf_var(ns, 2)));
+                         subtract(ns, VEC_ID(target_vec, i), VEC_ID(prediction, i)),
+                         init_leaf_var(ns, 2)));
     }
 
     backward(ns, loss);
@@ -576,7 +589,7 @@ float net_learn(Net *net, Matrix input, Matrix target) {
     for (size_t i = 0; i < net->nlayers - 1; ++i) {
         for (size_t j = 0; j < net->layers[i].weights.nrows; ++j) {
             for (size_t k = 0; k < net->layers[i].weights.ncols; ++k) {
-                init_leaf_var(ns, MAT_AT(net->layers[i].weights, j ,k));
+                init_leaf_var(ns, MAT_AT(net->layers[i].weights, j, k));
             }
         }
         for (size_t j = 0; j < net->layers[i].biases.nelem; ++j) {
@@ -588,20 +601,26 @@ float net_learn(Net *net, Matrix input, Matrix target) {
     Matrix one_target;
     float total_loss = 0;
     for (size_t i = 0; i < train_size; ++i) {
-        one_input = matrix_form(1, input.ncols, input.stride, &MAT_AT(input, i, 0));
-        one_target = matrix_form(1, target.ncols, target.stride, &MAT_AT(target, i, 0));
+        one_input =
+            matrix_form(1, input.ncols, input.stride, &MAT_AT(input, i, 0));
+        one_target =
+            matrix_form(1, target.ncols, target.stride, &MAT_AT(target, i, 0));
         total_loss += net_learn_one_input(net, ns, one_input, one_target);
         ns->length = net->nparam;
     }
 
     for (size_t i = 0; i < net->nlayers - 1; ++i) {
-        for (size_t j = 0; j < net->layers[i].weights.nrows; ++j){
-            for (size_t k = 0; k < net->layers[i].weights.ncols; ++k){
-                MAT_AT(net->layers[i].weights, j, k) -= CLEAR_NET_RATE * GET_NODE(MAT_ID(net->layers[i].weights, j, k)).grad;
+        for (size_t j = 0; j < net->layers[i].weights.nrows; ++j) {
+            for (size_t k = 0; k < net->layers[i].weights.ncols; ++k) {
+                MAT_AT(net->layers[i].weights, j, k) -=
+                    CLEAR_NET_RATE *
+                    GET_NODE(MAT_ID(net->layers[i].weights, j, k)).grad;
             }
         }
         for (size_t j = 0; j < net->layers[i].biases.nelem; ++j) {
-            VEC_AT(net->layers[i].biases, j) -= CLEAR_NET_RATE * GET_NODE(VEC_ID(net->layers[i].biases, j)).grad;
+            VEC_AT(net->layers[i].biases, j) -=
+                CLEAR_NET_RATE *
+                GET_NODE(VEC_ID(net->layers[i].biases, j)).grad;
         }
     }
 
@@ -624,18 +643,11 @@ Vector net_predict_layer(DenseLayer layer, Vector prev_output) {
 Vector net_predict(Net net, Vector input) {
     Vector guess = input;
 
-    for (size_t i = 0; i < net.nlayers -1; ++i) {
+    for (size_t i = 0; i < net.nlayers - 1; ++i) {
         guess = net_predict_layer(net.layers[i], guess);
     }
 
     return guess;
-}
-
-void _vec_print_res(Vector vec) {
-    for (size_t j = 0; j < vec.nelem; ++j) {
-        printf("%f ", VEC_AT(vec, j));
-    }
-    printf("| ");
 }
 
 void net_print_results(Net net, Matrix input, Matrix target) {
@@ -653,6 +665,128 @@ void net_print_results(Net net, Matrix input, Matrix target) {
     }
 }
 
-
-
 #endif // CLEAR_NET_IMPLEMENTATION
+
+/* Full License Text
+Creative Commons Legal Code
+
+CC0 1.0 Universal
+
+CREATIVE COMMONS CORPORATION IS NOT A LAW FIRM AND DOES NOT PROVIDE
+LEGAL SERVICES. DISTRIBUTION OF THIS DOCUMENT DOES NOT CREATE AN
+ATTORNEY-CLIENT RELATIONSHIP. CREATIVE COMMONS PROVIDES THIS
+INFORMATION ON AN "AS-IS" BASIS. CREATIVE COMMONS MAKES NO WARRANTIES
+REGARDING THE USE OF THIS DOCUMENT OR THE INFORMATION OR WORKS
+PROVIDED HEREUNDER, AND DISCLAIMS LIABILITY FOR DAMAGES RESULTING FROM
+THE USE OF THIS DOCUMENT OR THE INFORMATION OR WORKS PROVIDED
+HEREUNDER.
+
+Statement of Purpose
+
+The laws of most jurisdictions throughout the world automatically confer
+exclusive Copyright and Related Rights (defined below) upon the creator
+and subsequent owner(s) (each and all, an "owner") of an original work of
+authorship and/or a database (each, a "Work").
+
+Certain owners wish to permanently relinquish those rights to a Work for
+the purpose of contributing to a commons of creative, cultural and
+scientific works ("Commons") that the public can reliably and without fear
+of later claims of infringement build upon, modify, incorporate in other
+works, reuse and redistribute as freely as possible in any form whatsoever
+and for any purposes, including without limitation commercial purposes.
+These owners may contribute to the Commons to promote the ideal of a free
+culture and the further production of creative, cultural and scientific
+works, or to gain reputation or greater distribution for their Work in
+part through the use and efforts of others.
+
+For these and/or other purposes and motivations, and without any
+expectation of additional consideration or compensation, the person
+associating CC0 with a Work (the "Affirmer"), to the extent that he or she
+is an owner of Copyright and Related Rights in the Work, voluntarily
+elects to apply CC0 to the Work and publicly distribute the Work under its
+terms, with knowledge of his or her Copyright and Related Rights in the
+Work and the meaning and intended legal effect of CC0 on those rights.
+
+1. Copyright and Related Rights. A Work made available under CC0 may be
+protected by copyright and related or neighboring rights ("Copyright and
+Related Rights"). Copyright and Related Rights include, but are not
+limited to, the following:
+
+i. the right to reproduce, adapt, distribute, perform, display,
+communicate, and translate a Work;
+ii. moral rights retained by the original author(s) and/or performer(s);
+iii. publicity and privacy rights pertaining to a person's image or
+likeness depicted in a Work;
+iv. rights protecting against unfair competition in regards to a Work,
+subject to the limitations in paragraph 4(a), below;
+v. rights protecting the extraction, dissemination, use and reuse of data
+in a Work;
+vi. database rights (such as those arising under Directive 96/9/EC of the
+European Parliament and of the Council of 11 March 1996 on the legal
+protection of databases, and under any national implementation
+thereof, including any amended or successor version of such
+directive); and
+vii. other similar, equivalent or corresponding rights throughout the
+world based on applicable law or treaty, and any national
+implementations thereof.
+
+2. Waiver. To the greatest extent permitted by, but not in contravention
+of, applicable law, Affirmer hereby overtly, fully, permanently,
+irrevocably and unconditionally waives, abandons, and surrenders all of
+Affirmer's Copyright and Related Rights and associated claims and causes
+of action, whether now known or unknown (including existing as well as
+future claims and causes of action), in the Work (i) in all territories
+worldwide, (ii) for the maximum duration provided by applicable law or
+treaty (including future time extensions), (iii) in any current or future
+medium and for any number of copies, and (iv) for any purpose whatsoever,
+including without limitation commercial, advertising or promotional
+purposes (the "Waiver"). Affirmer makes the Waiver for the benefit of each
+member of the public at large and to the detriment of Affirmer's heirs and
+successors, fully intending that such Waiver shall not be subject to
+revocation, rescission, cancellation, termination, or any other legal or
+equitable action to disrupt the quiet enjoyment of the Work by the public
+as contemplated by Affirmer's express Statement of Purpose.
+
+3. Public License Fallback. Should any part of the Waiver for any reason
+be judged legally invalid or ineffective under applicable law, then the
+Waiver shall be preserved to the maximum extent permitted taking into
+account Affirmer's express Statement of Purpose. In addition, to the
+extent the Waiver is so judged Affirmer hereby grants to each affected
+person a royalty-free, non transferable, non sublicensable, non exclusive,
+irrevocable and unconditional license to exercise Affirmer's Copyright and
+Related Rights in the Work (i) in all territories worldwide, (ii) for the
+maximum duration provided by applicable law or treaty (including future
+time extensions), (iii) in any current or future medium and for any number
+of copies, and (iv) for any purpose whatsoever, including without
+limitation commercial, advertising or promotional purposes (the
+"License"). The License shall be deemed effective as of the date CC0 was
+applied by Affirmer to the Work. Should any part of the License for any
+reason be judged legally invalid or ineffective under applicable law, such
+partial invalidity or ineffectiveness shall not invalidate the remainder
+of the License, and in such case Affirmer hereby affirms that he or she
+will not (i) exercise any of his or her remaining Copyright and Related
+Rights in the Work or (ii) assert any associated claims and causes of
+action with respect to the Work, in either case contrary to Affirmer's
+express Statement of Purpose.
+
+4. Limitations and Disclaimers.
+
+a. No trademark or patent rights held by Affirmer are waived, abandoned,
+surrendered, licensed or otherwise affected by this document.
+b. Affirmer offers the Work as-is and makes no representations or
+warranties of any kind concerning the Work, express, implied,
+statutory or otherwise, including without limitation warranties of
+title, merchantability, fitness for a particular purpose, non
+infringement, or the absence of latent or other defects, accuracy, or
+the present or absence of errors, whether or not discoverable, all to
+the greatest extent permissible under applicable law.
+c. Affirmer disclaims responsibility for clearing rights of other persons
+that may apply to the Work or any use thereof, including without
+limitation any person's Copyright and Related Rights in the Work.
+Further, Affirmer disclaims responsibility for obtaining any necessary
+consents, permissions or other rights required for any use of the
+Work.
+d. Affirmer understands and acknowledges that Creative Commons is not a
+party to this document and has no duty or obligation with respect to
+this CC0 or use of the Work.
+*/
