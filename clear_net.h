@@ -128,7 +128,7 @@ void cn_dealloc_net(Net *net, size_t from_file);
 float cn_learn(Net *net, Matrix input, Matrix target);
 Vector cn_predict(Net net, Vector input);
 Vector cn_predict_layer(DenseLayer layer, Vector prev_output);
-float _cn_find_grad(Net *net, GradientStore *gs, Matrix input, Matrix target);
+float _cn_find_grad(Net *net, GradientStore *gs, Vector input, Vector target);
 Vector _cn_predict(Net *net, GradientStore *nl, Vector input);
 Vector _cn_predict_layer(DenseLayer layer, GradientStore *nl, Vector prev_output);
 void cn_randomize_net(Net net, float lower, float upper);
@@ -420,8 +420,6 @@ struct Net {
 Net cn_alloc_net(size_t *shape, size_t nlayers) {
     CLEAR_NET_ASSERT(nlayers != 0);
 
-    // TODO Move these allocations to their correct files
-
     Net net;
     net.nlayers = nlayers;
     net.layers = CLEAR_NET_ALLOC((nlayers - 1) * sizeof(DenseLayer));
@@ -437,32 +435,22 @@ Net cn_alloc_net(size_t *shape, size_t nlayers) {
         } else {
             layer.act = CLEAR_NET_ACT_HIDDEN;
         }
-        Matrix mat;
+        Matrix mat = cn_alloc_matrix(shape[i], shape[i+1]);
         mat.gs_id = nparam;
-        mat.nrows = shape[i];
-        mat.ncols = shape[i + 1];
         mat.stride = mat.ncols;
-        mat.elements =
-            CLEAR_NET_ALLOC(mat.nrows * mat.ncols * sizeof(*mat.elements));
         layer.weights = mat;
         nparam += (layer.weights.nrows * layer.weights.ncols);
 
-        Vector vec;
+        Vector vec = _cn_alloc_vector(shape[i+1]);
         vec.gs_id = nparam;
-        vec.nelem = shape[i + 1];
-        vec.elements = CLEAR_NET_ALLOC(vec.nelem * sizeof(*vec.elements));
         layer.biases = vec;
         nparam += layer.biases.nelem;
 
         layer.output_gs_ids =
             CLEAR_NET_ALLOC(layer.biases.nelem * sizeof(*layer.output_gs_ids));
-        layer.output = (Vector){
-            .elements = CLEAR_NET_ALLOC(layer.biases.nelem *
-                                        sizeof(*layer.output.elements)),
-            .nelem = layer.biases.nelem,
-            .gs_id = 0,
-        };
-
+        Vector out = _cn_alloc_vector(layer.biases.nelem);
+        out.gs_id = 0;
+        layer.output = out;
         net.layers[i] = layer;
     }
     net.nparam = nparam;
@@ -566,31 +554,25 @@ Vector _cn_predict(Net *net, GradientStore *gs, Vector input) {
     return guess;
 }
 
-float _cn_find_grad(Net *net, GradientStore *gs, Matrix input,
-                          Matrix target) {
-    // TODO this code should be moved to the cn_learn code and then pass the vectors to this function
-    Vector input_vec = (Vector){
-        .gs_id = gs->length,
-        .nelem = input.ncols,
-    };
-    for (size_t i = 0; i < input_vec.nelem; ++i) {
-        cn_init_leaf_var(gs, MAT_AT(input, 0, i));
+float _cn_find_grad(Net *net, GradientStore *gs, Vector input,
+                          Vector target) {
+    // TODO can do it by setting the start length in this function
+    input.gs_id = gs->length;
+    for (size_t i = 0; i < input.nelem; ++i) {
+        cn_init_leaf_var(gs, VEC_AT(input, i));
     }
+    Vector prediction = _cn_predict(net, gs, input);
 
-    Vector prediction = _cn_predict(net, gs, input_vec);
-    Vector target_vec = (Vector){
-        .gs_id = gs->length,
-        .nelem = target.ncols,
-    };
-    for (size_t i = 0; i < target.ncols; ++i) {
-        cn_init_leaf_var(gs, MAT_AT(target, 0, i));
+    target.gs_id = gs->length;
+    for (size_t i = 0; i < target.nelem; ++i) {
+        cn_init_leaf_var(gs, VEC_AT(target, i));
     }
     size_t loss = cn_init_leaf_var(gs, 0);
-    for (size_t i = 0; i < target.ncols; ++i) {
+    for (size_t i = 0; i < target.nelem; ++i) {
         loss = cn_add(
                    gs, loss,
                    cn_raise(gs,
-                         cn_subtract(gs, VEC_ID(target_vec, i), VEC_ID(prediction, i)),
+                         cn_subtract(gs, VEC_ID(target, i), VEC_ID(prediction, i)),
                          cn_init_leaf_var(gs, 2)));
     }
 
@@ -616,15 +598,19 @@ float cn_learn(Net *net, Matrix input, Matrix target) {
         }
     }
 
-    Matrix one_input;
-    Matrix one_target;
     float total_loss = 0;
     for (size_t i = 0; i < train_size; ++i) {
-        one_input =
-            cn_form_matrix(1, input.ncols, input.stride, &MAT_AT(input, i, 0));
-        one_target =
-            cn_form_matrix(1, target.ncols, target.stride, &MAT_AT(target, i, 0));
-        total_loss += _cn_find_grad(net, gs, one_input, one_target);
+        Vector input_vec = (Vector){
+            .elements = cn_form_matrix(1, input.ncols, input.stride, &MAT_AT(input, i, 0)).elements,
+            .gs_id = 0,
+            .nelem = input.ncols,
+        };
+        Vector target_vec = (Vector){
+            .elements = cn_form_matrix(1, target.ncols, target.stride, &MAT_AT(target, i, 0)).elements,
+            .gs_id = 0,
+            .nelem = target.ncols,
+        };
+        total_loss += _cn_find_grad(net, gs, input_vec, target_vec);
         gs->length = net->nparam;
     }
 
