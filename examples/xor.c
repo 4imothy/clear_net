@@ -1,5 +1,5 @@
-#define CLEAR_NET_IMPLEMENTATION
 #define CLEAR_NET_ACT_HIDDEN Sigmoid
+#define CLEAR_NET_IMPLEMENTATION
 #include "../clear_net.h"
 
 int main(void) {

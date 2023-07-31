@@ -33,66 +33,67 @@ Put these before including the /clear_net.h/ file in your code.
 | CLEAR_NET_ACT_HIDDEN    | The activation function of the hidden layer                             | /Leaky_RELU/             |
 | CLEAR_NET_ACT_NEG_SCALE | When using /Leaky RELU/, or /ELU/ this is the scale for negative values | /0.1/                    |
 *** Creating, Training and Saving a Neural Net
-This code is from [[./examples/xor.c][xor.c]].
-**** Define Training Strategy
-Define hidden and output activation function
+This code is fromh [[./examples/xor.c][xor.c]].
+**** Define hyperparameters
 #+begin_src C
-#define CLEAR_NET_ACT_OUTPUT Sigmoid
-#define CLEAR_NET_ACT_HIDDEN RELU
-#+end_src C
-Define learning rate
-#+begin_src C
-#define CLEAR_NET_RATE 0.1f
-#+end_src C
-**** Define the Shape
-#+begin_src C
-  size_t* shape = {2,2,1};
-  size_t* nlayers = ARR_LEN(shape);
+#define CLEAR_NET_ACT_HIDDEN Sigmoid
 #+end_src
-**** Create the Input and Target Data
+**** Include header and implement the library
 #+begin_src C
-  Matrix data = alloc_mat(4, 3);
+  #define CLEAR_NET_IMPLEMENTATION
+  #include "../clear_net.h"
+#+end_src
+**** Define the Shape and Create The Model
+#+begin_src C
+    size_t shape[] = {2, 2, 1};
+    size_t nlayers = sizeof((shape)) / sizeof((*shape));
+    Net net = cn_alloc_net(shape, nlayers);
+    cn_randomize_net(net, -1, 1);
+#+end_src
+**** Create the input and target data
+#+begin_src C
+  Matrix data = cn_alloc_matrix(4, 3);
   for (size_t i = 0; i < 2; ++i) {
-    for (size_t j = 0; j < 2; ++j) {
-      size_t row = i * 2 + j;
-      MAT_GET(data, row, 0) = i;
-      MAT_GET(data, row, 1) = j;
-      MAT_GET(data, row, 2) = i ^ j;
-    }
+      for (size_t j = 0; j < 2; ++j) {
+          size_t row = i * 2 + j;
+          MAT_AT(data, row, 0) = i;
+          MAT_AT(data, row, 1) = j;
+          MAT_AT(data, row, 2) = i ^ j;
+      }
    }
-  Matrix input = mat_form(data.nrows, 2, data.stride, &MAT_GET(data, 0, 0));
-  Matrix output = mat_form(data.nrows, 1, data.stride, &MAT_GET(data, 0, input.ncols));
+  Matrix input = cn_form_matrix(data.nrows, 2, data.stride, &MAT_AT(data, 0, 0));
+  Matrix target = cn_form_matrix(data.nrows, 1, data.stride, &MAT_AT(data, 0, data.ncols - 1));
 #+end_src
-**** Train the Model
+**** Train the model
 #+begin_src C
-  size_t num_epochs = 20000;
-  float error;
-  float error_break = 0.01;
+  float loss;
+  size_t num_epochs = 10000;
   for (size_t i = 0; i < num_epochs; ++i) {
-    net_backprop(net, input, output);
-    error = net_errorf(net, input, output);
-    if (i % (num_epochs / 5) == 0) {
-      printf("Cost at %zu: %f\n", i, error);
-    }
-    if (error < error_break) {
-      printf("Less than: %f error at epoch %zu\n", error_break, i);
-      break;
-    }
-   }
+      loss = cn_learn(&net, input, target);
+      if (i % 100 == 0) {
+          printf("Average loss: %g\n", loss);
+      }
+  }
+  printf("Final loss: %g\n", loss);
 #+end_src
-**** Once Model is Trained
-Print the results
+**** Once model is trained
+*Print the results*
 #+begin_src C
-  net_print_results(net, input, output, &roundf);
+  cn_print_net_results(net, input, target);
 #+end_src
-Save to file
-#+begin_src C 
-  net_save_to_file("model", net);
-  // can be loaded again with
-  Net net = alloc_net_from_file("model");
-#+end_src
-Deallocate
+*Save to file*
 #+begin_src C
-  dealloc_net(&net);
+  char* file = "model";
+  cn_save_net_to_file(net, file);
+  cn_dealloc_net(&net, 0);
 #+end_src
-
+*Load from file and view results again*
+#+begin_src C
+  net = cn_alloc_net_from_file(file);
+  cn_print_net_results(net, input, target);
+#+end_src
+*Load from file and view results again*
+#+begin_src C
+  cn_dealloc_net(&net, 1);
+  cn_dealloc_matrix(&data);
+#+end_src
