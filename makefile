@@ -33,7 +33,7 @@ run_%: %
 
 AUTODIFF_FILE := $(TEST_DIR)/autodiff.c
 
-autodiff: $(AUTODIFF_FILE) ./clear_net_new.h
+autodiff: $(AUTODIFF_FILE) clear_net
 	$(CC) $(CFLAGS) -o $@ $(AUTODIFF_FILE)
 
 test_%: %
