@@ -35,7 +35,6 @@ int main(void) {
     Net net = cn_alloc_net(shape, nlayers);
     printf("%zu\n", net.nlayers);
     cn_randomize_net(net, -1, 1);
-    float error_break = 0.01f;
     float loss;
     for (size_t i = 0; i < num_epochs; ++i) {
         loss = cn_learn(&net, input, target);
