@@ -1,5 +1,5 @@
 #define CLEAR_NET_IMPLEMENTATION
-#include "../../clear_net_new.h"
+#include "../../clear_net.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -8,17 +8,17 @@
 
 int main(int argc, char *argv[]) {
     CLEAR_NET_ASSERT(argc == 2);
-    NodeStore node_store = alloc_node_store(0);
-    NodeStore *ns = &node_store;
+    GradientStore gradient_store = cn_alloc_gradient_store(0);
+    GradientStore *gs = &gradient_store;
     if (strcmp(argv[1], "1") == 0) {
-        size_t a = init_leaf_var(ns, -2.0);
-        size_t b = init_leaf_var(ns, 3.0);
-        size_t c = multiply(ns, a, b);
-        size_t d = add(ns, a, b);
-        size_t e = multiply(ns, c, d);
-        size_t f = subtract(ns, a, e);
-        size_t g = hyper_tanv(ns, f);
-        backward(ns, g);
+        size_t a = cn_init_leaf_var(gs, -2.0);
+        size_t b = cn_init_leaf_var(gs, 3.0);
+        size_t c = cn_multiply(gs, a, b);
+        size_t d = cn_add(gs, a, b);
+        size_t e = cn_multiply(gs, c, d);
+        size_t f = cn_subtract(gs, a, e);
+        size_t g = cn_hyper_tanv(gs, f);
+        cn_backward(gs, g);
         PRINT_VAL(a);
         PRINT_VAL(b);
         PRINT_VAL(c);
@@ -27,22 +27,22 @@ int main(int argc, char *argv[]) {
         PRINT_VAL(f);
         PRINT_VAL(g);
     } else if (strcmp(argv[1], "2") == 0) {
-        size_t one = init_leaf_var(ns, 1.0);
-        size_t none = init_leaf_var(ns, -1.0);
-        size_t two = init_leaf_var(ns, 2.0);
-        size_t three = init_leaf_var(ns, 3.0);
-        size_t a = init_leaf_var(ns, -4.0);
-        size_t b = init_leaf_var(ns, 2.0);
-        size_t c = add(ns, a, b);
-        size_t d = add(ns, multiply(ns, a, b), b);
-        c = add(ns, c, add(ns, c, one));
-        c = add(ns, c, add(ns, c, add(ns, one, multiply(ns, none, a))));
-        d = add(ns, d, add(ns, multiply(ns, d, two), reluv(ns, add(ns, b, a))));
-        d = add(ns, d,
-                add(ns, multiply(ns, d, three), reluv(ns, subtract(ns, b, a))));
-        size_t e = subtract(ns, c, d);
-        size_t f = reluv(ns, e);
-        backward(ns, f);
+        size_t one = cn_init_leaf_var(gs, 1.0);
+        size_t none = cn_init_leaf_var(gs, -1.0);
+        size_t two = cn_init_leaf_var(gs, 2.0);
+        size_t three = cn_init_leaf_var(gs, 3.0);
+        size_t a = cn_init_leaf_var(gs, -4.0);
+        size_t b = cn_init_leaf_var(gs, 2.0);
+        size_t c = cn_add(gs, a, b);
+        size_t d = cn_add(gs, cn_multiply(gs, a, b), b);
+        c = cn_add(gs, c, cn_add(gs, c, one));
+        c = cn_add(gs, c, cn_add(gs, c, cn_add(gs, one, cn_multiply(gs, none, a))));
+        d = cn_add(gs, d, cn_add(gs, cn_multiply(gs, d, two), cn_reluv(gs, cn_add(gs, b, a))));
+        d = cn_add(gs, d,
+                cn_add(gs, cn_multiply(gs, d, three), cn_reluv(gs, cn_subtract(gs, b, a))));
+        size_t e = cn_subtract(gs, c, d);
+        size_t f = cn_reluv(gs, e);
+        cn_backward(gs, f);
         PRINT_VAL(a);
         PRINT_VAL(b);
         PRINT_VAL(c);
@@ -50,65 +50,65 @@ int main(int argc, char *argv[]) {
         PRINT_VAL(e);
         PRINT_VAL(f);
     } else if (strcmp(argv[1], "pow") == 0) {
-        size_t a = init_leaf_var(ns, 5);
-        size_t b = init_leaf_var(ns, 10);
-        size_t c = raise(ns, a, b);
-        c = raise(ns, c, init_leaf_var(ns, 2));
-        backward(ns, c);
+        size_t a = cn_init_leaf_var(gs, 5);
+        size_t b = cn_init_leaf_var(gs, 10);
+        size_t c = cn_raise(gs, a, b);
+        c = cn_raise(gs, c, cn_init_leaf_var(gs, 2));
+        cn_backward(gs, c);
         PRINT_VAL(a);
         PRINT_VAL(b);
         PRINT_VAL(c);
     } else if (strcmp(argv[1], "on_itself") == 0) {
-        size_t a = init_leaf_var(ns, 3.0);
-        size_t b = init_leaf_var(ns, 7.0);
-        size_t c = add(ns, a, b);
-        size_t t = init_leaf_var(ns, 2.0);
-        c = add(ns, c, t);
-        c = add(ns, c, t);
-        c = multiply(ns, c, a);
-        c = subtract(ns, c, b);
-        size_t d = init_leaf_var(ns, 5.0);
-        d = subtract(ns, d, c);
-        d = add(ns, d, d);
-        backward(ns, d);
+        size_t a = cn_init_leaf_var(gs, 3.0);
+        size_t b = cn_init_leaf_var(gs, 7.0);
+        size_t c = cn_add(gs, a, b);
+        size_t t = cn_init_leaf_var(gs, 2.0);
+        c = cn_add(gs, c, t);
+        c = cn_add(gs, c, t);
+        c = cn_multiply(gs, c, a);
+        c = cn_subtract(gs, c, b);
+        size_t d = cn_init_leaf_var(gs, 5.0);
+        d = cn_subtract(gs, d, c);
+        d = cn_add(gs, d, d);
+        cn_backward(gs, d);
         PRINT_VAL(a);
         PRINT_VAL(b);
         PRINT_VAL(c);
         PRINT_VAL(d);
     } else if (strcmp(argv[1], "tanh") == 0) {
-        size_t x1 = init_leaf_var(ns, 2.0);
-        size_t x2 = init_leaf_var(ns, -0.0);
-        size_t w1 = init_leaf_var(ns, -3.0);
-        size_t w2 = init_leaf_var(ns, 1.0);
-        size_t b = init_leaf_var(ns, 7.0);
-        size_t t1 = multiply(ns, x1, w1);
-        size_t t2 = multiply(ns, x2, w2);
-        size_t t3 = add(ns, t1, t2);
-        size_t n = add(ns, t3, b);
-        size_t o = hyper_tanv(ns, n);
-        backward(ns, o);
+        size_t x1 = cn_init_leaf_var(gs, 2.0);
+        size_t x2 = cn_init_leaf_var(gs, -0.0);
+        size_t w1 = cn_init_leaf_var(gs, -3.0);
+        size_t w2 = cn_init_leaf_var(gs, 1.0);
+        size_t b = cn_init_leaf_var(gs, 7.0);
+        size_t t1 = cn_multiply(gs, x1, w1);
+        size_t t2 = cn_multiply(gs, x2, w2);
+        size_t t3 = cn_add(gs, t1, t2);
+        size_t n = cn_add(gs, t3, b);
+        size_t o = cn_hyper_tanv(gs, n);
+        cn_backward(gs, o);
         PRINT_VAL(x1);
         PRINT_VAL(w1);
         PRINT_VAL(x2);
         PRINT_VAL(w2);
     } else if (strcmp(argv[1], "relu") == 0) {
-        size_t a = init_leaf_var(ns, 10.0);
-        size_t b = init_leaf_var(ns, 5.0);
-        size_t c = multiply(ns, a, b);
-        size_t d = reluv(ns, c);
-        backward(ns, d);
+        size_t a = cn_init_leaf_var(gs, 10.0);
+        size_t b = cn_init_leaf_var(gs, 5.0);
+        size_t c = cn_multiply(gs, a, b);
+        size_t d = cn_reluv(gs, c);
+        cn_backward(gs, d);
         PRINT_VAL(a);
         PRINT_VAL(b);
         PRINT_VAL(c);
         PRINT_VAL(d);
     } else if (strcmp(argv[1], "sigmoid") == 0) {
-        size_t a = init_leaf_var(ns, 0.3);
-        size_t b = init_leaf_var(ns, 0.5);
-        size_t c = init_leaf_var(ns, -1);
-        size_t d = multiply(ns, c, add(ns, a, b));
-        size_t e = multiply(ns, d, a);
-        size_t f = sigmoidv(ns, e);
-        backward(ns, f);
+        size_t a = cn_init_leaf_var(gs, 0.3);
+        size_t b = cn_init_leaf_var(gs, 0.5);
+        size_t c = cn_init_leaf_var(gs, -1);
+        size_t d = cn_multiply(gs, c, cn_add(gs, a, b));
+        size_t e = cn_multiply(gs, d, a);
+        size_t f = cn_sigmoidv(gs, e);
+        cn_backward(gs, f);
         PRINT_VAL(a);
         PRINT_VAL(b);
         PRINT_VAL(c);
@@ -116,5 +116,5 @@ int main(int argc, char *argv[]) {
         PRINT_VAL(e);
         PRINT_VAL(f);
     }
-    dealloc_node_store(ns);
+    cn_dealloc_gradient_store(gs);
 }

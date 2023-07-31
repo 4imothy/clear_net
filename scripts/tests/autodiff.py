@@ -59,8 +59,8 @@ def check_res(my_res, torch_res):
             print_diff(mres, tres, "grad")
             exit(1)
 
-        print(f"Clear: name: {mres[0]} val: {mres[1]} grad: {mres[2]}")
-        print(f"Torch: name: {tres[0]} val: {tres[1]} grad: {tres[2]}")
+        # print(f"Clear: name: {mres[0]} val: {mres[1]} grad: {mres[2]}")
+        # print(f"Torch: name: {tres[0]} val: {tres[1]} grad: {tres[2]}")
 
 
 def test_against_cn(code):
