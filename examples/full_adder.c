@@ -38,7 +38,9 @@ int main(void) {
     float loss;
     for (size_t i = 0; i < num_epochs; ++i) {
         loss = cn_learn(&net, input, target);
-        printf("Average loss: %g\n", loss);
+        if (i % (num_epochs /10) == 0) {
+            printf("Average loss: %g\n", loss);
+        }
     }
     printf("Final loss: %g\n", loss);
     cn_print_net(net, "final");
