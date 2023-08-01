@@ -116,6 +116,7 @@ void cn_print_matrix(Matrix mat, char *name);
 typedef struct Vector Vector;
 Vector _cn_alloc_vector(size_t nelem);
 void _cn_dealloc_vector(Vector *vec);
+Vector cn_form_vector(size_t nelem, float *elements);
 void _cn_print_vector(Vector vec, char *name);
 void _cn_print_vector_res(Vector vec);
 
@@ -376,7 +377,7 @@ void _cn_dealloc_vector(Vector *vec) {
     vec->elements = NULL;
 }
 
-Vector vector_form(size_t nelem, float *elements) {
+Vector cn_form_vector(size_t nelem, float *elements) {
     return (Vector){
         .gs_id = 0,
         .nelem = nelem,
@@ -597,21 +598,12 @@ float cn_learn(Net *net, Matrix input, Matrix target) {
     }
 
     float total_loss = 0;
-    size_t save;
+    Vector input_vec;
+    Vector target_vec;
     for (size_t i = 0; i < train_size; ++i) {
-        // TODO change this to a vector form
-        Vector input_vec = (Vector){
-            .elements = cn_form_matrix(1, input.ncols, input.stride, &MAT_AT(input, i, 0)).elements,
-            .gs_id = 0,
-            .nelem = input.ncols,
-        };
-        Vector target_vec = (Vector){
-            .elements = cn_form_matrix(1, target.ncols, target.stride, &MAT_AT(target, i, 0)).elements,
-            .gs_id = 0,
-            .nelem = target.ncols,
-        };
+        input_vec = cn_form_vector(input.ncols, &MAT_AT(input, i, 0));
+        target_vec = cn_form_vector(target.ncols, &MAT_AT(target, i, 0));
         total_loss += _cn_find_grad(net, gs, input_vec, target_vec);
-        save = gs->length;
         gs->length = net->nparam + 1;
     }
     float coef = CLEAR_NET_RATE / train_size;
@@ -662,8 +654,8 @@ void cn_print_net_results(Net net, Matrix input, Matrix target) {
     printf("Input | Net Output | Target\n");
     float loss = 0;
     for (size_t i = 0; i < size; ++i) {
-        Vector in = vector_form(input.ncols, &MAT_AT(input, i, 0));
-        Vector tar = vector_form(target.ncols, &MAT_AT(target, i, 0));
+        Vector in = cn_form_vector(input.ncols, &MAT_AT(input, i, 0));
+        Vector tar = cn_form_vector(target.ncols, &MAT_AT(target, i, 0));
         Vector out = cn_predict(net, in);
         for (size_t j = 0; j < out.nelem; ++j) {
             loss += powf(VEC_AT(out, j) - VEC_AT(tar, j), 2);
