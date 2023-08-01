@@ -10,12 +10,13 @@
 
    See end of file for full license.
 */
-
 /*
   TODO Activation for: elu, Leak_Relu
   TODO stochastic gradient descent
   TODO momentum
+  TODO instead of macros for hyperparameters make a net builder/hyperparam struct
 */
+/* Beginning */
 #ifndef CLEAR_NET
 #define CLEAR_NET
 
@@ -72,7 +73,6 @@ typedef struct VarNode VarNode;
 typedef struct GradientStore GradientStore;
 typedef void BackWardFunction(GradientStore *nl, VarNode *var);
 
-// other names for ad_add
 GradientStore cn_alloc_gradient_store(size_t length);
 void cn_dealloc_gradient_store(GradientStore *nl);
 size_t _cn_init_var(GradientStore *nl, float num, size_t prev_left, size_t prev_right,
@@ -291,11 +291,11 @@ size_t cn_sigmoidv(GradientStore *gs, size_t x) {
 
 void cn_backward(GradientStore *gs, size_t y) {
     GET_NODE(y).grad = 1;
-    VarNode var;
+    VarNode* var;
     for (size_t i = gs->length - 1; i > 0; --i) {
-        var = GET_NODE(i);
-        if (var.backward) {
-            var.backward(gs, &var);
+        var = &GET_NODE(i);
+        if (var->backward) {
+            var->backward(gs, var);
         }
     }
 }
@@ -384,6 +384,7 @@ Vector vector_form(size_t nelem, float *elements) {
     };
 }
 
+// TODO add check for whether the data is in a gradient store or its elements
 void _cn_print_vector(Vector vec, char *name) {
     printf("%s = [\n", name);
     printf("    ");
@@ -427,7 +428,7 @@ Net cn_alloc_net(size_t *shape, size_t nlayers) {
     // Length calculation
     // | number of weights | biases
     // (shape[0] * shape[1]) + shape[1]
-    size_t nparam = 1;
+    size_t offset = 1;
     for (size_t i = 0; i < nlayers - 1; ++i) {
         DenseLayer layer;
         if (i == nlayers - 2) {
@@ -436,15 +437,15 @@ Net cn_alloc_net(size_t *shape, size_t nlayers) {
             layer.act = CLEAR_NET_ACT_HIDDEN;
         }
         Matrix mat = cn_alloc_matrix(shape[i], shape[i+1]);
-        mat.gs_id = nparam;
+        mat.gs_id = offset;
         mat.stride = mat.ncols;
         layer.weights = mat;
-        nparam += (layer.weights.nrows * layer.weights.ncols);
+        offset += (layer.weights.nrows * layer.weights.ncols);
 
         Vector vec = _cn_alloc_vector(shape[i+1]);
-        vec.gs_id = nparam;
+        vec.gs_id = offset;
         layer.biases = vec;
-        nparam += layer.biases.nelem;
+        offset += layer.biases.nelem;
 
         layer.output_gs_ids =
             CLEAR_NET_ALLOC(layer.biases.nelem * sizeof(*layer.output_gs_ids));
@@ -453,7 +454,7 @@ Net cn_alloc_net(size_t *shape, size_t nlayers) {
         layer.output = out;
         net.layers[i] = layer;
     }
-    net.nparam = nparam;
+    net.nparam = offset - 1;
     net.computation_graph = cn_alloc_gradient_store(net.nparam);
     return net;
 }
@@ -482,6 +483,7 @@ size_t _cn_activate(GradientStore *gs, size_t id, Activation act) {
     }
 }
 
+// Todo fix this function
 float activate(float x, Activation act) {
     switch (act) {
     case ReLU:
@@ -537,9 +539,9 @@ Vector _cn_predict_layer(DenseLayer layer, GradientStore *gs, Vector prev_output
         .nelem = layer.weights.ncols,
     };
 
-    for (size_t i = 0; i < layer.weights.ncols; ++i) {
-        cn_init_leaf_var(gs, 0);
-        GET_NODE(VEC_ID(out, i)) = GET_NODE(layer.output_gs_ids[i]);
+    for (size_t i = 0; i < out.nelem; ++i) {
+        VarNode to_copy = GET_NODE(layer.output_gs_ids[i]);
+        _cn_init_var(gs, to_copy.num, to_copy.prev_left, to_copy.prev_right, to_copy.backward);
     }
     return out;
 }
@@ -550,13 +552,10 @@ Vector _cn_predict(Net *net, GradientStore *gs, Vector input) {
     for (size_t i = 0; i < net->nlayers - 1; ++i) {
         guess = _cn_predict_layer(net->layers[i], gs, guess);
     }
-
     return guess;
 }
 
-float _cn_find_grad(Net *net, GradientStore *gs, Vector input,
-                          Vector target) {
-    // TODO can do it by setting the start length in this function
+float _cn_find_grad(Net *net, GradientStore *gs, Vector input, Vector target) {
     input.gs_id = gs->length;
     for (size_t i = 0; i < input.nelem; ++i) {
         cn_init_leaf_var(gs, VEC_AT(input, i));
@@ -572,10 +571,9 @@ float _cn_find_grad(Net *net, GradientStore *gs, Vector input,
         loss = cn_add(
                    gs, loss,
                    cn_raise(gs,
-                         cn_subtract(gs, VEC_ID(target, i), VEC_ID(prediction, i)),
-                         cn_init_leaf_var(gs, 2)));
+                            cn_subtract(gs, VEC_ID(prediction, i), VEC_ID(target, i)),
+                            cn_init_leaf_var(gs, 2)));
     }
-
     cn_backward(gs, loss);
 
     return GET_NODE(loss).num;
@@ -599,7 +597,9 @@ float cn_learn(Net *net, Matrix input, Matrix target) {
     }
 
     float total_loss = 0;
+    size_t save;
     for (size_t i = 0; i < train_size; ++i) {
+        // TODO change this to a vector form
         Vector input_vec = (Vector){
             .elements = cn_form_matrix(1, input.ncols, input.stride, &MAT_AT(input, i, 0)).elements,
             .gs_id = 0,
@@ -611,20 +611,21 @@ float cn_learn(Net *net, Matrix input, Matrix target) {
             .nelem = target.ncols,
         };
         total_loss += _cn_find_grad(net, gs, input_vec, target_vec);
-        gs->length = net->nparam;
+        save = gs->length;
+        gs->length = net->nparam + 1;
     }
-
+    float coef = CLEAR_NET_RATE / train_size;
     for (size_t i = 0; i < net->nlayers - 1; ++i) {
         for (size_t j = 0; j < net->layers[i].weights.nrows; ++j) {
             for (size_t k = 0; k < net->layers[i].weights.ncols; ++k) {
                 MAT_AT(net->layers[i].weights, j, k) -=
-                    CLEAR_NET_RATE *
+                    coef *
                     GET_NODE(MAT_ID(net->layers[i].weights, j, k)).grad;
             }
         }
         for (size_t j = 0; j < net->layers[i].biases.nelem; ++j) {
-            VEC_AT(net->layers[i].biases, j) -=
-                CLEAR_NET_RATE *
+             VEC_AT(net->layers[i].biases, j) -=
+                 coef *
                 GET_NODE(VEC_ID(net->layers[i].biases, j)).grad;
         }
     }
@@ -712,127 +713,128 @@ Net cn_alloc_net_from_file(char *file_name) {
 }
 
 #endif // CLEAR_NET_IMPLEMENTATION
+/* Ending */
 
-/* Full License
-Creative Commons Legal Code
+/* License
+   Creative Commons Legal Code
 
-CC0 1.0 Universal
+   CC0 1.0 Universal
 
-CREATIVE COMMONS CORPORATION IS NOT A LAW FIRM AND DOES NOT PROVIDE
-LEGAL SERVICES. DISTRIBUTION OF THIS DOCUMENT DOES NOT CREATE AN
-ATTORNEY-CLIENT RELATIONSHIP. CREATIVE COMMONS PROVIDES THIS
-INFORMATION ON AN "AS-IS" BASIS. CREATIVE COMMONS MAKES NO WARRANTIES
-REGARDING THE USE OF THIS DOCUMENT OR THE INFORMATION OR WORKS
-PROVIDED HEREUNDER, AND DISCLAIMS LIABILITY FOR DAMAGES RESULTING FROM
-THE USE OF THIS DOCUMENT OR THE INFORMATION OR WORKS PROVIDED
-HEREUNDER.
+   CREATIVE COMMONS CORPORATION IS NOT A LAW FIRM AND DOES NOT PROVIDE
+   LEGAL SERVICES. DISTRIBUTION OF THIS DOCUMENT DOES NOT CREATE AN
+   ATTORNEY-CLIENT RELATIONSHIP. CREATIVE COMMONS PROVIDES THIS
+   INFORMATION ON AN "AS-IS" BASIS. CREATIVE COMMONS MAKES NO WARRANTIES
+   REGARDING THE USE OF THIS DOCUMENT OR THE INFORMATION OR WORKS
+   PROVIDED HEREUNDER, AND DISCLAIMS LIABILITY FOR DAMAGES RESULTING FROM
+   THE USE OF THIS DOCUMENT OR THE INFORMATION OR WORKS PROVIDED
+   HEREUNDER.
 
-Statement of Purpose
+   Statement of Purpose
 
-The laws of most jurisdictions throughout the world automatically confer
-exclusive Copyright and Related Rights (defined below) upon the creator
-and subsequent owner(s) (each and all, an "owner") of an original work of
-authorship and/or a database (each, a "Work").
+   The laws of most jurisdictions throughout the world automatically confer
+   exclusive Copyright and Related Rights (defined below) upon the creator
+   and subsequent owner(s) (each and all, an "owner") of an original work of
+   authorship and/or a database (each, a "Work").
 
-Certain owners wish to permanently relinquish those rights to a Work for
-the purpose of contributing to a commons of creative, cultural and
-scientific works ("Commons") that the public can reliably and without fear
-of later claims of infringement build upon, modify, incorporate in other
-works, reuse and redistribute as freely as possible in any form whatsoever
-and for any purposes, including without limitation commercial purposes.
-These owners may contribute to the Commons to promote the ideal of a free
-culture and the further production of creative, cultural and scientific
-works, or to gain reputation or greater distribution for their Work in
-part through the use and efforts of others.
+   Certain owners wish to permanently relinquish those rights to a Work for
+   the purpose of contributing to a commons of creative, cultural and
+   scientific works ("Commons") that the public can reliably and without fear
+   of later claims of infringement build upon, modify, incorporate in other
+   works, reuse and redistribute as freely as possible in any form whatsoever
+   and for any purposes, including without limitation commercial purposes.
+   These owners may contribute to the Commons to promote the ideal of a free
+   culture and the further production of creative, cultural and scientific
+   works, or to gain reputation or greater distribution for their Work in
+   part through the use and efforts of others.
 
-For these and/or other purposes and motivations, and without any
-expectation of additional consideration or compensation, the person
-associating CC0 with a Work (the "Affirmer"), to the extent that he or she
-is an owner of Copyright and Related Rights in the Work, voluntarily
-elects to apply CC0 to the Work and publicly distribute the Work under its
-terms, with knowledge of his or her Copyright and Related Rights in the
-Work and the meaning and intended legal effect of CC0 on those rights.
+   For these and/or other purposes and motivations, and without any
+   expectation of additional consideration or compensation, the person
+   associating CC0 with a Work (the "Affirmer"), to the extent that he or she
+   is an owner of Copyright and Related Rights in the Work, voluntarily
+   elects to apply CC0 to the Work and publicly distribute the Work under its
+   terms, with knowledge of his or her Copyright and Related Rights in the
+   Work and the meaning and intended legal effect of CC0 on those rights.
 
-1. Copyright and Related Rights. A Work made available under CC0 may be
-protected by copyright and related or neighboring rights ("Copyright and
-Related Rights"). Copyright and Related Rights include, but are not
-limited to, the following:
+   1. Copyright and Related Rights. A Work made available under CC0 may be
+   protected by copyright and related or neighboring rights ("Copyright and
+   Related Rights"). Copyright and Related Rights include, but are not
+   limited to, the following:
 
-i. the right to reproduce, adapt, distribute, perform, display,
-communicate, and translate a Work;
-ii. moral rights retained by the original author(s) and/or performer(s);
-iii. publicity and privacy rights pertaining to a person's image or
-likeness depicted in a Work;
-iv. rights protecting against unfair competition in regards to a Work,
-subject to the limitations in paragraph 4(a), below;
-v. rights protecting the extraction, dissemination, use and reuse of data
-in a Work;
-vi. database rights (such as those arising under Directive 96/9/EC of the
-European Parliament and of the Council of 11 March 1996 on the legal
-protection of databases, and under any national implementation
-thereof, including any amended or successor version of such
-directive); and
-vii. other similar, equivalent or corresponding rights throughout the
-world based on applicable law or treaty, and any national
-implementations thereof.
+   i. the right to reproduce, adapt, distribute, perform, display,
+   communicate, and translate a Work;
+   ii. moral rights retained by the original author(s) and/or performer(s);
+   iii. publicity and privacy rights pertaining to a person's image or
+   likeness depicted in a Work;
+   iv. rights protecting against unfair competition in regards to a Work,
+   subject to the limitations in paragraph 4(a), below;
+   v. rights protecting the extraction, dissemination, use and reuse of data
+   in a Work;
+   vi. database rights (such as those arising under Directive 96/9/EC of the
+   European Parliament and of the Council of 11 March 1996 on the legal
+   protection of databases, and under any national implementation
+   thereof, including any amended or successor version of such
+   directive); and
+   vii. other similar, equivalent or corresponding rights throughout the
+   world based on applicable law or treaty, and any national
+   implementations thereof.
 
-2. Waiver. To the greatest extent permitted by, but not in contravention
-of, applicable law, Affirmer hereby overtly, fully, permanently,
-irrevocably and unconditionally waives, abandons, and surrenders all of
-Affirmer's Copyright and Related Rights and associated claims and causes
-of action, whether now known or unknown (including existing as well as
-future claims and causes of action), in the Work (i) in all territories
-worldwide, (ii) for the maximum duration provided by applicable law or
-treaty (including future time extensions), (iii) in any current or future
-medium and for any number of copies, and (iv) for any purpose whatsoever,
-including without limitation commercial, advertising or promotional
-purposes (the "Waiver"). Affirmer makes the Waiver for the benefit of each
-member of the public at large and to the detriment of Affirmer's heirs and
-successors, fully intending that such Waiver shall not be subject to
-revocation, rescission, cancellation, termination, or any other legal or
-equitable action to disrupt the quiet enjoyment of the Work by the public
-as contemplated by Affirmer's express Statement of Purpose.
+   2. Waiver. To the greatest extent permitted by, but not in contravention
+   of, applicable law, Affirmer hereby overtly, fully, permanently,
+   irrevocably and unconditionally waives, abandons, and surrenders all of
+   Affirmer's Copyright and Related Rights and associated claims and causes
+   of action, whether now known or unknown (including existing as well as
+   future claims and causes of action), in the Work (i) in all territories
+   worldwide, (ii) for the maximum duration provided by applicable law or
+   treaty (including future time extensions), (iii) in any current or future
+   medium and for any number of copies, and (iv) for any purpose whatsoever,
+   including without limitation commercial, advertising or promotional
+   purposes (the "Waiver"). Affirmer makes the Waiver for the benefit of each
+   member of the public at large and to the detriment of Affirmer's heirs and
+   successors, fully intending that such Waiver shall not be subject to
+   revocation, rescission, cancellation, termination, or any other legal or
+   equitable action to disrupt the quiet enjoyment of the Work by the public
+   as contemplated by Affirmer's express Statement of Purpose.
 
-3. Public License Fallback. Should any part of the Waiver for any reason
-be judged legally invalid or ineffective under applicable law, then the
-Waiver shall be preserved to the maximum extent permitted taking into
-account Affirmer's express Statement of Purpose. In addition, to the
-extent the Waiver is so judged Affirmer hereby grants to each affected
-person a royalty-free, non transferable, non sublicensable, non exclusive,
-irrevocable and unconditional license to exercise Affirmer's Copyright and
-Related Rights in the Work (i) in all territories worldwide, (ii) for the
-maximum duration provided by applicable law or treaty (including future
-time extensions), (iii) in any current or future medium and for any number
-of copies, and (iv) for any purpose whatsoever, including without
-limitation commercial, advertising or promotional purposes (the
-"License"). The License shall be deemed effective as of the date CC0 was
-applied by Affirmer to the Work. Should any part of the License for any
-reason be judged legally invalid or ineffective under applicable law, such
-partial invalidity or ineffectiveness shall not invalidate the remainder
-of the License, and in such case Affirmer hereby affirms that he or she
-will not (i) exercise any of his or her remaining Copyright and Related
-Rights in the Work or (ii) assert any associated claims and causes of
-action with respect to the Work, in either case contrary to Affirmer's
-express Statement of Purpose.
+   3. Public License Fallback. Should any part of the Waiver for any reason
+   be judged legally invalid or ineffective under applicable law, then the
+   Waiver shall be preserved to the maximum extent permitted taking into
+   account Affirmer's express Statement of Purpose. In addition, to the
+   extent the Waiver is so judged Affirmer hereby grants to each affected
+   person a royalty-free, non transferable, non sublicensable, non exclusive,
+   irrevocable and unconditional license to exercise Affirmer's Copyright and
+   Related Rights in the Work (i) in all territories worldwide, (ii) for the
+   maximum duration provided by applicable law or treaty (including future
+   time extensions), (iii) in any current or future medium and for any number
+   of copies, and (iv) for any purpose whatsoever, including without
+   limitation commercial, advertising or promotional purposes (the
+   "License"). The License shall be deemed effective as of the date CC0 was
+   applied by Affirmer to the Work. Should any part of the License for any
+   reason be judged legally invalid or ineffective under applicable law, such
+   partial invalidity or ineffectiveness shall not invalidate the remainder
+   of the License, and in such case Affirmer hereby affirms that he or she
+   will not (i) exercise any of his or her remaining Copyright and Related
+   Rights in the Work or (ii) assert any associated claims and causes of
+   action with respect to the Work, in either case contrary to Affirmer's
+   express Statement of Purpose.
 
-4. Limitations and Disclaimers.
+   4. Limitations and Disclaimers.
 
-a. No trademark or patent rights held by Affirmer are waived, abandoned,
-surrendered, licensed or otherwise affected by this document.
-b. Affirmer offers the Work as-is and makes no representations or
-warranties of any kind concerning the Work, express, implied,
-statutory or otherwise, including without limitation warranties of
-title, merchantability, fitness for a particular purpose, non
-infringement, or the absence of latent or other defects, accuracy, or
-the present or absence of errors, whether or not discoverable, all to
-the greatest extent permissible under applicable law.
-c. Affirmer disclaims responsibility for clearing rights of other persons
-that may apply to the Work or any use thereof, including without
-limitation any person's Copyright and Related Rights in the Work.
-Further, Affirmer disclaims responsibility for obtaining any necessary
-consents, permissions or other rights required for any use of the
-Work.
-d. Affirmer understands and acknowledges that Creative Commons is not a
-party to this document and has no duty or obligation with respect to
-this CC0 or use of the Work.
+   a. No trademark or patent rights held by Affirmer are waived, abandoned,
+   surrendered, licensed or otherwise affected by this document.
+   b. Affirmer offers the Work as-is and makes no representations or
+   warranties of any kind concerning the Work, express, implied,
+   statutory or otherwise, including without limitation warranties of
+   title, merchantability, fitness for a particular purpose, non
+   infringement, or the absence of latent or other defects, accuracy, or
+   the present or absence of errors, whether or not discoverable, all to
+   the greatest extent permissible under applicable law.
+   c. Affirmer disclaims responsibility for clearing rights of other persons
+   that may apply to the Work or any use thereof, including without
+   limitation any person's Copyright and Related Rights in the Work.
+   Further, Affirmer disclaims responsibility for obtaining any necessary
+   consents, permissions or other rights required for any use of the
+   Work.
+   d. Affirmer understands and acknowledges that Creative Commons is not a
+   party to this document and has no duty or obligation with respect to
+   this CC0 or use of the Work.
 */
