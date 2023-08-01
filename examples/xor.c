@@ -27,7 +27,7 @@ int main(void) {
     for (size_t i = 0; i < num_epochs; ++i) {
         loss = cn_learn(&net, input, target);
         if (i % 100 == 0) {
-            printf("Average loss: %g\n", loss);
+            printf("Average loss: %f\n", loss);
         }
     }
     printf("Final loss: %g\n", loss);

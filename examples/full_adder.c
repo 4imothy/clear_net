@@ -33,14 +33,15 @@ int main(void) {
     size_t shape[] = {num_inputs, 3, 8, num_outputs};
     size_t nlayers = sizeof(shape) / sizeof(*shape);
     Net net = cn_alloc_net(shape, nlayers);
-    printf("%zu\n", net.nlayers);
     cn_randomize_net(net, -1, 1);
+    cn_print_net(net, "before");
     float loss;
     for (size_t i = 0; i < num_epochs; ++i) {
         loss = cn_learn(&net, input, target);
         printf("Average loss: %g\n", loss);
     }
     printf("Final loss: %g\n", loss);
+    cn_print_net(net, "final");
     cn_print_net_results(net, input, target);
     char *name = "model";
     cn_save_net_to_file(net, name);

@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <string.h>
 
-// clang-format off
 // sepal length (cm), sepal width (cm), petal length (cm), petal width (cm), target
+// clang-format off
 float test_values[] = {
     5.1, 3.5, 1.4, 0.2, 0,
     4.9, 3.0, 1.4, 0.2, 0,
@@ -143,84 +143,87 @@ float test_values[] = {
     6.8, 3.2, 5.9, 2.3, 2,
     6.7, 3.3, 5.7, 2.5, 2,
 };
-// clang-format on
-float validation_values[] = {
-    4.8, 3.0, 1.4, 0.3, 0, 5.1, 3.8, 1.6, 0.2, 0, 4.6, 3.2, 1.4, 0.2, 0,
-    5.3, 3.7, 1.5, 0.2, 0, 5.0, 3.3, 1.4, 0.2, 0, 5.7, 3.0, 4.2, 1.2, 1,
-    5.7, 2.9, 4.2, 1.3, 1, 6.2, 2.9, 4.3, 1.3, 1, 5.1, 2.5, 3.0, 1.1, 1,
-    5.7, 2.8, 4.1, 1.3, 1, 6.7, 3.0, 5.2, 2.3, 2, 6.3, 2.5, 5.0, 1.9, 2,
-    6.5, 3.0, 5.2, 2.0, 2, 6.2, 3.4, 5.4, 2.3, 2, 5.9, 3.0, 5.1, 1.8, 2};
 
-float fix_output(float out) { return roundf(out * 2); }
+float validation_values[] = {
+    4.8, 3.0, 1.4, 0.3, 0,
+    5.1, 3.8, 1.6, 0.2, 0,
+    4.6, 3.2, 1.4, 0.2, 0,
+    5.3, 3.7, 1.5, 0.2, 0,
+    5.0, 3.3, 1.4, 0.2, 0,
+    5.7, 3.0, 4.2, 1.2, 1,
+    5.7, 2.9, 4.2, 1.3, 1,
+    6.2, 2.9, 4.3, 1.3, 1,
+    5.1, 2.5, 3.0, 1.1, 1,
+    5.7, 2.8, 4.1, 1.3, 1,
+    6.7, 3.0, 5.2, 2.3, 2,
+    6.3, 2.5, 5.0, 1.9, 2,
+    6.5, 3.0, 5.2, 2.0, 2,
+    6.2, 3.4, 5.4, 2.3, 2,
+    5.9, 3.0, 5.1, 1.8, 2
+};
+// clang-format on
 
 int main(int argc, char *argv[]) {
     bool print = true;
 
     // Loop through command-line arguments
-    for (int i = 1; i < argc; i++) {
-        // Check if the argument is the "-b" flag
-        if (strcmp(argv[i], "-b") == 0) {
-            print = false;
-            break;
-        }
+    // TODO check this
+    if (argc > 1 && strcmp(argv[1], "-b") == 0) {
+        print = false;
     }
 
     srand(0);
     size_t data_cols = 5;
     size_t input_dim = 4;
-    size_t output_dim = 1;
+    size_t output_dim = data_cols - input_dim;
     size_t val_size = 15;
     size_t test_size = 150 - val_size;
-    Matrix test = mat_form(test_size, data_cols, data_cols, test_values);
+    Matrix test = cn_form_matrix(test_size, data_cols, data_cols, test_values);
     Matrix input =
-        mat_form(test_size, input_dim, test.stride, &MAT_GET(test, 0, 0));
-    Matrix target = mat_form(test_size, output_dim, test.stride,
-                             &MAT_GET(test, 0, input_dim));
+        cn_form_matrix(test_size, input_dim, test.stride, &MAT_AT(test, 0, 0));
+    Matrix target = cn_form_matrix(test_size, output_dim, test.stride,
+                             &MAT_AT(test, 0, input_dim));
     for (size_t i = 0; i < target.nrows; ++i) {
-        for (size_t j = 0; j < target.ncols; ++j) {
-            MAT_GET(target, i, j) = MAT_GET(target, i, j) / 2;
-        }
+        MAT_AT(target, i, 0) /= 2;
     }
-    Matrix val = mat_form(val_size, data_cols, data_cols, validation_values);
+
+    Matrix val = cn_form_matrix(val_size, data_cols, data_cols, validation_values);
+    Matrix val_input =
+        cn_form_matrix(val_size, input_dim, val.stride, &MAT_AT(val, 0, 0));
+    Matrix val_target = cn_form_matrix(val_size, output_dim, val.stride,
+                                       &MAT_AT(val, 0, input_dim));
+    for (size_t i = 0; i < val_size; ++i) {
+        MAT_AT(val_target, i, 0) /= 2;
+    }
+
     size_t shape[] = {input_dim, output_dim};
-    Net net = alloc_net(shape, ARR_LEN(shape));
-    net_rand(net, -1, 1);
+    size_t nlayers = sizeof(shape) / sizeof(*shape);
+    Net net = cn_alloc_net(shape, nlayers);
+    cn_randomize_net(net, -1, 1);
     size_t num_epochs = 10000;
-    float error;
+    float loss;
     float error_break = 0.01;
-    for (size_t i = 0; i < num_epochs; ++i) {
-        net_backprop(net, input, target);
-        error = net_errorf(net, input, target);
-        if (i % (num_epochs / 5) == 0) {
-            if (print) {
-                printf("Cost at %zu is %f\n", i, error);
-            }
-        }
-        if (error < error_break) {
-            if (print) {
-                printf("Less than %f error at %zu\n", error_break, i);
-            }
+    size_t i;
+    for (i = 0; i < num_epochs; ++i) {
+        loss = cn_learn(&net, input, target);
+        if (loss < error_break) {
             break;
+        }
+        if (i % (num_epochs / 5) == 0 && print) {
+            printf("Average loss: %f\n", loss);
         }
     }
     if (print) {
-        net_print_results(net, input, target, &fix_output);
-        Matrix val_input =
-            mat_form(val_size, input_dim, val.stride, &MAT_GET(val, 0, 0));
-        Matrix val_target = mat_form(val_size, output_dim, val.stride,
-                                     &MAT_GET(val, 0, input_dim));
-        for (size_t i = 0; i < val_target.nrows; ++i) {
-            for (size_t j = 0; j < val_target.ncols; ++j) {
-                MAT_GET(val_target, i, j) = MAT_GET(val_target, i, j) / 2;
-            }
-        }
-        net_print_results(net, val_input, val_target, &fix_output);
-        net_save_to_file("model", net);
-        dealloc_net(&net, 0);
-        net = alloc_net_from_file("model");
-        printf("After loading file\n");
-        net_print_results(net, val_input, val_target, &fix_output);
-        dealloc_net(&net, 1);
+        printf("Final loss at %zu : %g\n", i,loss);
+        cn_print_net_results(net, input, target);
+        char* file = "model";
+        cn_save_net_to_file(net, file);
+        cn_dealloc_net(&net, 0);
+        net = cn_alloc_net_from_file(file);
+        cn_print_net_results(net, input, target);
+        printf("On validation set\n");
+        cn_print_net_results(net, val_input, val_target);
+        cn_dealloc_net(&net, 1);
     }
     return 0;
 }
