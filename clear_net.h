@@ -12,7 +12,6 @@
 */
 /*
   TODO Activation for: elu, Leak_Relu
-  TODO stochastic gradient descent
   TODO momentum
   TODO instead of macros for hyperparameters make a net builder/hyperparam struct
 */
@@ -40,7 +39,6 @@
 #include "assert.h" // assert
 #define CLEAR_NET_ASSERT assert
 #endif // CLEAR_NET_ASSERT
-
 #ifndef CLEAR_NET_RATE
 #define CLEAR_NET_RATE 0.5f
 #endif
@@ -61,9 +59,9 @@
 #define CLEAR_NET_MOMENTUM_BETA 0.9
 #endif // CLEAR_NET_MOMENTUM_BETA
 
-#ifndef CLEAR_NET_PARAM_LIST_LENGTH
-#define CLEAR_NET_PARAM_LIST_LENGTH 10
-#endif // CLEAR_NET_PARAM_LIST_LENGTH
+#ifndef CLEAR_NET_INITIAL_GRAPH_LENGTH
+#define CLEAR_NET_INITIAL_GRAPH_LENGTH 10
+#endif // CLEAR_NET_INITIAL_GRAPH_LENGTH
 
 /* Declaration: Helpers */
 float _cn_randf(void);
@@ -112,6 +110,7 @@ Matrix cn_alloc_matrix(size_t nrows, size_t ncols);
 void cn_dealloc_matrix(Matrix *mat);
 Matrix cn_form_matrix(size_t nrows, size_t ncols, size_t stride, float *elements);
 void cn_print_matrix(Matrix mat, char *name);
+void cn_shuffle_matrix_rows(Matrix mat);
 
 typedef struct Vector Vector;
 Vector _cn_alloc_vector(size_t nelem);
@@ -148,7 +147,7 @@ float _cn_randf(void) { return (float)rand() / (float)RAND_MAX; }
 
 /* Implement: Automatic Differentiation Engine */
 #define CLEAR_NET_EXTEND_LENGTH_FUNCTION(len)               \
-    ((len) == 0 ? CLEAR_NET_PARAM_LIST_LENGTH : ((len)*2))
+    ((len) == 0 ? CLEAR_NET_INITIAL_GRAPH_LENGTH : ((len)*2))
 #define GET_NODE(id) (gs)->vars[(id)]
 
 struct GradientStore {
@@ -356,6 +355,19 @@ void cn_print_matrix(Matrix mat, char *name) {
     printf("]\n");
 }
 
+void cn_shuffle_matrix_rows(Matrix mat) {
+    for (size_t i = 0; i < mat.nrows; ++i) {
+        size_t j = i + rand() % (mat.nrows - i);
+        if (i != j) {
+            for (size_t k = 0; k < mat.ncols; ++k) {
+                float t = MAT_AT(mat, i, k);
+                MAT_AT(mat, i, k) = MAT_AT(mat, j, k);
+                MAT_AT(mat, j, k) = t;
+            }
+        }
+    }
+}
+
 struct Vector {
     float *elements;
     size_t gs_id;
@@ -385,7 +397,6 @@ Vector cn_form_vector(size_t nelem, float *elements) {
     };
 }
 
-// TODO add check for whether the data is in a gradient store or its elements
 void _cn_print_vector(Vector vec, char *name) {
     printf("%s = [\n", name);
     printf("    ");
@@ -646,6 +657,29 @@ Vector cn_predict(Net net, Vector input) {
     }
 
     return guess;
+}
+
+float cn_error(Net net, Matrix input, Matrix target) {
+    CLEAR_NET_ASSERT(input.nrows == target.nrows);
+    size_t size = input.nrows;
+    float loss = 0;
+    for (size_t i = 0; i < size; ++i) {
+        Vector in = cn_form_vector(input.ncols, &MAT_AT(input, i, 0));
+        Vector tar = cn_form_vector(target.ncols, &MAT_AT(target, i, 0));
+        Vector out = cn_predict(net, in);
+        for (size_t j = 0; j < out.nelem; ++j) {
+            loss += powf(VEC_AT(out, j) - VEC_AT(tar, j), 2);
+        }
+    }
+    return loss / size;
+}
+
+void cn_get_batch(Matrix *batch_in, Matrix *batch_tar, Matrix all_input,
+                  Matrix all_target, size_t batch_num, size_t batch_size) {
+    *batch_in = cn_form_matrix(batch_size, all_input.ncols, all_input.stride,
+                            &MAT_AT(all_input, batch_num * batch_size, 0));
+    *batch_tar = cn_form_matrix(batch_size, all_target.ncols, all_target.stride,
+                             &MAT_AT(all_target, batch_num * batch_size, 0));
 }
 
 void cn_print_net_results(Net net, Matrix input, Matrix target) {

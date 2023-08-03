@@ -204,8 +204,17 @@ int main(int argc, char *argv[]) {
     float loss;
     float error_break = 0.01;
     size_t i;
+    size_t batch_size = 27;
+    cn_shuffle_matrix_rows(test);
+    Matrix batch_in;
+    Matrix batch_tar;
+    CLEAR_NET_ASSERT(test_size % batch_size == 0);
     for (i = 0; i < num_epochs; ++i) {
-        loss = cn_learn(&net, input, target);
+        for (size_t batch_num = 0; batch_num < test_size / batch_size; ++batch_num) {
+            cn_get_batch(&batch_in, &batch_tar, input, target, batch_num, batch_size);
+            cn_learn(&net, batch_in, batch_tar);
+        }
+        loss = cn_error(net, input, target);
         if (loss < error_break) {
             break;
         }
