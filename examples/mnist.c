@@ -114,8 +114,7 @@ int main(void) {
     size_t batch_size = 100;
     CLEAR_NET_ASSERT(num_train_files % batch_size == 0);
     printf("Beginning Training\n");
-    // TODO change cn_error -> cn_loss
-    printf("Initial Cost: %f\n", cn_error(net, train_input, train_output));
+    printf("Initial Cost: %f\n", cn_loss(net, train_input, train_output));
     for (size_t i = 0; i < num_epochs; ++i) {
         for (size_t batch_num = 0; batch_num < (num_train_files / batch_size);
              ++batch_num) {
@@ -123,7 +122,7 @@ int main(void) {
                           train_output, batch_num, batch_size);
             cn_learn(&net, batch_input, batch_output);
         }
-        error = cn_error(net, train_input, train_output);
+        error = cn_loss(net, train_input, train_output);
         printf("Cost after epoch %zu: %f\n", i, error);
         if (error < error_break) {
             printf("Less than: %f error after epoch %zu\n", error_break, i);
@@ -132,15 +131,15 @@ int main(void) {
     }
 
     printf("Final Error on training set: %f\n",
-           cn_error(net, train_input, train_output));
+           cn_loss(net, train_input, train_output));
     char *file = "model";
     cn_save_net_to_file(net, file);
     cn_dealloc_net(&net);
     net = cn_alloc_net_from_file(file);
     printf("On training\n");
-    cn_print_net_results(net, train_input, train_output);
+    cn_print_target_output_pairs(net, train_input, train_output);
     printf("On testing\n");
-    cn_print_net_results(net, test_input, test_output);
+    cn_print_target_output_pairs(net, test_input, test_output);
     cn_dealloc_net(&net);
     cn_dealloc_matrix(&train);
     cn_dealloc_matrix(&test);
