@@ -10,7 +10,9 @@
 
    See end of file for full license.
 */
-
+/*
+  TODO make a print output function for easy examining of mnist, anything with many input dimensions
+*/
 /* Beginning */
 #ifndef CLEAR_NET
 #define CLEAR_NET
@@ -132,6 +134,7 @@ Vector _cn_predict_layer(DenseLayer layer, GradientStore *nl,
                          Vector prev_output);
 void cn_randomize_net(Net net, float lower, float upper);
 size_t _cn_activate(GradientStore *nl, size_t id, Activation act);
+float cn_error(Net net, Matrix input, Matrix target);
 void cn_print_net(Net net, char *name);
 void cn_print_net_results(Net net, Matrix input, Matrix target);
 void cn_save_net_to_file(Net net, char *file_name);
