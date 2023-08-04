@@ -11,7 +11,6 @@
    See end of file for full license.
 */
 /*
-  TODO make a print output function for easy examining of mnist, anything with many input dimensions
 */
 /* Beginning */
 #ifndef CLEAR_NET
@@ -40,14 +39,6 @@
 #ifndef CLEAR_NET_ACT_NEG_SCALE
 #define CLEAR_NET_ACT_NEG_SCALE 0.1f
 #endif // CLEAR_NET_NEG_SCALE
-
-#ifndef CLEAR_NET_MOMENTUM
-#define CLEAR_NET_MOMENTUM 0
-#endif // CLEAR_NET_MOMENTUM
-#ifndef CLEAR_NET_MOMENTUM_BETA
-#define CLEAR_NET_MOMENTUM_BETA 0.9
-#endif // CLEAR_NET_MOMENTUM_BETA
-
 #ifndef CLEAR_NET_INITIAL_GRAPH_LENGTH
 #define CLEAR_NET_INITIAL_GRAPH_LENGTH 10
 #endif // CLEAR_NET_INITIAL_GRAPH_LENGTH
@@ -134,9 +125,10 @@ Vector _cn_predict_layer(DenseLayer layer, GradientStore *nl,
                          Vector prev_output);
 void cn_randomize_net(Net net, float lower, float upper);
 size_t _cn_activate(GradientStore *nl, size_t id, Activation act);
-float cn_error(Net net, Matrix input, Matrix target);
+float cn_loss(Net net, Matrix input, Matrix target);
 void cn_print_net(Net net, char *name);
 void cn_print_net_results(Net net, Matrix input, Matrix target);
+void cn_print_target_output_pairs(Net net, Matrix input, Matrix target);
 void cn_save_net_to_file(Net net, char *file_name);
 Net cn_alloc_net_from_file(char *file_name);
 
@@ -782,7 +774,7 @@ Vector cn_predict(Net net, Vector input) {
     return guess;
 }
 
-float cn_error(Net net, Matrix input, Matrix target) {
+float cn_loss(Net net, Matrix input, Matrix target) {
     CLEAR_NET_ASSERT(input.nrows == target.nrows);
     size_t size = input.nrows;
     float loss = 0;
@@ -823,6 +815,29 @@ void cn_print_net_results(Net net, Matrix input, Matrix target) {
         printf("\n");
     }
     printf("Average Loss: %f\n", loss / size);
+}
+
+void cn_print_target_output_pairs(Net net, Matrix input, Matrix target) {
+    CLEAR_NET_ASSERT(input.nrows == target.nrows);
+    Vector in;
+    Vector tar;
+    Vector out;
+    for (size_t i = 0; i < input.nrows; ++i) {
+        in = cn_form_vector(input.ncols, &MAT_AT(input, i, 0));
+        tar = cn_form_vector(target.ncols, &MAT_AT(target, i, 0));
+        out = cn_predict(net, in);
+        printf("------------\n");
+        printf("target: ");
+        for (size_t j = 0; j < tar.nelem; ++j) {
+            printf("%f ", VEC_AT(tar, j));
+        }
+        printf("\n");
+        printf("output: ");
+        for (size_t j = 0; j < out.nelem; ++j) {
+            printf("%f ", VEC_AT(out, j));
+        }
+        printf("\n");
+    }
 }
 
 void cn_save_net_to_file(Net net, char *file_name) {
