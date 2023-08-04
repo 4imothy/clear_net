@@ -220,7 +220,7 @@ int main(int argc, char *argv[]) {
                          batch_size);
             cn_learn(&net, batch_in, batch_tar);
         }
-        loss = cn_error(net, input, target);
+        loss = cn_loss(net, input, target);
         if (loss < error_break) {
             break;
         }
