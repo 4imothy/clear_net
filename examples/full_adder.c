@@ -35,9 +35,9 @@ int main(void) {
     size_t activations_allocated = 0;
     float rate = 0.5;
     NetConfig hparams = cn_init_net_conf(shape, shape_allocated, nlayers, acts, activations_allocated, rate);
+    cn_with_momentum(&hparams, 0);
     Net net = cn_alloc_net(hparams);
     cn_randomize_net(net, -1, 1);
-    cn_print_net(net, "before");
     float loss;
     for (size_t i = 0; i < num_epochs; ++i) {
         loss = cn_learn(&net, input, target);
@@ -46,7 +46,6 @@ int main(void) {
         }
     }
     printf("Final loss: %g\n", loss);
-    cn_print_net(net, "final");
     cn_print_net_results(net, input, target);
     char *name = "model";
     cn_save_net_to_file(net, name);

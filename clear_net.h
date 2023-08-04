@@ -10,10 +10,7 @@
 
    See end of file for full license.
 */
-/*
-  TODO Activation for: elu
-  TODO momentum
-*/
+
 /* Beginning */
 #ifndef CLEAR_NET
 #define CLEAR_NET
@@ -55,6 +52,7 @@
 
 /* Declaration: Helpers */
 float _cn_randf(void);
+void _cn_fill_floats(float *ptr, size_t len, float val);
 
 /* Declaration: Automatic Differentiation Engine */
 typedef struct VarNode VarNode;
@@ -145,6 +143,12 @@ Net cn_alloc_net_from_file(char *file_name);
 
 /* Implement: Helpers */
 float _cn_randf(void) { return (float)rand() / (float)RAND_MAX; }
+
+void _cn_fill_floats(float *ptr, size_t len, float val) {
+    for (size_t i = 0; i < len; ++i) {
+        ptr[i] = val;
+    }
+}
 
 /* Implement: Automatic Differentiation Engine */
 #define CLEAR_NET_EXTEND_LENGTH_FUNCTION(len)                                  \
@@ -343,6 +347,7 @@ void cn_backward(GradientStore *gs, size_t y) {
 
 struct Matrix {
     float *elements;
+    float *grad_stores;
     size_t gs_id;
     size_t stride;
     size_t nrows;
@@ -356,11 +361,16 @@ Matrix cn_alloc_matrix(size_t nrows, size_t ncols) {
     mat.stride = ncols;
     mat.elements = CLEAR_NET_ALLOC(nrows * ncols * sizeof(*mat.elements));
     CLEAR_NET_ASSERT(mat.elements != NULL);
+    mat.grad_stores = NULL;
+    mat.gs_id = 0;
     return mat;
 }
 
 void cn_dealloc_matrix(Matrix *mat) {
     CLEAR_NET_DEALLOC(mat->elements);
+    if (mat->grad_stores != NULL) {
+        CLEAR_NET_DEALLOC(mat->grad_stores);
+    }
     mat->nrows = 0;
     mat->ncols = 0;
     mat->stride = 0;
@@ -404,6 +414,7 @@ void cn_shuffle_matrix_rows(Matrix mat) {
 
 struct Vector {
     float *elements;
+    float *grad_stores;
     size_t gs_id;
     size_t nelem;
 };
@@ -413,11 +424,15 @@ Vector _cn_alloc_vector(size_t nelem) {
     vec.nelem = nelem;
     vec.elements = CLEAR_NET_ALLOC(nelem * sizeof(*vec.elements));
     CLEAR_NET_ASSERT(vec.elements != NULL);
+    vec.grad_stores = NULL;
     return vec;
 }
 
 void _cn_dealloc_vector(Vector *vec) {
     CLEAR_NET_DEALLOC(vec->elements);
+    if (vec->grad_stores != NULL) {
+        CLEAR_NET_DEALLOC(vec->grad_stores);
+    }
     vec->nelem = 0;
     vec->gs_id = 0;
     vec->elements = NULL;
@@ -451,10 +466,12 @@ void _cn_print_vector_res(Vector vec) {
 struct NetConfig {
     size_t *shape;
     size_t shape_allocated;
-    size_t nparam;
-    size_t nlayers;
     Activation *activations;
     size_t activations_allocated;
+    size_t nparam;
+    size_t nlayers;
+    size_t with_momentum;
+    float momentum_beta;
     float rate;
 };
 
@@ -496,6 +513,11 @@ NetConfig cn_alloc_default_conf(size_t *shape, size_t shape_allocated,
                             activations_allocated, rate);
 }
 
+void cn_with_momentum(NetConfig *nc, float momentum_beta) {
+    nc->with_momentum = 1;
+    nc->momentum_beta = momentum_beta;
+}
+
 Net cn_alloc_net(NetConfig net_conf) {
     CLEAR_NET_ASSERT(net_conf.nlayers != 0);
 
@@ -510,12 +532,21 @@ Net cn_alloc_net(NetConfig net_conf) {
         layer.act = net_conf.activations[i];
         Matrix mat = cn_alloc_matrix(net_conf.shape[i], net_conf.shape[i + 1]);
         mat.gs_id = offset;
-        mat.stride = mat.ncols;
+        if (net_conf.with_momentum) {
+            mat.grad_stores = CLEAR_NET_ALLOC(mat.nrows * mat.ncols *
+                                              sizeof(*mat.grad_stores));
+            _cn_fill_floats(mat.grad_stores, mat.nrows * mat.ncols, 0);
+        }
         layer.weights = mat;
         offset += (layer.weights.nrows * layer.weights.ncols);
 
         Vector vec = _cn_alloc_vector(net_conf.shape[i + 1]);
         vec.gs_id = offset;
+        if (net_conf.with_momentum) {
+            vec.grad_stores =
+                CLEAR_NET_ALLOC(vec.nelem * sizeof(*vec.grad_stores));
+            _cn_fill_floats(vec.grad_stores, vec.nelem, 0);
+        }
         layer.biases = vec;
         offset += layer.biases.nelem;
 
@@ -533,7 +564,7 @@ Net cn_alloc_net(NetConfig net_conf) {
 }
 
 void cn_dealloc_net(Net *net) {
-    for (size_t i = 0; i < net->hparams.nlayers; ++i) {
+    for (size_t i = 0; i < net->hparams.nlayers - 1; ++i) {
         cn_dealloc_matrix(&net->layers[i].weights);
         _cn_dealloc_vector(&net->layers[i].biases);
         _cn_dealloc_vector(&net->layers[i].output);
@@ -692,16 +723,33 @@ float cn_learn(Net *net, Matrix input, Matrix target) {
         gs->length = net->hparams.nparam + 1;
     }
     float coef = net->hparams.rate / train_size;
+
     for (size_t i = 0; i < net->hparams.nlayers - 1; ++i) {
         for (size_t j = 0; j < net->layers[i].weights.nrows; ++j) {
             for (size_t k = 0; k < net->layers[i].weights.ncols; ++k) {
-                MAT_AT(net->layers[i].weights, j, k) -=
+                float change =
                     coef * GET_NODE(MAT_ID(net->layers[i].weights, j, k)).grad;
+                if (net->hparams.with_momentum) {
+                    net->layers[i].weights.grad_stores[j * k] =
+                        net->hparams.momentum_beta *
+                            net->layers[i].weights.grad_stores[j * k] +
+                        ((1 - net->hparams.momentum_beta) * change);
+                    change = net->layers[i].weights.grad_stores[j * k];
+                }
+                MAT_AT(net->layers[i].weights, j, k) -= change;
             }
         }
         for (size_t j = 0; j < net->layers[i].biases.nelem; ++j) {
-            VEC_AT(net->layers[i].biases, j) -=
+            float change =
                 coef * GET_NODE(VEC_ID(net->layers[i].biases, j)).grad;
+            if (net->hparams.with_momentum) {
+                net->layers[i].biases.grad_stores[j] =
+                    net->hparams.momentum_beta *
+                        net->layers[i].biases.grad_stores[j] +
+                    ((1 - net->hparams.momentum_beta) * change);
+                change = net->layers[i].biases.grad_stores[j];
+            }
+            VEC_AT(net->layers[i].biases, j) -= change;
         }
     }
 
