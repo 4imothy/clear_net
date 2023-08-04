@@ -13,7 +13,6 @@
 /*
   TODO Activation for: elu
   TODO momentum
-  TODO use bool
 */
 /* Beginning */
 #ifndef CLEAR_NET
@@ -22,7 +21,6 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
 // allow custom memory allocation strategies
 #ifndef CLEAR_NET_ALLOC
@@ -84,20 +82,24 @@ void _cn_sigmoid_backward(GradientStore *nl, VarNode *var);
 size_t cn_sigmoidv(GradientStore *nl, size_t x);
 void _cn_leaky_relu_backward(GradientStore *nl, VarNode *var);
 size_t cn_leaky_reluv(GradientStore *nl, size_t x);
+void _cn_elu_backward(GradientStore *gs, VarNode *var);
+size_t cn_eluv(GradientStore *gs, size_t x);
 void cn_backward(GradientStore *nl, size_t y);
 
 /* Declaration: Activation Functions */
 typedef enum {
-  Sigmoid,
-  ReLU,
-  Tanh,
-  LeakyReLU,
+    Sigmoid,
+    ReLU,
+    Tanh,
+    LeakyReLU,
+    ELU,
 } Activation;
 
 float cn_sigmoid(float x);
 float cn_relu(float x);
 float cn_hyper_tan(float x);
 float cn_leaky_relu(float x);
+float cn_elu(float x);
 
 /* Declaration: Linear Algebra */
 typedef struct Matrix Matrix;
@@ -291,7 +293,7 @@ size_t cn_sigmoidv(GradientStore *gs, size_t x) {
 }
 
 float cn_leaky_relu(float x) {
-    return x >= 0 ? x :CLEAR_NET_ACT_NEG_SCALE * x;
+    return x >= 0 ? x : CLEAR_NET_ACT_NEG_SCALE * x;
 }
 
 void _cn_leaky_relu_backward(GradientStore *gs, VarNode *var) {
@@ -302,6 +304,21 @@ void _cn_leaky_relu_backward(GradientStore *gs, VarNode *var) {
 size_t cn_leaky_reluv(GradientStore *gs, size_t x) {
     float val = cn_leaky_relu(GET_NODE(x).num);
     size_t out = _cn_init_var(gs, val, x, 0, _cn_leaky_relu_backward);
+    return out;
+}
+
+float cn_elu(float x) {
+    return x > 0 ? x : CLEAR_NET_ACT_NEG_SCALE * (expf(x) - 1);
+}
+
+void _cn_elu_backward(GradientStore *gs, VarNode *var) {
+    float change = var->num > 0 ? 1 : var->num + CLEAR_NET_ACT_NEG_SCALE;
+    GET_NODE(var->prev_left).grad += change * var->grad;
+}
+
+size_t cn_eluv(GradientStore *gs, size_t x) {
+    float val = cn_elu(GET_NODE(x).num);
+    size_t out = _cn_init_var(gs, val, x, 0, _cn_elu_backward);
     return out;
 }
 
@@ -541,6 +558,8 @@ size_t _cn_activate(GradientStore *gs, size_t id, Activation act) {
         return cn_hyper_tanv(gs, id);
     case LeakyReLU:
         return cn_leaky_reluv(gs, id);
+    case ELU:
+        return cn_eluv(gs, id);
     }
 }
 
@@ -554,6 +573,8 @@ float activate(float x, Activation act) {
         return cn_hyper_tan(x);
     case LeakyReLU:
         return cn_leaky_relu(x);
+    case ELU:
+        return cn_elu(x);
     }
 }
 

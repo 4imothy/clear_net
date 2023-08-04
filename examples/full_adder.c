@@ -29,10 +29,10 @@ int main(void) {
         cn_form_matrix(num_combinations, num_outputs, stride, &data[num_inputs]);
     size_t num_epochs = 20000;
     size_t shape[] = {num_inputs, 3, 8, num_outputs};
-    size_t shape_allocated = 0;
-    Activation acts[] = {Tanh, LeakyReLU, Sigmoid};
-    size_t activations_allocated = 0;
     size_t nlayers = sizeof(shape) / sizeof(*shape);
+    size_t shape_allocated = 0;
+    Activation acts[] = {Tanh, ELU, Sigmoid};
+    size_t activations_allocated = 0;
     float rate = 0.5;
     NetConfig hparams = cn_init_net_conf(shape, shape_allocated, nlayers, acts, activations_allocated, rate);
     Net net = cn_alloc_net(hparams);
