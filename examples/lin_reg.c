@@ -1,7 +1,4 @@
 #define CLEAR_NET_IMPLEMENTATION
-// need negative outputs
-#define CLEAR_NET_ACT_OUTPUT Tanh
-#define CLEAR_NET_MOMENTUM 1
 #include "../clear_net.h"
 // function to learn
 // y = 2 + 4a - 3b + 5c + 6d - 2e + 7f - 8g + 9h
@@ -70,34 +67,39 @@ int main(void) {
         }
     }
 
-    Matrix input = mat_form(num_train, dim_input, num_var, train);
-    Matrix output = mat_form(num_train, 1, num_var, &train[dim_input]);
-    Matrix val_in = mat_form(num_train, dim_input, num_var, val);
-    Matrix val_out = mat_form(num_train, 1, num_var, &val[dim_input]);
+    Matrix input = cn_form_matrix(num_train, dim_input, num_var, train);
+    Matrix output = cn_form_matrix(num_train, 1, num_var, &train[dim_input]);
+    Matrix val_in = cn_form_matrix(num_train, dim_input, num_var, val);
+    Matrix val_out = cn_form_matrix(num_train, 1, num_var, &val[dim_input]);
     size_t shape[] = {dim_input, 1};
-    Net net = alloc_net(shape, ARR_LEN(shape));
-    net_rand(net, -1, 1);
+    size_t shape_allocated = 0;
+    size_t nlayers = sizeof(shape) / sizeof(*shape);
+    Activation acts[] = {Tanh};
+    size_t acts_allocated = 0;
+    float rate = 0.5;
+    NetConfig hparams = cn_init_net_conf(shape, shape_allocated, nlayers, acts, acts_allocated, rate);
+    Net net = cn_alloc_net(hparams);
+    cn_randomize_net(net, -1, 1);
     size_t num_epochs = 200000;
-    float error_break = 0.01f;
-    float error;
+    float error_break = 0.f;
+    float loss;
     for (size_t i = 0; i < num_epochs; ++i) {
-        net_backprop(net, input, output);
-        error = net_errorf(net, input, output);
+        loss = cn_learn(&net, input, output);
         if (i % (num_epochs / 20) == 0) {
-            printf("Cost at %zu: %f\n", i, error);
+            printf("Cost at %zu: %f\n", i, loss);
         }
-        if (error < error_break) {
+        if (loss < error_break) {
             printf("Less than: %f error at epoch %zu\n", error_break, i);
             break;
         }
     }
-    net_print_results(net, input, output, &mul_max);
-    char *file_name = "lin_reg_model";
-    net_save_to_file(file_name, net);
-    dealloc_net(&net, 0);
-    net = alloc_net_from_file(file_name);
+    cn_print_net_results(net, input, output);
+    char *file_name = "model";
+    cn_save_net_to_file(net, file_name);
+    cn_dealloc_net(&net);
+    net = cn_alloc_net_from_file(file_name);
     printf("After Loading From File\n");
-    net_print_results(net, val_in, val_out, &mul_max);
-    dealloc_net(&net, 1);
+    cn_print_net_results(net, val_in, val_out);
+    cn_dealloc_net(&net);
     return 0;
 }
