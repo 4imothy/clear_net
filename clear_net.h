@@ -10,8 +10,7 @@
 
    See end of file for full license.
 */
-/*
-*/
+
 /* Beginning */
 #ifndef CLEAR_NET
 #define CLEAR_NET
