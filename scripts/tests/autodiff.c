@@ -121,11 +121,26 @@ int main(int argc, char *argv[]) {
         PRINT_VAL(f);
     } else if (strcmp(argv[1], "leaky_relu") == 0) {
         size_t a = cn_init_leaf_var(gs, 72);
-        size_t b  = cn_init_leaf_var(gs, 38);
+        size_t b = cn_init_leaf_var(gs, 38);
         size_t c = cn_init_leaf_var(gs, -10);
-        size_t d = cn_multiply(gs, c, cn_add(gs, a,b));
+        size_t d = cn_multiply(gs, c, cn_add(gs, a, b));
         size_t e = cn_multiply(gs, d, a);
         size_t f = cn_leaky_reluv(gs, e);
+        cn_backward(gs, f);
+        PRINT_VAL(a);
+        PRINT_VAL(b);
+        PRINT_VAL(c);
+        PRINT_VAL(d);
+        PRINT_VAL(e);
+        PRINT_VAL(f);
+    } else if (!strcmp(argv[1], "elu")) {
+        // TODO make all the if statements like this
+        size_t a = cn_init_leaf_var(gs, 5);
+        size_t b = cn_init_leaf_var(gs, -6);
+        size_t c = cn_eluv(gs, b);
+        size_t d = cn_multiply(gs, a, cn_subtract(gs, c, b));
+        size_t e = cn_multiply(gs, d, d);
+        size_t f = cn_eluv(gs, e);
         cn_backward(gs, f);
         PRINT_VAL(a);
         PRINT_VAL(b);

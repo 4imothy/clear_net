@@ -46,7 +46,7 @@ def assert_with_mes(mine, torch):
 def check_res(my_res, torch_res, show=False):
     """Check if the two results are equal."""
     assert len(my_res) == len(torch_res), "Length is not equal"
-    check = 0;
+    check = 0
     for mres, tres in zip(my_res, torch_res):
         if assert_with_mes(mres[0], tres[0]):
             print_diff(mres, tres, "names")
@@ -55,7 +55,6 @@ def check_res(my_res, torch_res, show=False):
         if assert_with_mes(mres[1], tres[1]):
             print_diff(mres, tres, "values")
             check = 1
-
 
         if assert_with_mes(mres[2], tres[2]):
             print_diff(mres, tres, "grad")
@@ -304,6 +303,36 @@ def do_test_leaky_relu():
     test_against_cn("leaky_relu")
 
 
+def do_test_elu():
+    """Test againts clear net elu."""
+    global torch_res
+    torch_res = []
+
+    elu = torch.nn.ELU(0.1)
+
+    a = torch.Tensor([5])
+    a.requires_grad = True
+    b = torch.Tensor([-6])
+    b.requires_grad = True
+    c = elu(b)
+    d = a * (c - b)
+    e = d * d
+    f = elu(e)
+    c.retain_grad()
+    d.retain_grad()
+    e.retain_grad()
+    f.retain_grad()
+    f.backward()
+    add_val(a, 'a')
+    add_val(b, 'b')
+    add_val(c, 'c')
+    add_val(d, 'd')
+    add_val(e, 'e')
+    add_val(f, 'f')
+
+    test_against_cn("elu")
+
+
 do_test_one()
 do_test_two()
 do_test_pow()
@@ -312,3 +341,4 @@ do_test_tanh()
 do_test_relu()
 do_test_sigmoid()
 do_test_leaky_relu()
+do_test_elu()
