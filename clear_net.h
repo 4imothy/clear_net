@@ -13,7 +13,6 @@
 /*
   TODO Activation for: elu, Leak_Relu
   TODO momentum
-  TODO instead of macros for hyperparameters make a net builder/hyperparam struct
 */
 /* Beginning */
 #ifndef CLEAR_NET
@@ -39,15 +38,6 @@
 #include "assert.h" // assert
 #define CLEAR_NET_ASSERT assert
 #endif // CLEAR_NET_ASSERT
-#ifndef CLEAR_NET_RATE
-#define CLEAR_NET_RATE 0.5f
-#endif
-#ifndef CLEAR_NET_ACT_OUTPUT
-#define CLEAR_NET_ACT_OUTPUT Sigmoid
-#endif // CLEAR_NET_ACT_OUTPUT
-#ifndef CLEAR_NET_ACT_HIDDEN
-#define CLEAR_NET_ACT_HIDDEN ReLU
-#endif // CLEAR_NET_ACT_HIDDEN
 #ifndef CLEAR_NET_ACT_NEG_SCALE
 #define CLEAR_NET_ACT_NEG_SCALE 0.1f
 #endif // CLEAR_NET_NEG_SCALE
@@ -73,8 +63,8 @@ typedef void BackWardFunction(GradientStore *nl, VarNode *var);
 
 GradientStore cn_alloc_gradient_store(size_t length);
 void cn_dealloc_gradient_store(GradientStore *nl);
-size_t _cn_init_var(GradientStore *nl, float num, size_t prev_left, size_t prev_right,
-                BackWardFunction *backward);
+size_t _cn_init_var(GradientStore *nl, float num, size_t prev_left,
+                    size_t prev_right, BackWardFunction *backward);
 size_t cn_init_leaf_var(GradientStore *nl, float num);
 size_t cn_add(GradientStore *nl, size_t left, size_t right);
 void _cn_add_backward(GradientStore *nl, VarNode *var);
@@ -108,7 +98,8 @@ typedef struct Matrix Matrix;
 
 Matrix cn_alloc_matrix(size_t nrows, size_t ncols);
 void cn_dealloc_matrix(Matrix *mat);
-Matrix cn_form_matrix(size_t nrows, size_t ncols, size_t stride, float *elements);
+Matrix cn_form_matrix(size_t nrows, size_t ncols, size_t stride,
+                      float *elements);
 void cn_print_matrix(Matrix mat, char *name);
 void cn_shuffle_matrix_rows(Matrix mat);
 
@@ -120,17 +111,19 @@ void _cn_print_vector(Vector vec, char *name);
 void _cn_print_vector_res(Vector vec);
 
 /* Declaration: Net */
+typedef struct NetConfig NetConfig;
 typedef struct Net Net;
 typedef struct DenseLayer DenseLayer;
 
-Net cn_alloc_net(size_t *shape, size_t nlayers);
-void cn_dealloc_net(Net *net, size_t from_file);
+Net cn_alloc_net(NetConfig net_conf);
+void cn_dealloc_net(Net *net);
 float cn_learn(Net *net, Matrix input, Matrix target);
 Vector cn_predict(Net net, Vector input);
 Vector cn_predict_layer(DenseLayer layer, Vector prev_output);
 float _cn_find_grad(Net *net, GradientStore *gs, Vector input, Vector target);
 Vector _cn_predict(Net *net, GradientStore *nl, Vector input);
-Vector _cn_predict_layer(DenseLayer layer, GradientStore *nl, Vector prev_output);
+Vector _cn_predict_layer(DenseLayer layer, GradientStore *nl,
+                         Vector prev_output);
 void cn_randomize_net(Net net, float lower, float upper);
 size_t _cn_activate(GradientStore *nl, size_t id, Activation act);
 void cn_print_net(Net net, char *name);
@@ -146,7 +139,7 @@ Net cn_alloc_net_from_file(char *file_name);
 float _cn_randf(void) { return (float)rand() / (float)RAND_MAX; }
 
 /* Implement: Automatic Differentiation Engine */
-#define CLEAR_NET_EXTEND_LENGTH_FUNCTION(len)               \
+#define CLEAR_NET_EXTEND_LENGTH_FUNCTION(len)                                  \
     ((len) == 0 ? CLEAR_NET_INITIAL_GRAPH_LENGTH : ((len)*2))
 #define GET_NODE(id) (gs)->vars[(id)]
 
@@ -173,7 +166,9 @@ GradientStore cn_alloc_gradient_store(size_t length) {
     };
 }
 
-void cn_dealloc_gradient_store(GradientStore *gs) { CLEAR_NET_DEALLOC(gs->vars); }
+void cn_dealloc_gradient_store(GradientStore *gs) {
+    CLEAR_NET_DEALLOC(gs->vars);
+}
 
 VarNode create_var(float num, size_t prev_left, size_t prev_right,
                    BackWardFunction *backward) {
@@ -186,8 +181,8 @@ VarNode create_var(float num, size_t prev_left, size_t prev_right,
     };
 }
 
-size_t _cn_init_var(GradientStore *gs, float num, size_t prev_left, size_t prev_right,
-                BackWardFunction *backward) {
+size_t _cn_init_var(GradientStore *gs, float num, size_t prev_left,
+                    size_t prev_right, BackWardFunction *backward) {
     if (gs->length >= gs->max_length) {
         gs->max_length = CLEAR_NET_EXTEND_LENGTH_FUNCTION(gs->max_length);
         gs->vars =
@@ -291,7 +286,7 @@ size_t cn_sigmoidv(GradientStore *gs, size_t x) {
 
 void cn_backward(GradientStore *gs, size_t y) {
     GET_NODE(y).grad = 1;
-    VarNode* var;
+    VarNode *var;
     for (size_t i = gs->length - 1; i > 0; --i) {
         var = &GET_NODE(i);
         if (var->backward) {
@@ -335,7 +330,8 @@ void cn_dealloc_matrix(Matrix *mat) {
     mat->elements = NULL;
 }
 
-Matrix cn_form_matrix(size_t nrows, size_t ncols, size_t stride, float *elements) {
+Matrix cn_form_matrix(size_t nrows, size_t ncols, size_t stride,
+                      float *elements) {
     return (Matrix){.gs_id = 0,
                     .nrows = nrows,
                     .ncols = ncols,
@@ -414,6 +410,16 @@ void _cn_print_vector_res(Vector vec) {
 }
 
 /* Implement: Net */
+struct NetConfig {
+    size_t *shape;
+    size_t shape_allocated;
+    size_t nparam;
+    size_t nlayers;
+    Activation *activations;
+    size_t activations_allocated;
+    float rate;
+};
+
 struct DenseLayer {
     Matrix weights;
     Vector biases;
@@ -425,36 +431,52 @@ struct DenseLayer {
 struct Net {
     DenseLayer *layers;
     GradientStore computation_graph;
-    size_t *shape;
-    size_t nlayers;
-    size_t nparam;
+    NetConfig hparams;
 };
 
-Net cn_alloc_net(size_t *shape, size_t nlayers) {
-    CLEAR_NET_ASSERT(nlayers != 0);
+NetConfig cn_init_net_conf(size_t *shape, size_t shape_allocated,
+                           size_t nlayers, Activation *acts,
+                           size_t activations_allocated, float rate) {
+    return (NetConfig){.shape = shape,
+                       .shape_allocated = shape_allocated,
+                       .nlayers = nlayers,
+                       .activations = acts,
+                       .activations_allocated = activations_allocated,
+                       .rate = rate};
+}
+
+NetConfig cn_alloc_default_conf(size_t *shape, size_t shape_allocated,
+                                size_t nlayers) {
+    Activation *acts =
+        (Activation *)CLEAR_NET_ALLOC((nlayers - 1) * sizeof(Activation));
+    for (size_t i = 0; i < nlayers - 1; i++) {
+        acts[i] = i == nlayers - 2 ? Sigmoid : ReLU;
+    }
+    size_t activations_allocated = 1;
+    float rate = 0.5;
+    return cn_init_net_conf(shape, shape_allocated, nlayers, acts,
+                            activations_allocated, rate);
+}
+
+Net cn_alloc_net(NetConfig net_conf) {
+    CLEAR_NET_ASSERT(net_conf.nlayers != 0);
 
     Net net;
-    net.nlayers = nlayers;
-    net.layers = CLEAR_NET_ALLOC((nlayers - 1) * sizeof(DenseLayer));
-    net.shape = shape;
+    net.layers = CLEAR_NET_ALLOC((net_conf.nlayers - 1) * sizeof(DenseLayer));
     // Length calculation
     // | number of weights | biases
     // (shape[0] * shape[1]) + shape[1]
     size_t offset = 1;
-    for (size_t i = 0; i < nlayers - 1; ++i) {
+    for (size_t i = 0; i < net_conf.nlayers - 1; ++i) {
         DenseLayer layer;
-        if (i == nlayers - 2) {
-            layer.act = CLEAR_NET_ACT_OUTPUT;
-        } else {
-            layer.act = CLEAR_NET_ACT_HIDDEN;
-        }
-        Matrix mat = cn_alloc_matrix(shape[i], shape[i+1]);
+        layer.act = net_conf.activations[i];
+        Matrix mat = cn_alloc_matrix(net_conf.shape[i], net_conf.shape[i + 1]);
         mat.gs_id = offset;
         mat.stride = mat.ncols;
         layer.weights = mat;
         offset += (layer.weights.nrows * layer.weights.ncols);
 
-        Vector vec = _cn_alloc_vector(shape[i+1]);
+        Vector vec = _cn_alloc_vector(net_conf.shape[i + 1]);
         vec.gs_id = offset;
         layer.biases = vec;
         offset += layer.biases.nelem;
@@ -466,20 +488,24 @@ Net cn_alloc_net(size_t *shape, size_t nlayers) {
         layer.output = out;
         net.layers[i] = layer;
     }
-    net.nparam = offset - 1;
-    net.computation_graph = cn_alloc_gradient_store(net.nparam);
+    net_conf.nparam = offset - 1;
+    net.hparams = net_conf;
+    net.computation_graph = cn_alloc_gradient_store(net.hparams.nparam);
     return net;
 }
 
-void cn_dealloc_net(Net *net, size_t from_file) {
-    for (size_t i = 0; i < net->nlayers; ++i) {
+void cn_dealloc_net(Net *net) {
+    for (size_t i = 0; i < net->hparams.nlayers; ++i) {
         cn_dealloc_matrix(&net->layers[i].weights);
         _cn_dealloc_vector(&net->layers[i].biases);
         _cn_dealloc_vector(&net->layers[i].output);
         CLEAR_NET_DEALLOC(net->layers[i].output_gs_ids);
     }
-    if (from_file) {
-        CLEAR_NET_DEALLOC(net->shape);
+    if (net->hparams.shape_allocated) {
+        CLEAR_NET_DEALLOC(net->hparams.shape);
+    }
+    if (net->hparams.activations_allocated) {
+        CLEAR_NET_DEALLOC(net->hparams.activations);
     }
     cn_dealloc_gradient_store(&net->computation_graph);
 }
@@ -495,7 +521,6 @@ size_t _cn_activate(GradientStore *gs, size_t id, Activation act) {
     }
 }
 
-// Todo fix this function
 float activate(float x, Activation act) {
     switch (act) {
     case ReLU:
@@ -508,11 +533,12 @@ float activate(float x, Activation act) {
 }
 
 void cn_randomize_net(Net net, float lower, float upper) {
-    for (size_t i = 0; i < net.nlayers - 1; ++i) {
+    for (size_t i = 0; i < net.hparams.nlayers - 1; ++i) {
         DenseLayer layer = net.layers[i];
         for (size_t j = 0; j < layer.weights.nrows; ++j) {
             for (size_t k = 0; k < layer.weights.ncols; ++k) {
-                MAT_AT(layer.weights, j, k) = _cn_randf() * (upper - lower) + lower;
+                MAT_AT(layer.weights, j, k) =
+                    _cn_randf() * (upper - lower) + lower;
             }
         }
         for (size_t j = 0; j < layer.biases.nelem; ++j) {
@@ -524,7 +550,7 @@ void cn_randomize_net(Net net, float lower, float upper) {
 void cn_print_net(Net net, char *name) {
     char buf[256];
     printf("%s = [\n", name);
-    for (size_t i = 0; i < net.nlayers - 1; ++i) {
+    for (size_t i = 0; i < net.hparams.nlayers - 1; ++i) {
         DenseLayer layer = net.layers[i];
         snprintf(buf, sizeof(buf), "weight matrix: %zu", i);
         cn_print_matrix(layer.weights, buf);
@@ -533,13 +559,14 @@ void cn_print_net(Net net, char *name) {
     }
 }
 
-Vector _cn_predict_layer(DenseLayer layer, GradientStore *gs, Vector prev_output) {
+Vector _cn_predict_layer(DenseLayer layer, GradientStore *gs,
+                         Vector prev_output) {
     for (size_t i = 0; i < layer.weights.ncols; ++i) {
         size_t res = cn_init_leaf_var(gs, 0);
         for (size_t j = 0; j < prev_output.nelem; ++j) {
             res = cn_add(gs, res,
-                      cn_multiply(gs, MAT_ID(layer.weights, j, i),
-                               VEC_ID(prev_output, j)));
+                         cn_multiply(gs, MAT_ID(layer.weights, j, i),
+                                     VEC_ID(prev_output, j)));
         }
         res = cn_add(gs, res, VEC_ID(layer.biases, i));
         res = _cn_activate(gs, res, layer.act);
@@ -553,7 +580,8 @@ Vector _cn_predict_layer(DenseLayer layer, GradientStore *gs, Vector prev_output
 
     for (size_t i = 0; i < out.nelem; ++i) {
         VarNode to_copy = GET_NODE(layer.output_gs_ids[i]);
-        _cn_init_var(gs, to_copy.num, to_copy.prev_left, to_copy.prev_right, to_copy.backward);
+        _cn_init_var(gs, to_copy.num, to_copy.prev_left, to_copy.prev_right,
+                     to_copy.backward);
     }
     return out;
 }
@@ -561,7 +589,7 @@ Vector _cn_predict_layer(DenseLayer layer, GradientStore *gs, Vector prev_output
 Vector _cn_predict(Net *net, GradientStore *gs, Vector input) {
     CLEAR_NET_ASSERT(input.nelem == net->layers[0].weights.nrows);
     Vector guess = input;
-    for (size_t i = 0; i < net->nlayers - 1; ++i) {
+    for (size_t i = 0; i < net->hparams.nlayers - 1; ++i) {
         guess = _cn_predict_layer(net->layers[i], gs, guess);
     }
     return guess;
@@ -581,10 +609,10 @@ float _cn_find_grad(Net *net, GradientStore *gs, Vector input, Vector target) {
     size_t loss = cn_init_leaf_var(gs, 0);
     for (size_t i = 0; i < target.nelem; ++i) {
         loss = cn_add(
-                   gs, loss,
-                   cn_raise(gs,
-                            cn_subtract(gs, VEC_ID(prediction, i), VEC_ID(target, i)),
-                            cn_init_leaf_var(gs, 2)));
+            gs, loss,
+            cn_raise(gs,
+                     cn_subtract(gs, VEC_ID(prediction, i), VEC_ID(target, i)),
+                     cn_init_leaf_var(gs, 2)));
     }
     cn_backward(gs, loss);
 
@@ -597,7 +625,7 @@ float cn_learn(Net *net, Matrix input, Matrix target) {
     net->computation_graph.length = 1;
     GradientStore *gs = &net->computation_graph;
 
-    for (size_t i = 0; i < net->nlayers - 1; ++i) {
+    for (size_t i = 0; i < net->hparams.nlayers - 1; ++i) {
         for (size_t j = 0; j < net->layers[i].weights.nrows; ++j) {
             for (size_t k = 0; k < net->layers[i].weights.ncols; ++k) {
                 cn_init_leaf_var(gs, MAT_AT(net->layers[i].weights, j, k));
@@ -615,21 +643,19 @@ float cn_learn(Net *net, Matrix input, Matrix target) {
         input_vec = cn_form_vector(input.ncols, &MAT_AT(input, i, 0));
         target_vec = cn_form_vector(target.ncols, &MAT_AT(target, i, 0));
         total_loss += _cn_find_grad(net, gs, input_vec, target_vec);
-        gs->length = net->nparam + 1;
+        gs->length = net->hparams.nparam + 1;
     }
-    float coef = CLEAR_NET_RATE / train_size;
-    for (size_t i = 0; i < net->nlayers - 1; ++i) {
+    float coef = net->hparams.rate / train_size;
+    for (size_t i = 0; i < net->hparams.nlayers - 1; ++i) {
         for (size_t j = 0; j < net->layers[i].weights.nrows; ++j) {
             for (size_t k = 0; k < net->layers[i].weights.ncols; ++k) {
                 MAT_AT(net->layers[i].weights, j, k) -=
-                    coef *
-                    GET_NODE(MAT_ID(net->layers[i].weights, j, k)).grad;
+                    coef * GET_NODE(MAT_ID(net->layers[i].weights, j, k)).grad;
             }
         }
         for (size_t j = 0; j < net->layers[i].biases.nelem; ++j) {
-             VEC_AT(net->layers[i].biases, j) -=
-                 coef *
-                GET_NODE(VEC_ID(net->layers[i].biases, j)).grad;
+            VEC_AT(net->layers[i].biases, j) -=
+                coef * GET_NODE(VEC_ID(net->layers[i].biases, j)).grad;
         }
     }
 
@@ -652,7 +678,7 @@ Vector cn_predict_layer(DenseLayer layer, Vector prev_output) {
 Vector cn_predict(Net net, Vector input) {
     Vector guess = input;
 
-    for (size_t i = 0; i < net.nlayers - 1; ++i) {
+    for (size_t i = 0; i < net.hparams.nlayers - 1; ++i) {
         guess = cn_predict_layer(net.layers[i], guess);
     }
 
@@ -677,9 +703,9 @@ float cn_error(Net net, Matrix input, Matrix target) {
 void cn_get_batch(Matrix *batch_in, Matrix *batch_tar, Matrix all_input,
                   Matrix all_target, size_t batch_num, size_t batch_size) {
     *batch_in = cn_form_matrix(batch_size, all_input.ncols, all_input.stride,
-                            &MAT_AT(all_input, batch_num * batch_size, 0));
+                               &MAT_AT(all_input, batch_num * batch_size, 0));
     *batch_tar = cn_form_matrix(batch_size, all_target.ncols, all_target.stride,
-                             &MAT_AT(all_target, batch_num * batch_size, 0));
+                                &MAT_AT(all_target, batch_num * batch_size, 0));
 }
 
 void cn_print_net_results(Net net, Matrix input, Matrix target) {
@@ -702,16 +728,21 @@ void cn_print_net_results(Net net, Matrix input, Matrix target) {
     printf("Average Loss: %f\n", loss / size);
 }
 
-void cn_save_net_to_file(Net net, char* file_name) {
+void cn_save_net_to_file(Net net, char *file_name) {
     FILE *fp = fopen(file_name, "wb");
-    fwrite(&net.nlayers, sizeof(net.nlayers), 1, fp);
-    fwrite(net.shape, sizeof(*net.shape), net.nlayers, fp);
+    fwrite(&net.hparams.nlayers, sizeof(net.hparams.nlayers), 1, fp);
+    fwrite(net.hparams.shape, sizeof(*net.hparams.shape), net.hparams.nlayers,
+           fp);
+    fwrite(&net.hparams.rate, sizeof(net.hparams.rate), 1, fp);
+    fwrite(net.hparams.activations, sizeof(*net.hparams.activations),
+           net.hparams.nlayers, fp);
     Matrix weights;
     Vector biases;
-    for (size_t i = 0; i < net.nlayers - 1; ++i) {
+    for (size_t i = 0; i < net.hparams.nlayers - 1; ++i) {
         weights = net.layers[i].weights;
         biases = net.layers[i].biases;
-        fwrite(weights.elements, sizeof(*weights.elements), weights.nrows * weights.ncols, fp);
+        fwrite(weights.elements, sizeof(*weights.elements),
+               weights.nrows * weights.ncols, fp);
         fwrite(biases.elements, sizeof(*biases.elements), biases.nelem, fp);
     }
     fclose(fp);
@@ -725,12 +756,19 @@ Net cn_alloc_net_from_file(char *file_name) {
     size_t *shape = (size_t *)CLEAR_NET_ALLOC(nlayers * sizeof(nlayers));
     CLEAR_NET_ASSERT(shape != NULL);
     fread(shape, sizeof(*shape), nlayers, fp);
-    Net net = cn_alloc_net(shape, nlayers);
+    float rate;
+    fread(&rate, sizeof(rate), 1, fp);
+    Activation *acts =
+        (Activation *)CLEAR_NET_ALLOC(nlayers * sizeof(Activation));
+    fread(acts, sizeof(*acts), nlayers, fp);
+    NetConfig hparams = cn_init_net_conf(shape, 1, nlayers, acts, 1, rate);
+    Net net = cn_alloc_net(hparams);
     Matrix weights;
     Vector biases;
-    for (size_t i = 0; i < net.nlayers - 1; ++i) {
+    for (size_t i = 0; i < net.hparams.nlayers - 1; ++i) {
         weights = net.layers[i].weights;
-        fread(weights.elements, sizeof(*weights.elements), weights.nrows * weights.ncols, fp);
+        fread(weights.elements, sizeof(*weights.elements),
+              weights.nrows * weights.ncols, fp);
         biases = net.layers[i].biases;
         fread(biases.elements, sizeof(*biases.elements), biases.nelem, fp);
     }

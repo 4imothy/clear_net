@@ -1,7 +1,5 @@
 #define CLEAR_NET_IMPLEMENTATION
-#define CLEAR_NET_ACT_HIDDEN Sigmoid
 #include "../clear_net.h"
-#define BITS_PER_NUM 1
 
 // a full adder with carry in and carry out
 int main(void) {
@@ -31,14 +29,19 @@ int main(void) {
         cn_form_matrix(num_combinations, num_outputs, stride, &data[num_inputs]);
     size_t num_epochs = 20000;
     size_t shape[] = {num_inputs, 3, 8, num_outputs};
+    size_t shape_allocated = 0;
+    Activation acts[] = {Tanh, ReLU, Sigmoid};
+    size_t activations_allocated = 0;
     size_t nlayers = sizeof(shape) / sizeof(*shape);
-    Net net = cn_alloc_net(shape, nlayers);
+    float rate = 0.5;
+    NetConfig hparams = cn_init_net_conf(shape, shape_allocated, nlayers, acts, activations_allocated, rate);
+    Net net = cn_alloc_net(hparams);
     cn_randomize_net(net, -1, 1);
     cn_print_net(net, "before");
     float loss;
     for (size_t i = 0; i < num_epochs; ++i) {
         loss = cn_learn(&net, input, target);
-        if (i % (num_epochs /10) == 0) {
+        if (i % (num_epochs / 10) == 0) {
             printf("Average loss: %g\n", loss);
         }
     }
@@ -47,11 +50,11 @@ int main(void) {
     cn_print_net_results(net, input, target);
     char *name = "model";
     cn_save_net_to_file(net, name);
-    cn_dealloc_net(&net, 0);
+    cn_dealloc_net(&net);
     net = cn_alloc_net_from_file(name);
     printf("After loading file\n");
     cn_print_net_results(net, input, target);
-    cn_dealloc_net(&net, 1);
+    cn_dealloc_net(&net);
 
     return 0;
 }

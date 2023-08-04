@@ -4,7 +4,8 @@
 #include <stdbool.h>
 #include <string.h>
 
-// sepal length (cm), sepal width (cm), petal length (cm), petal width (cm), target
+// sepal length (cm), sepal width (cm), petal length (cm), petal width (cm),
+// target
 // clang-format off
 float test_values[] = {
     5.1, 3.5, 1.4, 0.2, 0,
@@ -182,12 +183,13 @@ int main(int argc, char *argv[]) {
     Matrix input =
         cn_form_matrix(test_size, input_dim, test.stride, &MAT_AT(test, 0, 0));
     Matrix target = cn_form_matrix(test_size, output_dim, test.stride,
-                             &MAT_AT(test, 0, input_dim));
+                                   &MAT_AT(test, 0, input_dim));
     for (size_t i = 0; i < target.nrows; ++i) {
         MAT_AT(target, i, 0) /= 2;
     }
 
-    Matrix val = cn_form_matrix(val_size, data_cols, data_cols, validation_values);
+    Matrix val =
+        cn_form_matrix(val_size, data_cols, data_cols, validation_values);
     Matrix val_input =
         cn_form_matrix(val_size, input_dim, val.stride, &MAT_AT(val, 0, 0));
     Matrix val_target = cn_form_matrix(val_size, output_dim, val.stride,
@@ -198,20 +200,24 @@ int main(int argc, char *argv[]) {
 
     size_t shape[] = {input_dim, output_dim};
     size_t nlayers = sizeof(shape) / sizeof(*shape);
-    Net net = cn_alloc_net(shape, nlayers);
+    size_t shape_allocated = 0;
+    NetConfig hparams = cn_alloc_default_conf(shape, shape_allocated, nlayers);
+    Net net = cn_alloc_net(hparams);
     cn_randomize_net(net, -1, 1);
     size_t num_epochs = 10000;
     float loss;
     float error_break = 0.01;
     size_t i;
-    size_t batch_size = 27;
+    size_t batch_size = 45;
     cn_shuffle_matrix_rows(test);
     Matrix batch_in;
     Matrix batch_tar;
     CLEAR_NET_ASSERT(test_size % batch_size == 0);
     for (i = 0; i < num_epochs; ++i) {
-        for (size_t batch_num = 0; batch_num < test_size / batch_size; ++batch_num) {
-            cn_get_batch(&batch_in, &batch_tar, input, target, batch_num, batch_size);
+        for (size_t batch_num = 0; batch_num < test_size / batch_size;
+             ++batch_num) {
+            cn_get_batch(&batch_in, &batch_tar, input, target, batch_num,
+                         batch_size);
             cn_learn(&net, batch_in, batch_tar);
         }
         loss = cn_error(net, input, target);
@@ -223,16 +229,17 @@ int main(int argc, char *argv[]) {
         }
     }
     if (print) {
-        printf("Final loss at %zu : %g\n", i,loss);
+        printf("Final loss at %zu : %g\n", i, loss);
         cn_print_net_results(net, input, target);
-        char* file = "model";
+        char *file = "model";
         cn_save_net_to_file(net, file);
-        cn_dealloc_net(&net, 0);
+        cn_dealloc_net(&net);
+        printf("After loading from file\n");
         net = cn_alloc_net_from_file(file);
         cn_print_net_results(net, input, target);
         printf("On validation set\n");
         cn_print_net_results(net, val_input, val_target);
-        cn_dealloc_net(&net, 1);
+        cn_dealloc_net(&net);
     }
     return 0;
 }

@@ -1,14 +1,17 @@
-#define CLEAR_NET_ACT_HIDDEN Sigmoid
 #define CLEAR_NET_IMPLEMENTATION
 #include "../clear_net.h"
 
 int main(void) {
     srand(0);
-    // size_t shape[] = {2, 8, 7, 5, 1};
-    // size_t shape[] = {2, 25, 50, 1};
     size_t shape[] = {2, 2, 1};
+    size_t shape_allocated = 0;
     size_t nlayers = sizeof((shape)) / sizeof((*shape));
-    Net net = cn_alloc_net(shape, nlayers);
+    Activation acts[] = {Sigmoid, Sigmoid};
+    size_t activations_allocated = 0;
+    float rate = 0.5;
+    NetConfig hparams = cn_init_net_conf(shape, shape_allocated, nlayers, acts,
+                                         activations_allocated, rate);
+    Net net = cn_alloc_net(hparams);
     cn_randomize_net(net, -1, 1);
     Matrix data = cn_alloc_matrix(4, 3);
     for (size_t i = 0; i < 2; ++i) {
@@ -19,9 +22,10 @@ int main(void) {
             MAT_AT(data, row, 2) = i ^ j;
         }
     }
-    Matrix input = cn_form_matrix(data.nrows, 2, data.stride, &MAT_AT(data, 0, 0));
+    Matrix input =
+        cn_form_matrix(data.nrows, 2, data.stride, &MAT_AT(data, 0, 0));
     Matrix target = cn_form_matrix(data.nrows, 1, data.stride,
-                                &MAT_AT(data, 0, data.ncols - 1));
+                                   &MAT_AT(data, 0, data.ncols - 1));
     float loss;
     size_t num_epochs = 10000;
     for (size_t i = 0; i < num_epochs; ++i) {
@@ -32,11 +36,11 @@ int main(void) {
     }
     printf("Final loss: %g\n", loss);
     cn_print_net_results(net, input, target);
-    char* file = "model";
+    char *file = "model";
     cn_save_net_to_file(net, file);
-    cn_dealloc_net(&net, 0);
+    cn_dealloc_net(&net);
     net = cn_alloc_net_from_file(file);
     cn_print_net_results(net, input, target);
-    cn_dealloc_net(&net, 1);
+    cn_dealloc_net(&net);
     cn_dealloc_matrix(&data);
 }
