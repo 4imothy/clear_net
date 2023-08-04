@@ -36,10 +36,14 @@ int main(int argc, char *argv[]) {
         size_t c = cn_add(gs, a, b);
         size_t d = cn_add(gs, cn_multiply(gs, a, b), b);
         c = cn_add(gs, c, cn_add(gs, c, one));
-        c = cn_add(gs, c, cn_add(gs, c, cn_add(gs, one, cn_multiply(gs, none, a))));
-        d = cn_add(gs, d, cn_add(gs, cn_multiply(gs, d, two), cn_reluv(gs, cn_add(gs, b, a))));
+        c = cn_add(gs, c,
+                   cn_add(gs, c, cn_add(gs, one, cn_multiply(gs, none, a))));
         d = cn_add(gs, d,
-                cn_add(gs, cn_multiply(gs, d, three), cn_reluv(gs, cn_subtract(gs, b, a))));
+                   cn_add(gs, cn_multiply(gs, d, two),
+                          cn_reluv(gs, cn_add(gs, b, a))));
+        d = cn_add(gs, d,
+                   cn_add(gs, cn_multiply(gs, d, three),
+                          cn_reluv(gs, cn_subtract(gs, b, a))));
         size_t e = cn_subtract(gs, c, d);
         size_t f = cn_reluv(gs, e);
         cn_backward(gs, f);
