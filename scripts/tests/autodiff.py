@@ -43,31 +43,36 @@ def assert_with_mes(mine, torch):
             return 1
 
 
-def check_res(my_res, torch_res):
+def check_res(my_res, torch_res, show=False):
     """Check if the two results are equal."""
     assert len(my_res) == len(torch_res), "Length is not equal"
+    check = 0;
     for mres, tres in zip(my_res, torch_res):
         if assert_with_mes(mres[0], tres[0]):
             print_diff(mres, tres, "names")
-            exit(1)
+            check = 1
 
         if assert_with_mes(mres[1], tres[1]):
             print_diff(mres, tres, "values")
-            exit(1)
+            check = 1
+
 
         if assert_with_mes(mres[2], tres[2]):
             print_diff(mres, tres, "grad")
-            exit(1)
+            check = 1
 
-        # print(f"Clear: name: {mres[0]} val: {mres[1]} grad: {mres[2]}")
-        # print(f"Torch: name: {tres[0]} val: {tres[1]} grad: {tres[2]}")
+        if show and not check:
+            print(f"Clear: name: {mres[0]} val: {mres[1]} grad: {mres[2]}")
+            print(f"Torch: name: {tres[0]} val: {tres[1]} grad: {tres[2]}")
+    return check
 
 
-def test_against_cn(code):
+def test_against_cn(code, show=False):
     """Do the test."""
     my_impl_res = get_res(code)
-    check_res(my_impl_res, torch_res)
-    print_pass(code)
+    check = check_res(my_impl_res, torch_res, show)
+    if not check:
+        print_pass(code)
 
 
 def print_diff(mres, tres, name):
@@ -269,6 +274,36 @@ def do_test_sigmoid():
     test_against_cn("sigmoid")
 
 
+def do_test_leaky_relu():
+    """Test against clear net leaky relu."""
+    global torch_res
+    torch_res = []
+
+    leaky_relu = torch.nn.LeakyReLU(0.1)
+
+    a = torch.Tensor([72])
+    a.requires_grad = True
+    b = torch.Tensor([38])
+    b.requires_grad = True
+    c = torch.Tensor([-10.0])
+    c.requires_grad = True
+    d = (a + b) * c
+    e = d * a
+    f = leaky_relu(e)
+    d.retain_grad()
+    e.retain_grad()
+    f.retain_grad()
+    f.backward()
+    add_val(a, 'a')
+    add_val(b, 'b')
+    add_val(c, 'c')
+    add_val(d, 'd')
+    add_val(e, 'e')
+    add_val(f, 'f')
+
+    test_against_cn("leaky_relu")
+
+
 do_test_one()
 do_test_two()
 do_test_pow()
@@ -276,3 +311,4 @@ do_test_on_itself()
 do_test_tanh()
 do_test_relu()
 do_test_sigmoid()
+do_test_leaky_relu()

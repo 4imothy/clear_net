@@ -11,8 +11,9 @@
    See end of file for full license.
 */
 /*
-  TODO Activation for: elu, Leak_Relu
+  TODO Activation for: elu
   TODO momentum
+  TODO use bool
 */
 /* Beginning */
 #ifndef CLEAR_NET
@@ -21,6 +22,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 // allow custom memory allocation strategies
 #ifndef CLEAR_NET_ALLOC
@@ -35,7 +37,7 @@
 #endif // CLEAR_NET_MALLOC
 // allow custom assertion strategies
 #ifndef CLEAR_NET_ASSERT
-#include "assert.h" // assert
+#include "assert.h"
 #define CLEAR_NET_ASSERT assert
 #endif // CLEAR_NET_ASSERT
 #ifndef CLEAR_NET_ACT_NEG_SCALE
@@ -80,18 +82,22 @@ void _cn_tanh_backward(GradientStore *nl, VarNode *var);
 size_t cn_hyper_tanv(GradientStore *nl, size_t x);
 void _cn_sigmoid_backward(GradientStore *nl, VarNode *var);
 size_t cn_sigmoidv(GradientStore *nl, size_t x);
+void _cn_leaky_relu_backward(GradientStore *nl, VarNode *var);
+size_t cn_leaky_reluv(GradientStore *nl, size_t x);
 void cn_backward(GradientStore *nl, size_t y);
 
 /* Declaration: Activation Functions */
 typedef enum {
-    Sigmoid,
-    ReLU,
-    Tanh,
+  Sigmoid,
+  ReLU,
+  Tanh,
+  LeakyReLU,
 } Activation;
 
 float cn_sigmoid(float x);
 float cn_relu(float x);
 float cn_hyper_tan(float x);
+float cn_leaky_relu(float x);
 
 /* Declaration: Linear Algebra */
 typedef struct Matrix Matrix;
@@ -246,13 +252,13 @@ size_t cn_raise(GradientStore *gs, size_t to_cn_raise, size_t pow) {
     return out;
 }
 
+float cn_relu(float x) { return x > 0 ? x : 0; }
+
 void cn_relu_backward(GradientStore *gs, VarNode *var) {
     if (var->num > 0) {
         GET_NODE(var->prev_left).grad += var->grad;
     }
 }
-
-float cn_relu(float x) { return x > 0 ? x : 0; }
 
 size_t cn_reluv(GradientStore *gs, size_t x) {
     float val = cn_relu(GET_NODE(x).num);
@@ -260,11 +266,11 @@ size_t cn_reluv(GradientStore *gs, size_t x) {
     return out;
 }
 
+float cn_hyper_tan(float x) { return tanhf(x); }
+
 void _cn_tanh_backward(GradientStore *gs, VarNode *var) {
     GET_NODE(var->prev_left).grad += (1 - powf(var->num, 2)) * var->grad;
 }
-
-float cn_hyper_tan(float x) { return tanhf(x); }
 
 size_t cn_hyper_tanv(GradientStore *gs, size_t x) {
     float val = cn_hyper_tan(GET_NODE(x).num);
@@ -272,15 +278,30 @@ size_t cn_hyper_tanv(GradientStore *gs, size_t x) {
     return out;
 }
 
+float cn_sigmoid(float x) { return 1 / (1 + expf(-x)); }
+
 void _cn_sigmoid_backward(GradientStore *gs, VarNode *var) {
     GET_NODE(var->prev_left).grad += var->num * (1 - var->num) * var->grad;
 }
 
-float cn_sigmoid(float x) { return 1 / (1 + expf(-x)); }
-
 size_t cn_sigmoidv(GradientStore *gs, size_t x) {
     float val = cn_sigmoid(GET_NODE(x).num);
     size_t out = _cn_init_var(gs, val, x, 0, _cn_sigmoid_backward);
+    return out;
+}
+
+float cn_leaky_relu(float x) {
+    return x >= 0 ? x :CLEAR_NET_ACT_NEG_SCALE * x;
+}
+
+void _cn_leaky_relu_backward(GradientStore *gs, VarNode *var) {
+    float change = var->num >= 0 ? 1 : CLEAR_NET_ACT_NEG_SCALE;
+    GET_NODE(var->prev_left).grad += change * var->grad;
+}
+
+size_t cn_leaky_reluv(GradientStore *gs, size_t x) {
+    float val = cn_leaky_relu(GET_NODE(x).num);
+    size_t out = _cn_init_var(gs, val, x, 0, _cn_leaky_relu_backward);
     return out;
 }
 
@@ -518,6 +539,8 @@ size_t _cn_activate(GradientStore *gs, size_t id, Activation act) {
         return cn_sigmoidv(gs, id);
     case Tanh:
         return cn_hyper_tanv(gs, id);
+    case LeakyReLU:
+        return cn_leaky_reluv(gs, id);
     }
 }
 
@@ -529,6 +552,8 @@ float activate(float x, Activation act) {
         return cn_sigmoid(x);
     case Tanh:
         return cn_hyper_tan(x);
+    case LeakyReLU:
+        return cn_leaky_relu(x);
     }
 }
 

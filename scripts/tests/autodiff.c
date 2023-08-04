@@ -119,6 +119,21 @@ int main(int argc, char *argv[]) {
         PRINT_VAL(d);
         PRINT_VAL(e);
         PRINT_VAL(f);
+    } else if (strcmp(argv[1], "leaky_relu") == 0) {
+        size_t a = cn_init_leaf_var(gs, 72);
+        size_t b  = cn_init_leaf_var(gs, 38);
+        size_t c = cn_init_leaf_var(gs, -10);
+        size_t d = cn_multiply(gs, c, cn_add(gs, a,b));
+        size_t e = cn_multiply(gs, d, a);
+        size_t f = cn_leaky_reluv(gs, e);
+        cn_backward(gs, f);
+        PRINT_VAL(a);
+        PRINT_VAL(b);
+        PRINT_VAL(c);
+        PRINT_VAL(d);
+        PRINT_VAL(e);
+        PRINT_VAL(f);
     }
+
     cn_dealloc_gradient_store(gs);
 }

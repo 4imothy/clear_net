@@ -30,7 +30,7 @@ int main(void) {
     size_t num_epochs = 20000;
     size_t shape[] = {num_inputs, 3, 8, num_outputs};
     size_t shape_allocated = 0;
-    Activation acts[] = {Tanh, ReLU, Sigmoid};
+    Activation acts[] = {Tanh, LeakyReLU, Sigmoid};
     size_t activations_allocated = 0;
     size_t nlayers = sizeof(shape) / sizeof(*shape);
     float rate = 0.5;
