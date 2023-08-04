@@ -1,10 +1,11 @@
-* TODO Short
-- Make sure can compile with clang, cc too
-- Move autodiff to a testing dir and test with pytorch
-- Rewrite tanh to use e^(2x) simplification, [[https://en.wikipedia.org/wiki/Hyperbolic_functions][link]], actually tanh is in <math.h>
-* Optim Algorithms
+* Optimization Algorithms
 - Should implement autograd before I think
 - [[https://en.wikipedia.org/wiki/Stochastic_gradient_descent][See Extensions and Variants (wikipedia)]]
+- Adaptive Gradient Algorithm (AdaGrad)
+- Root Mean Square Propagation (RMSProp)
+- The algorithms that have a perparameter learning rate must have that rate
+  saved to enable training on an already saved net, create a seperate
+  cn_alloc_net_from_file function with this functionality
 * Autodiff
 - Using reverse mode
 - Tells us how the editing of one variable affects another through a mathematical DAG
