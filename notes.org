@@ -1,17 +1,3 @@
-* Optimization Algorithms
-- Should implement autograd before I think
-- [[https://en.wikipedia.org/wiki/Stochastic_gradient_descent][See Extensions and Variants (wikipedia)]]
-- Adaptive Gradient Algorithm (AdaGrad)
-- Root Mean Square Propagation (RMSProp)
-- The algorithms that have a perparameter learning rate must have that rate
-  saved to enable training on an already saved net, create a seperate
-  cn_alloc_net_from_file function with this functionality
-* Autodiff
-- Using reverse mode
-- Tells us how the editing of one variable affects another through a mathematical DAG
-- If /dy/dx = 10/ (derivative of y with respect to x) then when changing /x/ the slope of the growth on /y/ is /10/
-  - Tells us how /y/ will respond if /x/ is tweaked in a positive direction
-** Benefits
 * CNN Ideas
 Filter consists of multiple kernels stacked on top of eachother.
 [[https://www.youtube.com/watch?v=Lakz2MoHy6o][Convolutional Neural Network from Scratch | Mathematics & Python Code]]
@@ -49,3 +35,10 @@ Filter consists of multiple kernels stacked on top of eachother.
 - When changing the size the next image should be /1/n/ the size of the image before, where /n % 2 == 0/
 ** Things to Do Later
 - Stride, dilation, transpose, padding to be changed in the implementation
+* Optimization Algorithms
+- [[https://en.wikipedia.org/wiki/Stochastic_gradient_descent][See Extensions and Variants (wikipedia)]]
+- Adaptive Gradient Algorithm (AdaGrad)
+- Root Mean Square Propagation (RMSProp)
+- The algorithms that have a perparameter learning rate must have that rate
+  saved to enable training on an already saved net, create a seperate
+  cn_alloc_net_from_file function with this functionality
