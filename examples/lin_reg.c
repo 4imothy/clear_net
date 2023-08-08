@@ -77,7 +77,8 @@ int main(void) {
     Activation acts[] = {Tanh};
     size_t acts_allocated = 0;
     float rate = 0.5;
-    NetConfig hparams = cn_init_net_conf(shape, shape_allocated, nlayers, acts, acts_allocated, rate);
+    NetConfig hparams = cn_init_net_conf(shape, shape_allocated, nlayers, acts,
+                                         acts_allocated, rate);
     Net net = cn_alloc_net(hparams);
     cn_randomize_net(net, -1, 1);
     size_t num_epochs = 200000;

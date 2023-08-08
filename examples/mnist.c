@@ -80,10 +80,11 @@ int main(void) {
     }
     // randomize for stochastic gradient descent
     cn_shuffle_matrix_rows(train);
-    Matrix train_input = cn_form_matrix(num_train_files, num_pixels, train.ncols,
-                                  &MAT_AT(train, 0, 0));
-    Matrix train_output = cn_form_matrix(num_train_files, dim_output, train.ncols,
-                                   &MAT_AT(train, 0, num_pixels));
+    Matrix train_input = cn_form_matrix(num_train_files, num_pixels,
+                                        train.ncols, &MAT_AT(train, 0, 0));
+    Matrix train_output =
+        cn_form_matrix(num_train_files, dim_output, train.ncols,
+                       &MAT_AT(train, 0, num_pixels));
 
     char *test_path = "./datasets/mnist/test";
     Matrix test = cn_alloc_matrix(num_test_files, num_pixels + dim_output);
@@ -91,10 +92,10 @@ int main(void) {
     if (res != 0) {
         return 1;
     }
-    Matrix test_input =
-        cn_form_matrix(num_test_files, num_pixels, test.ncols, &MAT_AT(test, 0, 0));
+    Matrix test_input = cn_form_matrix(num_test_files, num_pixels, test.ncols,
+                                       &MAT_AT(test, 0, 0));
     Matrix test_output = cn_form_matrix(num_test_files, dim_output, test.ncols,
-                                  &MAT_AT(test, 0, num_pixels));
+                                        &MAT_AT(test, 0, num_pixels));
 
     size_t shape[] = {num_pixels, 16, 16, dim_output};
     size_t shape_allocated = 0;
@@ -102,7 +103,8 @@ int main(void) {
     Activation acts[] = {Sigmoid, Sigmoid, Sigmoid};
     size_t acts_allocated = 0;
     float rate = 0.5;
-    NetConfig hparams = cn_init_net_conf(shape, shape_allocated, nlayers, acts, acts_allocated, rate);
+    NetConfig hparams = cn_init_net_conf(shape, shape_allocated, nlayers, acts,
+                                         acts_allocated, rate);
     Net net = cn_alloc_net(hparams);
     cn_randomize_net(net, -1, 1);
     size_t num_epochs = 20000;
@@ -118,8 +120,8 @@ int main(void) {
     for (size_t i = 0; i < num_epochs; ++i) {
         for (size_t batch_num = 0; batch_num < (num_train_files / batch_size);
              ++batch_num) {
-            cn_get_batch(&batch_input, &batch_output, train_input,
-                          train_output, batch_num, batch_size);
+            cn_get_batch(&batch_input, &batch_output, train_input, train_output,
+                         batch_num, batch_size);
             cn_learn(&net, batch_input, batch_output);
         }
         error = cn_loss(net, train_input, train_output);
