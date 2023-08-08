@@ -11,6 +11,20 @@
    See end of file for full license.
 */
 
+/*
+  TODO change to a add_layer function rather than a big alloc_net function
+  - Can work by taking both the size of inputs and outputs and asserting this
+  ones inputs is equal to the previous output
+
+  TODO change _cn_predict_layer -> _cn_forward
+
+  TODO change the EXTEND something to be less than * 2
+
+  TODO move the negative parameter to the net config struct
+
+  TODO update the certifi dep for python
+*/
+
 /* Beginning */
 #ifndef CLEAR_NET
 #define CLEAR_NET
