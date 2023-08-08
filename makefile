@@ -13,6 +13,7 @@ TEST_DIR := $(SCRIPTS_DIR)/tests
 DOWNLOAD_DATA_DIR := $(SCRIPTS_DIR)/download_datasets
 
 EXAMPLE_FILES := $(wildcard $(EXAMPLE_DIR)/*.c)
+TEST_FILES := $(wildcard $(TEST_DIR)/*.c)
 DOWNLOAD_SCRIPTS := $(wildcard $(DOWNLOAD_DATA_DIR)/*.py)
 
 C_FILES := $(shell find . -name '*.c' -not -path "./env/*")
@@ -31,10 +32,10 @@ $(examples): clear_net $(EXAMPLE_FILES)
 run_%: %
 	./$<
 
-AUTODIFF_FILE := $(TEST_DIR)/autodiff.c
+tests := autodiff convolution
 
-autodiff: $(AUTODIFF_FILE) clear_net
-	$(CC) $(CFLAGS) -o $@ $(AUTODIFF_FILE)
+$(tests): clear_net $(TEST_FILES)
+	$(CC) $(CFLAGS) -o $@ $(TEST_DIR)/$@.c
 
 test_%: %
 	$(PY) $(TEST_DIR)/$<.py

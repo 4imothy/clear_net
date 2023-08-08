@@ -10,6 +10,7 @@ lin_reg
 bench_mul
 mnist
 autodiff
+convolution
 # model save files
 model
 # ignore file of youtube demo
