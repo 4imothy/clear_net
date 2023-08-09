@@ -56,5 +56,5 @@ format: $(C_FILES) $(H_FILES) $(PY_FILES)
 	$(PY_FORMAT) --in-place $(PY_FILES)
 
 clean:
-	rm -f $(examples) bench_mul autodiff
+	rm -f $(examples) $(tests) bench_mul
 	rm -f model lin_reg_model adder_model
