@@ -154,14 +154,14 @@ def test_same_guassian_blur_5x5():
     compare_and_print(cn_res, output_matrix, "same guassian 5x5", 1e-3)
 
 
-def do_test_with_default_elements(code, input_dim, krows, kcols, mode,
+def do_test_with_default_elements(code, input_rows, input_cols, krows, kcols, mode,
                                   print_name):
     """Do the test on the given example."""
     cn_res = get_res(code)
-    input_matrix = np.zeros((input_dim, input_dim))
+    input_matrix = np.zeros((input_rows, input_cols))
     poss_idx = 0
-    for i in range(input_dim):
-        for j in range(input_dim):
+    for i in range(input_rows):
+        for j in range(input_cols):
             input_matrix[i, j] = poss_values[poss_idx]
             poss_idx = (poss_idx + 1) % len(poss_values)
     kernel = np.zeros((krows, kcols))
@@ -182,11 +182,14 @@ test_same_guassian_blur_3x3()
 test_same_guassian_blur_5x5()
 
 # tests with elements from a known list
-do_test_with_default_elements("same_even_kernel", 20, 4, 4, 'same',
+do_test_with_default_elements("same_even_kernel", 20, 20, 4, 4, 'same',
                               "same even kernel")
-do_test_with_default_elements("same_rect", 30, 5, 3, 'same', "same rect")
-do_test_with_default_elements("full_7x7", 30, 7, 7, 'full', "full 7x7")
-do_test_with_default_elements("full_even", 15, 4, 4, 'full',
+do_test_with_default_elements("same_rect", 30, 30, 5, 3, 'same', "same rect")
+do_test_with_default_elements("full_7x7", 30, 30, 7, 7, 'full', "full 7x7")
+do_test_with_default_elements("full_even", 15, 15, 4, 4, 'full',
                               "full even kernel")
-do_test_with_default_elements("full_rect", 30, 4, 7, 'full', "full rect")
-do_test_with_default_elements("valid_7x7", 11, 7, 7, 'valid', "valid 7x7")
+do_test_with_default_elements("full_rect", 30, 30, 4, 7, 'full', "full rect")
+do_test_with_default_elements("valid_7x7", 11, 11, 7, 7, 'valid', "valid 7x7")
+do_test_with_default_elements("valid_rect", 23, 23, 1, 6, 'valid', "valid rect")
+do_test_with_default_elements("valid_rect_input", 10, 20, 4, 4, 'valid',
+                              "valid rectangular input")

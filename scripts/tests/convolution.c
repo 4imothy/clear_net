@@ -1,10 +1,8 @@
-// TODO valid padding correlation
 // TODO add multi input/output test
 // TODO make an add filter method to the ConvolutionalLayer, create the layer
 // first then add filter method,
 // like the new way to create a neural net
 // TODO test it running computations on the gradient store
-// TODO test for rectangular input
 #include <stddef.h>
 #define CLEAR_NET_IMPLEMENTATION
 #include "../../clear_net.h"
@@ -165,14 +163,14 @@ void fill_matrix(Matrix *mat, const float *elements, size_t elem_len) {
     }
 }
 
-void do_test_with_default_elements(const size_t input_dim, size_t krows, size_t kcols, Padding padding) {
+void do_test_with_default_elements(const size_t input_rows, const size_t input_cols, size_t krows, size_t kcols, Padding padding) {
          size_t nfilters = 1;
-         Filter filter = alloc_filter(krows, kcols, 1, input_dim, input_dim, padding);
+         Filter filter = alloc_filter(krows, kcols, 1, input_rows, input_cols, padding);
         fill_matrix(&filter.kernels[0], poss_kernel_elements,
                     poss_kernel_elem_len);
         ConvolutionalLayer cl = alloc_convolutional_layer(&filter, nfilters, padding);
-        float input[input_dim * input_dim];
-        Matrix minput = cn_form_matrix(input_dim, input_dim, input_dim, input);
+        float input[input_rows * input_cols];
+        Matrix minput = cn_form_matrix(input_rows, input_cols, input_cols, input);
         fill_matrix(&minput, poss_elements, poss_elements_len);
         Matrix *list = &minput;
         forward(&cl, &list);
@@ -251,26 +249,34 @@ int main(int argc, char *argv[]) {
     }
 
     else if (strcmp(argv[1], "same_even_kernel") == 0) {
-        do_test_with_default_elements(20, 4,4, Same);
+        do_test_with_default_elements(20, 20, 4,4, Same);
     }
 
     else if (strcmp(argv[1], "same_rect") == 0) {
-        do_test_with_default_elements(30, 5, 3, Same);
+        do_test_with_default_elements(30, 30, 5, 3, Same);
     }
 
     else if (strcmp(argv[1], "full_7x7") == 0) {
-        do_test_with_default_elements(30, 7, 7, Full);
+        do_test_with_default_elements(30, 30, 7, 7, Full);
     }
 
     else if (strcmp(argv[1], "full_even") == 0) {
-        do_test_with_default_elements(15, 4, 4, Full);
+        do_test_with_default_elements(15, 15, 4, 4, Full);
     }
 
     else if (strcmp(argv[1], "full_rect") == 0) {
-        do_test_with_default_elements(30, 4, 7, Full);
+        do_test_with_default_elements(30, 30, 4, 7, Full);
     }
 
     else if (strcmp(argv[1], "valid_7x7") == 0) {
-        do_test_with_default_elements(11, 7, 7, Valid);
+        do_test_with_default_elements(11, 11, 7, 7, Valid);
+    }
+
+    else if (strcmp(argv[1], "valid_rect") == 0) {
+        do_test_with_default_elements(23, 23, 1, 6, Valid);
+    }
+
+    else if (strcmp(argv[1], "valid_rect_input") == 0) {
+        do_test_with_default_elements(10, 20, 4, 4, Valid);
     }
 }
