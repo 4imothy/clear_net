@@ -11,12 +11,8 @@
    See end of file for full license.
 */
 
-/*
-  TODO change predict to forward???
-  TODO change the EXTEND something to be less than * 2
-  TODO move the negative parameter to the net config struct
-  TODO update the certifi dep for python
-*/
+/***
+***/
 
 /* Beginning */
 #ifndef CLEAR_NET
@@ -152,7 +148,7 @@ void _cn_fill_floats(float *ptr, size_t len, float val) {
 
 /* Implement: Automatic Differentiation Engine */
 #define CLEAR_NET_EXTEND_LENGTH_FUNCTION(len)                                  \
-    ((len) == 0 ? CLEAR_NET_INITIAL_GRAPH_LENGTH : ((len)*2))
+    ((len) == 0 ? CLEAR_NET_INITIAL_GRAPH_LENGTH : ((len) * 1.5))
 #define GET_NODE(id) (gs)->vars[(id)]
 
 float NEG_SCALE = 0.1;
