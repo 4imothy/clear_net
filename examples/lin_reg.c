@@ -71,18 +71,13 @@ int main(void) {
     Matrix output = cn_form_matrix(num_train, 1, num_var, &train[dim_input]);
     Matrix val_in = cn_form_matrix(num_train, dim_input, num_var, val);
     Matrix val_out = cn_form_matrix(num_train, 1, num_var, &val[dim_input]);
-    size_t shape[] = {dim_input, 1};
-    size_t shape_allocated = 0;
-    size_t nlayers = sizeof(shape) / sizeof(*shape);
-    Activation acts[] = {Tanh};
-    size_t acts_allocated = 0;
-    float rate = 0.5;
-    NetConfig hparams = cn_init_net_conf(shape, shape_allocated, nlayers, acts,
-                                         acts_allocated, rate);
-    Net net = cn_alloc_net(hparams);
+
+    NetConfig hparams = cn_init_net_conf();
+    Net net = cn_init_net(hparams);
+    cn_alloc_dense_layer(&net, 8, 1, Tanh);
     cn_randomize_net(net, -1, 1);
     size_t num_epochs = 200000;
-    float error_break = 0.f;
+    float error_break = 0.01f;
     float loss;
     for (size_t i = 0; i < num_epochs; ++i) {
         loss = cn_learn(&net, input, output);

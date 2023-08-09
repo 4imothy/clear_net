@@ -97,15 +97,11 @@ int main(void) {
     Matrix test_output = cn_form_matrix(num_test_files, dim_output, test.ncols,
                                         &MAT_AT(test, 0, num_pixels));
 
-    size_t shape[] = {num_pixels, 16, 16, dim_output};
-    size_t shape_allocated = 0;
-    size_t nlayers = sizeof(shape) / sizeof(*shape);
-    Activation acts[] = {Sigmoid, Sigmoid, Sigmoid};
-    size_t acts_allocated = 0;
-    float rate = 0.5;
-    NetConfig hparams = cn_init_net_conf(shape, shape_allocated, nlayers, acts,
-                                         acts_allocated, rate);
-    Net net = cn_alloc_net(hparams);
+    NetConfig hparams = cn_init_net_conf();
+    Net net = cn_init_net(hparams);
+    cn_alloc_dense_layer(&net, num_pixels, 16, Sigmoid);
+    cn_alloc_dense_layer(&net, 16, 16, Sigmoid);
+    cn_alloc_dense_layer(&net, 16, dim_output, Sigmoid);
     cn_randomize_net(net, -1, 1);
     size_t num_epochs = 20000;
     float error;

@@ -3,15 +3,10 @@
 
 int main(void) {
     srand(0);
-    size_t shape[] = {2, 2, 1};
-    size_t shape_allocated = 0;
-    size_t nlayers = sizeof((shape)) / sizeof((*shape));
-    Activation acts[] = {Sigmoid, Sigmoid};
-    size_t activations_allocated = 0;
-    float rate = 0.5;
-    NetConfig hparams = cn_init_net_conf(shape, shape_allocated, nlayers, acts,
-                                         activations_allocated, rate);
-    Net net = cn_alloc_net(hparams);
+    NetConfig hparams = cn_init_net_conf();
+    Net net = cn_init_net(hparams);
+    cn_alloc_dense_layer(&net, 2, 2, Sigmoid);
+    cn_alloc_dense_layer(&net, 2, 1, Sigmoid);
     cn_randomize_net(net, -1, 1);
     Matrix data = cn_alloc_matrix(4, 3);
     for (size_t i = 0; i < 2; ++i) {

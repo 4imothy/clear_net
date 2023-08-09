@@ -304,11 +304,11 @@ size_t cn_sigmoidv(GradientStore *gs, size_t x) {
 }
 
 float cn_leaky_relu(float x) {
-    return x >= 0 ? x : CLEAR_NET_ACT_NEG_SCALE * x;
+    return x >= 0 ? x : NEG_SCALE * x;
 }
 
 void _cn_leaky_relu_backward(GradientStore *gs, VarNode *var) {
-    float change = var->num >= 0 ? 1 : CLEAR_NET_ACT_NEG_SCALE;
+    float change = var->num >= 0 ? 1 : NEG_SCALE;
     GET_NODE(var->prev_left).grad += change * var->grad;
 }
 
@@ -319,11 +319,11 @@ size_t cn_leaky_reluv(GradientStore *gs, size_t x) {
 }
 
 float cn_elu(float x) {
-    return x > 0 ? x : CLEAR_NET_ACT_NEG_SCALE * (expf(x) - 1);
+    return x > 0 ? x : NEG_SCALE * (expf(x) - 1);
 }
 
 void _cn_elu_backward(GradientStore *gs, VarNode *var) {
-    float change = var->num > 0 ? 1 : var->num + CLEAR_NET_ACT_NEG_SCALE;
+    float change = var->num > 0 ? 1 : var->num + NEG_SCALE;
     GET_NODE(var->prev_left).grad += change * var->grad;
 }
 
@@ -509,8 +509,8 @@ void cn_with_momentum(NetConfig *nc, float momentum_beta) {
     nc->momentum_beta = momentum_beta;
 }
 
-void cn_set_neg_scale(NetConfig *nc, float neg_scale) {
-    nc->neg_scale = neg_scale;
+void cn_set_neg_scale(float neg_scale) {
+    NEG_SCALE = neg_scale;
 }
 
 void cn_alloc_dense_layer(Net *net, size_t dim_input, size_t dim_output, Activation act) {
@@ -840,11 +840,11 @@ void cn_save_net_to_file(Net net, char *file_name) {
     FILE *fp = fopen(file_name, "wb");
     Matrix weights;
     Vector biases;
-    // TODO Need to put negative scale in here too
     fwrite(&net.hparams.nlayers, sizeof(net.hparams.nlayers), 1, fp);
     fwrite(&net.hparams.rate, sizeof(net.hparams.rate), 1, fp);
     fwrite(&net.hparams.with_momentum, sizeof(net.hparams.with_momentum), 1, fp);
     fwrite(&net.hparams.momentum_beta, sizeof(net.hparams.momentum_beta), 1, fp);
+    fwrite(&NEG_SCALE, sizeof(NEG_SCALE), 1, fp);
     for (size_t i = 0; i < net.hparams.nlayers; ++i) {
         fwrite(&net.layers[i].act, sizeof(net.layers[i].act), 1, fp);
         weights = net.layers[i].weights;
@@ -867,6 +867,7 @@ Net cn_alloc_net_from_file(char *file_name) {
     fread(&nc.rate, sizeof(nc.rate), 1, fp);
     fread(&nc.with_momentum, sizeof(nc.with_momentum), 1, fp);
     fread(&nc.momentum_beta, sizeof(nc.momentum_beta), 1, fp);
+    fread(&NEG_SCALE, sizeof(NEG_SCALE), 1, fp);
     Net net = cn_init_net(nc);
     Activation act;
     size_t input_dim;

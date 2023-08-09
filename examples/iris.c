@@ -198,11 +198,9 @@ int main(int argc, char *argv[]) {
         MAT_AT(val_target, i, 0) /= 2;
     }
 
-    size_t shape[] = {input_dim, output_dim};
-    size_t nlayers = sizeof(shape) / sizeof(*shape);
-    size_t shape_allocated = 0;
-    NetConfig hparams = cn_alloc_default_conf(shape, shape_allocated, nlayers);
-    Net net = cn_alloc_net(hparams);
+    NetConfig hparams = cn_init_net_conf();
+    Net net = cn_init_net(hparams);
+    cn_alloc_dense_layer(&net, input_dim, 1, Sigmoid);
     cn_randomize_net(net, -1, 1);
     size_t num_epochs = 10000;
     float loss;

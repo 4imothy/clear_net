@@ -28,16 +28,15 @@ int main(void) {
     Matrix target =
         cn_form_matrix(num_combinations, num_outputs, stride, &data[num_inputs]);
     size_t num_epochs = 20000;
-    size_t shape[] = {num_inputs, 3, 8, num_outputs};
-    size_t nlayers = sizeof(shape) / sizeof(*shape);
-    size_t shape_allocated = 0;
-    Activation acts[] = {Tanh, ELU, Sigmoid};
-    size_t activations_allocated = 0;
-    float rate = 0.5;
-    NetConfig hparams = cn_init_net_conf(shape, shape_allocated, nlayers, acts, activations_allocated, rate);
-    cn_with_momentum(&hparams, 0);
-    Net net = cn_alloc_net(hparams);
+    NetConfig hparams = cn_init_net_conf();
+    // cn_with_momentum(&hparams, 0);
+    Net net = cn_init_net(hparams);
+    cn_set_neg_scale(0.001);
+    cn_alloc_dense_layer(&net, num_inputs, 3, Tanh);
+    cn_alloc_dense_layer(&net, 3, 8, LeakyReLU);
+    cn_alloc_dense_layer(&net, 8, num_outputs, Sigmoid);
     cn_randomize_net(net, -1, 1);
+    cn_print_net(net, "net");
     float loss;
     for (size_t i = 0; i < num_epochs; ++i) {
         loss = cn_learn(&net, input, target);
