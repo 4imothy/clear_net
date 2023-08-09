@@ -1,10 +1,8 @@
 """Testing the autodifferentiation engine."""
 import subprocess
 import os
-import torch
 import numpy as np
-import warnings
-warnings.filterwarnings("ignore")
+import scipy as sp
 
 
 cwd = os.getcwd()
@@ -35,14 +33,13 @@ def get_res(code):
         elements.append(float(part))
     rows, cols = map(int, elements[:2])
     elements = elements[2:]
-    data = torch.tensor(elements, dtype=torch.float32)
-    matrix = data.view(rows, cols)
+    matrix = np.array(elements).reshape(rows, cols)
     return matrix
 
 
-def compare_and_print(cn_mat, torch_mat, name, atol=1e-7):
+def compare_and_print(cn_mat, sp_mat, name, atol=1e-7):
     """Compare the two matrices and print results."""
-    elementwise_comparison = np.isclose(cn_mat, torch_mat, atol=atol)
+    elementwise_comparison = np.isclose(cn_mat, sp_mat, atol=atol)
     if np.all(elementwise_comparison):
         print(f"Pass: {name}")
     else:
@@ -50,45 +47,41 @@ def compare_and_print(cn_mat, torch_mat, name, atol=1e-7):
         print("Differences:")
         diff_indices = np.where(~elementwise_comparison)
         for i, j in zip(*diff_indices):
-            torch_val = torch_mat[i, j]
+            sp_val = sp_mat[i, j]
             cn_val = cn_mat[i, j]
             print(
-                f"Different at ({i}, {j}): torch: {torch_val}, cn: {cn_val}")
+                f"Different at ({i}, {j}): scipy: {sp_val}, cn: {cn_val}")
 
 
-def test_same_zeroes():
-    """Test same correlation with result being all zeroes."""
-    cn_res = get_res("same_zeroes")
-    input_matrix = torch.zeros(15, 15)
+def test_same_zeros():
+    """Test same correlation with result being all zeros."""
+    cn_res = get_res("same_zeros")
+    input_matrix = np.zeros((15, 15))
 
     poss_idx = 0
     for i in range(15):
         for j in range(15):
             input_matrix[i, j] = poss_values[poss_idx]
             poss_idx = (poss_idx + 1) % len(poss_values)
-    kernel = torch.zeros(3, 3)
-    output_matrix = torch.nn.functional.conv2d(input_matrix.unsqueeze(
-        0).unsqueeze(0), kernel.unsqueeze(0).unsqueeze(0), padding='same')
-    output_matrix = output_matrix.squeeze()
-    compare_and_print(cn_res, output_matrix, "same zeroes")
+    kernel = np.zeros((3, 3))
+    output_matrix = sp.signal.correlate2d(input_matrix, kernel, mode='same')
+    compare_and_print(cn_res, output_matrix, "same zeros")
 
 
 def test_same_identity():
     """Test same correlation with identity kernel."""
     cn_res = get_res("same_identity")
     dim = 10
-    input_matrix = torch.zeros(dim, dim)
+    input_matrix = np.zeros((dim, dim))
 
     poss_idx = 0
     for i in range(dim):
         for j in range(dim):
             input_matrix[i, j] = poss_values[poss_idx]
             poss_idx = (poss_idx + 1) % len(poss_values)
-    kernel = torch.zeros(3, 3)
+    kernel = np.zeros((3, 3))
     kernel[1][1] = 1
-    output_matrix = torch.nn.functional.conv2d(input_matrix.unsqueeze(
-        0).unsqueeze(0), kernel.unsqueeze(0).unsqueeze(0), padding='same')
-    output_matrix = output_matrix.squeeze()
+    output_matrix = sp.signal.correlate2d(input_matrix, kernel, mode='same')
     compare_and_print(cn_res, output_matrix, "same identity")
 
 
@@ -96,14 +89,14 @@ def test_same_guassian_blur_3x3():
     """Test same correlation with guassian blur filter."""
     cn_res = get_res("same_guassian_blur_3")
     dim = 20
-    input_matrix = torch.zeros(dim, dim)
+    input_matrix = np.zeros((dim, dim))
 
     poss_idx = 0
     for i in range(dim):
         for j in range(dim):
             input_matrix[i, j] = poss_values[poss_idx]
             poss_idx = (poss_idx + 1) % len(poss_values)
-    kernel = torch.zeros(3, 3)
+    kernel = np.zeros((3, 3))
     kernel[0][0] = 1 / 16
     kernel[0][1] = 2 / 16
     kernel[0][2] = 1 / 16
@@ -113,9 +106,7 @@ def test_same_guassian_blur_3x3():
     kernel[2][0] = 1 / 16
     kernel[2][1] = 2 / 16
     kernel[2][2] = 1 / 16
-    output_matrix = torch.nn.functional.conv2d(input_matrix.unsqueeze(
-        0).unsqueeze(0), kernel.unsqueeze(0).unsqueeze(0), padding='same')
-    output_matrix = output_matrix.squeeze()
+    output_matrix = sp.signal.correlate2d(input_matrix, kernel, mode='same')
     compare_and_print(cn_res, output_matrix, "same guassian 3x3")
 
 
@@ -123,7 +114,7 @@ def test_same_guassian_blur_5x5():
     """Test same correlation with guassian blur filter."""
     cn_res = get_res("same_guassian_blur_5")
     dim = 20
-    input_matrix = torch.zeros(dim, dim)
+    input_matrix = np.zeros((dim, dim))
 
     poss_idx = 0
     for i in range(dim):
@@ -131,7 +122,7 @@ def test_same_guassian_blur_5x5():
             input_matrix[i, j] = poss_values[poss_idx]
             poss_idx = (poss_idx + 1) % len(poss_values)
     k_size = 5
-    kernel = torch.zeros(k_size, k_size)
+    kernel = np.zeros((k_size, k_size))
     kernel[0][0] = 1
     kernel[0][1] = 4
     kernel[0][2] = 7
@@ -159,37 +150,43 @@ def test_same_guassian_blur_5x5():
     kernel[4][4] = 1
 
     kernel = kernel / kernel.sum()  # Normalize the kernel
-    output_matrix = torch.nn.functional.conv2d(input_matrix.unsqueeze(
-        0).unsqueeze(0), kernel.unsqueeze(0).unsqueeze(0), padding='same')
-    output_matrix = output_matrix.squeeze()
+    output_matrix = sp.signal.correlate2d(input_matrix, kernel, mode='same')
     compare_and_print(cn_res, output_matrix, "same guassian 5x5", 1e-3)
 
 
-def test_same_even_dim_kernel():
-    """Test same correlation with an even kernel."""
-    cn_res = get_res("same_even_kernel")
-    dim = 20
-    input_matrix = torch.zeros(dim, dim)
+def do_test_with_default_elements(code, input_dim, krows, kcols, mode,
+                                  print_name):
+    """Do the test on the given example."""
+    cn_res = get_res(code)
+    input_matrix = np.zeros((input_dim, input_dim))
     poss_idx = 0
-    for i in range(dim):
-        for j in range(dim):
+    for i in range(input_dim):
+        for j in range(input_dim):
             input_matrix[i, j] = poss_values[poss_idx]
             poss_idx = (poss_idx + 1) % len(poss_values)
-    kernel = torch.zeros(4, 4)
+    kernel = np.zeros((krows, kcols))
     poss_idx = 0
-    for i in range(4):
-        for j in range(4):
+    for i in range(krows):
+        for j in range(kcols):
             kernel[i][j] = poss_kernel_elements[poss_idx]
             poss_idx = (poss_idx + 1) % len(poss_kernel_elements)
 
-    output_matrix = torch.nn.functional.conv2d(input_matrix.unsqueeze(
-        0).unsqueeze(0), kernel.unsqueeze(0).unsqueeze(0), padding='same')
-    output_matrix = output_matrix.squeeze()
-    compare_and_print(cn_res, output_matrix, "same even kernel")
+    output_matrix = sp.signal.correlate2d(input_matrix, kernel, mode=mode)
+    compare_and_print(cn_res, output_matrix, print_name)
 
 
-test_same_zeroes()
+# tests with predefined elements
+test_same_zeros()
 test_same_identity()
 test_same_guassian_blur_3x3()
 test_same_guassian_blur_5x5()
-test_same_even_dim_kernel()
+
+# tests with elements from a known list
+do_test_with_default_elements("same_even_kernel", 20, 4, 4, 'same',
+                              "same even kernel")
+do_test_with_default_elements("same_rect", 30, 5, 3, 'same', "same rect")
+do_test_with_default_elements("full_7x7", 30, 7, 7, 'full', "full 7x7")
+do_test_with_default_elements("full_even", 15, 4, 4, 'full',
+                              "full even kernel")
+do_test_with_default_elements("full_rect", 30, 4, 7, 'full', "full rect")
+do_test_with_default_elements("valid_7x7", 11, 7, 7, 'valid', "valid 7x7")

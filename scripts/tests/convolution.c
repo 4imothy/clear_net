@@ -1,4 +1,10 @@
-// TODO valid and full convolution
+// TODO valid padding correlation
+// TODO add multi input/output test
+// TODO make an add filter method to the ConvolutionalLayer, create the layer
+// first then add filter method,
+// like the new way to create a neural net
+// TODO test it running computations on the gradient store
+// TODO test for rectangular input
 #include <stddef.h>
 #define CLEAR_NET_IMPLEMENTATION
 #include "../../clear_net.h"
@@ -6,6 +12,12 @@
 
 typedef struct ConvolutionalLayer ConvolutionalLayer;
 typedef struct Filter Filter;
+
+typedef enum {
+    Same,
+    Valid,
+    Full,
+} Padding;
 
 struct Filter {
     Matrix *kernels;
@@ -19,6 +31,7 @@ struct Filter {
 struct ConvolutionalLayer {
     Filter *filters;
     size_t nfilters;
+    Padding padding;
 };
 
 float padded_mat_at(Matrix mat, long row, long col) {
@@ -43,14 +56,32 @@ float correlation(Matrix kern, Matrix *input, long top_left_row,
 
 void forward(ConvolutionalLayer *layer, Matrix **input) {
     float res;
+    size_t row_padding;
+    size_t col_padding;
     for (size_t i = 0; i < layer->nfilters; ++i) {
         for (size_t j = 0; j < layer->filters[i].output.nrows; ++j) {
             for (size_t k = 0; k < layer->filters[i].output.ncols; ++k) {
                 for (size_t l = 0; l < layer->filters[i].nkernels; ++l) {
-                    size_t padding =
-                        (layer->filters[i].kernels[l].nrows - 1) / 2;
-                    long top_left_row = (long)j - padding;
-                    long top_left_col = (long)k - padding;
+                    switch (layer->padding) {
+                    case Same:
+                        row_padding =
+                            (layer->filters[i].kernels[l].nrows - 1) / 2;
+                        col_padding =
+                            (layer->filters[i].kernels[l].ncols - 1) / 2;
+                        break;
+                    case Full:
+                        row_padding =
+                            layer->filters[i].kernels[l].nrows - 1;
+                        col_padding =
+                            layer->filters[i].kernels[l].ncols - 1;
+                        break;
+                    case Valid:
+                        row_padding = 0;
+                        col_padding = 0;
+                        break;
+                    }
+                    long top_left_row = (long)j - row_padding;
+                    long top_left_col = (long)k - col_padding;
                     res = correlation(layer->filters[i].kernels[l], input[i],
                                       top_left_row, top_left_col);
                     MAT_AT(layer->filters[i].output, j, k) += res;
@@ -60,13 +91,29 @@ void forward(ConvolutionalLayer *layer, Matrix **input) {
     }
 }
 
-Filter alloc_filter(size_t kernel_size, size_t nkernels, size_t output_nrows,
-                    size_t output_ncols) {
+Filter alloc_filter(size_t kernel_nrows, size_t kernel_ncols, size_t nkernels, size_t input_nrows,
+                    size_t input_ncols, Padding padding) {
     Filter filter;
     filter.nkernels = nkernels;
     filter.kernels = CLEAR_NET_ALLOC(filter.nkernels * sizeof(Matrix));
     for (size_t i = 0; i < filter.nkernels; ++i) {
-        filter.kernels[i] = cn_alloc_matrix(kernel_size, kernel_size);
+        filter.kernels[i] = cn_alloc_matrix(kernel_nrows, kernel_ncols);
+    }
+    size_t output_nrows;
+    size_t output_ncols;
+    switch(padding) {
+    case Same:
+        output_nrows = input_nrows;
+        output_ncols = input_ncols;
+        break;
+    case Full:
+        output_nrows = input_nrows + kernel_nrows - 1;
+        output_ncols = input_ncols + kernel_ncols - 1;
+        break;
+    case Valid:
+        output_nrows = input_nrows - kernel_nrows + 1;
+        output_ncols = input_ncols - kernel_ncols + 1;
+        break;
     }
     filter.biases = cn_alloc_matrix(output_nrows, output_ncols);
     filter.output = cn_alloc_matrix(output_nrows, output_ncols);
@@ -75,10 +122,11 @@ Filter alloc_filter(size_t kernel_size, size_t nkernels, size_t output_nrows,
     return filter;
 }
 
-ConvolutionalLayer alloc_convolutional_layer(Filter *filters, size_t nfilters) {
+ConvolutionalLayer alloc_convolutional_layer(Filter *filters, size_t nfilters, Padding padding) {
     return (ConvolutionalLayer){
         .filters = filters,
         .nfilters = nfilters,
+        .padding = padding,
     };
 }
 
@@ -117,16 +165,31 @@ void fill_matrix(Matrix *mat, const float *elements, size_t elem_len) {
     }
 }
 
+void do_test_with_default_elements(const size_t input_dim, size_t krows, size_t kcols, Padding padding) {
+         size_t nfilters = 1;
+         Filter filter = alloc_filter(krows, kcols, 1, input_dim, input_dim, padding);
+        fill_matrix(&filter.kernels[0], poss_kernel_elements,
+                    poss_kernel_elem_len);
+        ConvolutionalLayer cl = alloc_convolutional_layer(&filter, nfilters, padding);
+        float input[input_dim * input_dim];
+        Matrix minput = cn_form_matrix(input_dim, input_dim, input_dim, input);
+        fill_matrix(&minput, poss_elements, poss_elements_len);
+        Matrix *list = &minput;
+        forward(&cl, &list);
+        print_results(cl.filters[0].output);
+}
+
 int main(int argc, char *argv[]) {
     CLEAR_NET_ASSERT(argc == 2);
     srand(0);
-    if (strcmp(argv[1], "same_zeroes") == 0) {
+    if (strcmp(argv[1], "same_zeros") == 0) {
+        Padding padding = Same;
         size_t nfilters = 1;
         const size_t dim = 15;
-        Filter filter = alloc_filter(3, 1, dim, dim);
+        Filter filter = alloc_filter(3, 3, 1, dim, dim, padding);
         float elem[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
         filter.kernels[0].elements = elem;
-        ConvolutionalLayer cl = alloc_convolutional_layer(&filter, nfilters);
+        ConvolutionalLayer cl = alloc_convolutional_layer(&filter, nfilters, padding);
         float input[dim * dim] = {0};
         Matrix minput = cn_form_matrix(dim, dim, dim, input);
         fill_matrix(&minput, poss_elements, poss_elements_len);
@@ -136,12 +199,13 @@ int main(int argc, char *argv[]) {
     }
 
     else if (strcmp(argv[1], "same_identity") == 0) {
+        Padding padding = Same;
         size_t nfilters = 1;
         const size_t dim = 10;
-        Filter filter = alloc_filter(3, 1, dim, dim);
+        Filter filter = alloc_filter(3, 3, 1, dim, dim, Same);
         float elem[] = {0, 0, 0, 0, 1, 0, 0, 0, 0};
         filter.kernels[0].elements = elem;
-        ConvolutionalLayer cl = alloc_convolutional_layer(&filter, nfilters);
+        ConvolutionalLayer cl = alloc_convolutional_layer(&filter, nfilters, padding);
         float input[dim * dim] = {0};
         Matrix minput = cn_form_matrix(dim, dim, dim, input);
         fill_matrix(&minput, poss_elements, poss_elements_len);
@@ -151,13 +215,14 @@ int main(int argc, char *argv[]) {
     }
 
     else if (strcmp(argv[1], "same_guassian_blur_3") == 0) {
+        Padding padding = Same;
         size_t nfilters = 1;
         const size_t dim = 20;
-        Filter filter = alloc_filter(3, 1, dim, dim);
+        Filter filter = alloc_filter(3, 3, 1, dim, dim, padding);
         float elem[] = {0.0625, 0.1250, 0.0625, 0.1250, 0.25,
                         0.1250, 0.0625, 0.1250, 0.0625};
         filter.kernels[0].elements = elem;
-        ConvolutionalLayer cl = alloc_convolutional_layer(&filter, nfilters);
+        ConvolutionalLayer cl = alloc_convolutional_layer(&filter, nfilters, padding);
         float input[dim * dim] = {0};
         Matrix minput = cn_form_matrix(dim, dim, dim, input);
         fill_matrix(&minput, poss_elements, poss_elements_len);
@@ -167,15 +232,16 @@ int main(int argc, char *argv[]) {
     }
 
     else if (strcmp(argv[1], "same_guassian_blur_5") == 0) {
+        Padding padding = Same;
         size_t nfilters = 1;
         const size_t dim = 20;
-        Filter filter = alloc_filter(5, 1, dim, dim);
+        Filter filter = alloc_filter(5, 5, 1, dim, dim, padding);
         float elem[] = {0.0037, 0.0147, 0.0256, 0.0147, 0.0037, 0.0147, 0.0586,
                         0.0952, 0.0586, 0.0147, 0.0256, 0.0952, 0.1502, 0.0952,
                         0.0256, 0.0147, 0.0586, 0.0952, 0.0586, 0.0147, 0.0037,
                         0.0147, 0.0256, 0.0147, 0.0037};
         filter.kernels[0].elements = elem;
-        ConvolutionalLayer cl = alloc_convolutional_layer(&filter, nfilters);
+        ConvolutionalLayer cl = alloc_convolutional_layer(&filter, nfilters, padding);
         float input[dim * dim] = {0};
         Matrix minput = cn_form_matrix(dim, dim, dim, input);
         fill_matrix(&minput, poss_elements, poss_elements_len);
@@ -185,17 +251,26 @@ int main(int argc, char *argv[]) {
     }
 
     else if (strcmp(argv[1], "same_even_kernel") == 0) {
-        size_t nfilters = 1;
-        const size_t dim = 20;
-        Filter filter = alloc_filter(4, 1, dim, dim);
-        fill_matrix(&filter.kernels[0], poss_kernel_elements,
-                    poss_kernel_elem_len);
-        ConvolutionalLayer cl = alloc_convolutional_layer(&filter, nfilters);
-        float input[dim * dim] = {0};
-        Matrix minput = cn_form_matrix(dim, dim, dim, input);
-        fill_matrix(&minput, poss_elements, poss_elements_len);
-        Matrix *list = &minput;
-        forward(&cl, &list);
-        print_results(cl.filters[0].output);
+        do_test_with_default_elements(20, 4,4, Same);
+    }
+
+    else if (strcmp(argv[1], "same_rect") == 0) {
+        do_test_with_default_elements(30, 5, 3, Same);
+    }
+
+    else if (strcmp(argv[1], "full_7x7") == 0) {
+        do_test_with_default_elements(30, 7, 7, Full);
+    }
+
+    else if (strcmp(argv[1], "full_even") == 0) {
+        do_test_with_default_elements(15, 4, 4, Full);
+    }
+
+    else if (strcmp(argv[1], "full_rect") == 0) {
+        do_test_with_default_elements(30, 4, 7, Full);
+    }
+
+    else if (strcmp(argv[1], "valid_7x7") == 0) {
+        do_test_with_default_elements(11, 7, 7, Valid);
     }
 }
