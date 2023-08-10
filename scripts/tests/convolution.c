@@ -3,10 +3,10 @@
 // - Can do this by arg 2 being to run on the gradient store or normal math
 // - Do this after
 // TODO make a function that reshapes the 3d output of a convolutional layer to
+// TODO do a multikernel test, not sure how to do in python
 // a vector
 // Global Max Pooling, take each output of the layer and take the greatest
 // element and pass that to the dense layers via a vector
-// TODO make the outputs owned by the layer struct not by each Filter
 
 #include <stddef.h>
 #define CLEAR_NET_IMPLEMENTATION
@@ -15,23 +15,35 @@
 
 typedef struct ConvolutionalLayer ConvolutionalLayer;
 typedef struct Filter Filter;
+typedef struct PoolingLayer PoolingLayer;
 
 typedef enum {
-    Same,
-    Valid,
-    Full,
+  Same,
+  Valid,
+  Full,
 } Padding;
+
+typedef enum {
+  Max,
+  Average,
+} Pooling;
+
+struct PoolingLayer {
+    size_t nelem;
+    Vector data;
+    Pooling pooling;
+};
 
 struct Filter {
     Matrix *kernels;
     size_t nkernels;
     Matrix biases;
-    Matrix output;
     Activation act;
 };
 
 struct ConvolutionalLayer {
     Filter *filters;
+    Matrix *outputs;
     size_t nfilters;
     Padding padding;
     size_t input_nrows;
@@ -46,17 +58,16 @@ struct ConvolutionalLayer {
 void alloc_filter(ConvolutionalLayer *c_layer, size_t nkernels) {
     Filter filter;
     filter.nkernels = nkernels;
-    // TODO check if this can be a reference that is allocated
     filter.kernels = CLEAR_NET_ALLOC(nkernels * sizeof(Matrix));
     for (size_t i = 0; i < filter.nkernels; ++i) {
         filter.kernels[i] = cn_alloc_matrix(c_layer->k_nrows, c_layer->k_ncols);
     }
     filter.biases = cn_alloc_matrix(c_layer->output_nrows, c_layer->output_ncols);
-    filter.output = cn_alloc_matrix(c_layer->output_nrows, c_layer->output_ncols);
     filter.act = Sigmoid;
-    // TODO check if this can be reference
-    c_layer->filters = CLEAR_NET_REALLOC(c_layer->filters, c_layer->nfilters + 1 * sizeof(Filter));
+    c_layer->filters = CLEAR_NET_REALLOC(c_layer->filters, (c_layer->nfilters + 1) * sizeof(Filter));
     c_layer->filters[c_layer->nfilters] = filter;
+    c_layer->outputs = CLEAR_NET_REALLOC(c_layer->outputs, (c_layer->nfilters + 1) * sizeof(Matrix));
+    c_layer->outputs[c_layer->nfilters] = cn_alloc_matrix(c_layer->output_nrows, c_layer->output_ncols);
     c_layer->nfilters++;
 }
 
@@ -79,8 +90,8 @@ ConvolutionalLayer init_convolutional_layer(Padding padding, size_t input_nrows,
         break;
     }
     return (ConvolutionalLayer){
+         .nfilters = 0,
         .filters = NULL,
-        .nfilters = 0,
         .padding = padding,
         .input_nrows = input_nrows,
         .input_ncols = input_ncols,
@@ -104,6 +115,10 @@ float correlation(Matrix kern, Matrix *input, long top_left_row,
     float res = 0;
     for (size_t i = 0; i < kern.nrows; ++i) {
         for (size_t j = 0; j < kern.ncols; ++j) {
+            // we are accessing memory that doesn't belong to program
+            printf("1\n");
+            float val = padded_mat_at(*input, top_left_row + i, top_left_col + j);
+            printf("2\n");
             res += MAT_AT(kern, i, j) *
                    padded_mat_at(*input, top_left_row + i, top_left_col + j);
         }
@@ -111,83 +126,52 @@ float correlation(Matrix kern, Matrix *input, long top_left_row,
     return res;
 }
 
-void forward(ConvolutionalLayer *layer, Matrix **input) {
+void forward(ConvolutionalLayer *layer, Matrix **input, size_t nimput) {
     float res;
     size_t row_padding;
     size_t col_padding;
-    for (size_t i = 0; i < layer->nfilters; ++i) {
-        for (size_t j = 0; j < layer->filters[i].output.nrows; ++j) {
-            for (size_t k = 0; k < layer->filters[i].output.ncols; ++k) {
-                for (size_t l = 0; l < layer->filters[i].nkernels; ++l) {
-                    switch (layer->padding) {
-                    case Same:
-                        row_padding =
-                            (layer->filters[i].kernels[l].nrows - 1) / 2;
-                        col_padding =
-                            (layer->filters[i].kernels[l].ncols - 1) / 2;
-                        break;
-                    case Full:
-                        row_padding =
-                            layer->filters[i].kernels[l].nrows - 1;
-                        col_padding =
-                            layer->filters[i].kernels[l].ncols - 1;
-                        break;
-                    case Valid:
-                        row_padding = 0;
-                        col_padding = 0;
-                        break;
+
+    // Traversing the output with k and l
+    // Applying that to those indices to input causes segfault
+
+    // Each filter goes through the whole input
+    // so we need to go through the whole input for each filter, which creates its own output
+    for (size_t i = 0; i < nimput; ++i) {
+        for (size_t j = 0; j < layer->nfilters; ++j) {
+            for (size_t k = 0; k < layer->outputs[j].nrows; ++k) {
+                for (size_t l = 0; l < layer->outputs[j].ncols; ++l) {
+                    for (size_t m = 0; m < layer->filters[j].nkernels; ++m) {
+                        switch (layer->padding) {
+                        case Same:
+                            row_padding =
+                                (layer->filters[j].kernels[m].nrows - 1) / 2;
+                            col_padding =
+                                (layer->filters[j].kernels[m].ncols - 1) / 2;
+                            break;
+                        case Full:
+                            row_padding =
+                                layer->filters[j].kernels[m].nrows - 1;
+                            col_padding =
+                                layer->filters[j].kernels[m].ncols - 1;
+                            break;
+                        case Valid:
+                            row_padding = 0;
+                            col_padding = 0;
+                            break;
+                        }
+                        long top_left_row = (long)k - row_padding;
+                        long top_left_col = (long)l - col_padding;
+                        res = correlation(layer->filters[j].kernels[m], input[i],
+                                          top_left_row, top_left_col);
+
+                        MAT_AT(layer->outputs[j], k, l) += res;
                     }
-                    long top_left_row = (long)j - row_padding;
-                    long top_left_col = (long)k - col_padding;
-                    res = correlation(layer->filters[i].kernels[l], input[i],
-                                      top_left_row, top_left_col);
-                    MAT_AT(layer->filters[i].output, j, k) += res;
                 }
             }
         }
     }
-    // TODO for the actual net will need to apply biases and activations
+   // TODO for the actual net will need to apply biases and activations
 }
-
-
-void _forward(GradientStore *gs, ConvolutionalLayer *layer, Matrix **input) {
-    float res;
-    size_t row_padding;
-    size_t col_padding;
-    for (size_t i = 0; i < layer->nfilters; ++i) {
-        for (size_t j = 0; j < layer->filters[i].output.nrows; ++j) {
-            for (size_t k = 0; k < layer->filters[i].output.ncols; ++k) {
-                for (size_t l = 0; l < layer->filters[i].nkernels; ++l) {
-                    switch (layer->padding) {
-                    case Same:
-                        row_padding =
-                            (layer->filters[i].kernels[l].nrows - 1) / 2;
-                        col_padding =
-                            (layer->filters[i].kernels[l].ncols - 1) / 2;
-                        break;
-                    case Full:
-                        row_padding =
-                            layer->filters[i].kernels[l].nrows - 1;
-                        col_padding =
-                            layer->filters[i].kernels[l].ncols - 1;
-                        break;
-                    case Valid:
-                        row_padding = 0;
-                        col_padding = 0;
-                        break;
-                    }
-                    long top_left_row = (long)j - row_padding;
-                    long top_left_col = (long)k - col_padding;
-                    res = correlation(layer->filters[i].kernels[l], input[i],
-                                      top_left_row, top_left_col);
-                    MAT_AT(layer->filters[i].output, j, k) += res;
-                }
-            }
-        }
-    }
-    // TODO for the actual net will need to apply biases and activations
-}
-
 
 void print_results(Matrix mat) {
     printf("%zu %zu", mat.nrows, mat.ncols);
@@ -233,8 +217,8 @@ void do_test_with_default_elements(Padding padding, const size_t input_rows, con
     Matrix minput = cn_form_matrix(input_rows, input_cols, input_cols, input);
     fill_matrix(&minput, poss_elements, poss_elements_len);
     Matrix *list = &minput;
-    forward(&cl, &list);
-    print_results(cl.filters[0].output);
+    forward(&cl, &list, 1);
+    print_results(cl.outputs[0]);
 }
 
 int main(int argc, char *argv[]) {
@@ -250,8 +234,8 @@ int main(int argc, char *argv[]) {
         Matrix minput = cn_form_matrix(dim, dim, dim, input);
         fill_matrix(&minput, poss_elements, poss_elements_len);
         Matrix *list = &minput;
-        forward(&cl, &list);
-        print_results(cl.filters[0].output);
+        forward(&cl, &list, 1);
+        print_results(cl.outputs[0]);
     }
 
     else if (strcmp(argv[1], "same_identity") == 0) {
@@ -264,8 +248,8 @@ int main(int argc, char *argv[]) {
         Matrix minput = cn_form_matrix(dim, dim, dim, input);
         fill_matrix(&minput, poss_elements, poss_elements_len);
         Matrix *list = &minput;
-        forward(&cl, &list);
-        print_results(cl.filters[0].output);
+        forward(&cl, &list, 1);
+        print_results(cl.outputs[0]);
     }
 
     else if (strcmp(argv[1], "same_guassian_blur_3") == 0) {
@@ -279,8 +263,8 @@ int main(int argc, char *argv[]) {
         Matrix minput = cn_form_matrix(dim, dim, dim, input);
         fill_matrix(&minput, poss_elements, poss_elements_len);
         Matrix *list = &minput;
-        forward(&cl, &list);
-        print_results(cl.filters[0].output);
+        forward(&cl, &list, 1);
+        print_results(cl.outputs[0]);
     }
 
     else if (strcmp(argv[1], "same_guassian_blur_5") == 0) {
@@ -296,8 +280,8 @@ int main(int argc, char *argv[]) {
         Matrix minput = cn_form_matrix(dim, dim, dim, input);
         fill_matrix(&minput, poss_elements, poss_elements_len);
         Matrix *list = &minput;
-        forward(&cl, &list);
-        print_results(cl.filters[0].output);
+        forward(&cl, &list, 1);
+        print_results(cl.outputs[0]);
     }
 
     else if (strcmp(argv[1], "same_even_kernel") == 0) {
@@ -331,4 +315,39 @@ int main(int argc, char *argv[]) {
     else if (strcmp(argv[1], "valid_rect_input") == 0) {
         do_test_with_default_elements(Valid, 10, 20, 4, 4);
     }
+
+    else if (strcmp(argv[1], "multi_output") == 0) {
+        size_t n_cls = 3;
+        size_t in_dim = 20;
+
+        ConvolutionalLayer *cls = CLEAR_NET_ALLOC(n_cls * sizeof(ConvolutionalLayer));
+        cls[0] = init_convolutional_layer(Valid, in_dim, in_dim, 5,5);
+        alloc_filter(&cls[0], 3);
+        alloc_filter(&cls[0], 3);
+        alloc_filter(&cls[0], 3);
+
+        cls[1] = init_convolutional_layer(Valid, cls[0].output_nrows, cls[0].output_ncols, 5, 5);
+        alloc_filter(&cls[1], 2);
+        alloc_filter(&cls[1], 2);
+
+        cls[2] = init_convolutional_layer(Valid, cls[1].output_nrows, cls[1].output_ncols, 7, 7);
+        // the previous had three outputs so this one needs three inputs??
+        alloc_filter(&cls[2], 4);
+        alloc_filter(&cls[2], 4);
+        float input[in_dim * in_dim];
+        Matrix minput = cn_form_matrix(in_dim, in_dim, in_dim, input);
+        fill_matrix(&minput, poss_elements, poss_elements_len);
+        Matrix *list =  &minput;
+
+        forward(&cls[0], &list, 1);
+        printf("1\n");
+        forward(&cls[1], &cls[0].outputs, cls[0].nfilters);
+        printf("2\n");
+        forward(&cls[2], &cls[1].outputs, cls[1].nfilters);
+        printf("3\n");
+        for (size_t i = 0; i < cls[1].nfilters; ++i) {
+            cn_print_matrix(cls[2].outputs[i], "output");
+        }
+    }
+
 }
