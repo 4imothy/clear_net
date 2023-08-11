@@ -29,9 +29,9 @@ int main(void) {
         cn_form_matrix(num_combinations, num_outputs, stride, &data[num_inputs]);
     size_t num_epochs = 20000;
     NetConfig hparams = cn_init_net_conf();
-    // cn_with_momentum(&hparams, 0);
+    cn_with_momentum(&hparams, 0.1);
     Net net = cn_init_net(hparams);
-    cn_set_neg_scale(0.001);
+    cn_set_neg_scale(1);
     cn_alloc_dense_layer(&net, num_inputs, 3, Tanh);
     cn_alloc_dense_layer(&net, 3, 8, LeakyReLU);
     cn_alloc_dense_layer(&net, 8, num_outputs, Sigmoid);
