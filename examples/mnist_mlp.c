@@ -1,8 +1,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "./external/stb_image.h"
 #define CLEAR_NET_IMPLEMENTATION
-#define CLEAR_NET_MOMENTUM 1
-#define CLEAR_NET_ACT_HIDDEN Sigmoid
 #include "../clear_net.h"
 
 #include <dirent.h>
@@ -97,8 +95,8 @@ int main(void) {
     Matrix test_output = cn_form_matrix(num_test_files, dim_output, test.ncols,
                                         &MAT_AT(test, 0, num_pixels));
 
-    NetConfig hparams = cn_init_net_conf();
-    Net net = cn_init_net(hparams);
+    cn_with_momentum(0.9);
+    Net net = cn_init_net();
     cn_alloc_dense_layer(&net, num_pixels, 16, Sigmoid);
     cn_alloc_dense_layer(&net, 16, 16, Sigmoid);
     cn_alloc_dense_layer(&net, 16, dim_output, Sigmoid);
@@ -112,15 +110,15 @@ int main(void) {
     size_t batch_size = 100;
     CLEAR_NET_ASSERT(num_train_files % batch_size == 0);
     printf("Beginning Training\n");
-    printf("Initial Cost: %f\n", cn_loss(net, train_input, train_output));
+    printf("Initial Cost: %f\n", cn_loss_mlp(net, train_input, train_output));
     for (size_t i = 0; i < num_epochs; ++i) {
         for (size_t batch_num = 0; batch_num < (num_train_files / batch_size);
              ++batch_num) {
             cn_get_batch(&batch_input, &batch_output, train_input, train_output,
                          batch_num, batch_size);
-            cn_learn(&net, batch_input, batch_output);
+            cn_learn_mlp(&net, batch_input, batch_output);
         }
-        error = cn_loss(net, train_input, train_output);
+        error = cn_loss_mlp(net, train_input, train_output);
         printf("Cost after epoch %zu: %f\n", i, error);
         if (error < error_break) {
             printf("Less than: %f error after epoch %zu\n", error_break, i);
@@ -129,15 +127,15 @@ int main(void) {
     }
 
     printf("Final Error on training set: %f\n",
-           cn_loss(net, train_input, train_output));
+           cn_loss_mlp(net, train_input, train_output));
     char *file = "model";
     cn_save_net_to_file(net, file);
     cn_dealloc_net(&net);
     net = cn_alloc_net_from_file(file);
     printf("On training\n");
-    cn_print_target_output_pairs(net, train_input, train_output);
+    cn_print_target_output_pairs_mlp(net, train_input, train_output);
     printf("On testing\n");
-    cn_print_target_output_pairs(net, test_input, test_output);
+    cn_print_target_output_pairs_mlp(net, test_input, test_output);
     cn_dealloc_net(&net);
     cn_dealloc_matrix(&train);
     cn_dealloc_matrix(&test);

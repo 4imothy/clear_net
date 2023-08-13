@@ -1,30 +1,23 @@
-/*
-   Clear Net by Timothy Cronin
+/***
+    Clear Net (c) by Timothy Cronin
 
-   To the extent possible under law, the person who associated CC0 with
-   Clear Net has waived all copyright and related or neighboring rights
-   to Clear Net.
+    Clear Net is licensed under a
+    Creative Commons Attribution 4.0 International License.
 
-   You should have received a copy of the CC0 legalcode along with this
-   work.  If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
-
-   See end of file for full license.
-*/
+    You should have received a copy of the license along with this
+    work.  If not, see <http://creativecommons.org/licenses/by/4.0/>.
+***/
 
 /***
-    TODO think about MAT_AT being a mocro and padded_mat_at being a function, kind of ugly, not sure how to change, use this maybe pretty clean
-    #define PADDED_MAT_AT(mat, row, col) \
-    ((row < 0 || col < 0 || row >= (long)mat.nrows || col >= (long)mat.ncols) ? 0 : MAT_AT(mat, row, col))
-    Implement the functions then call them from the testing file, then change to a macr
 ***/
 
 /* Beginning */
 #ifndef CLEAR_NET
 #define CLEAR_NET
 
+#include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <float.h>
 
 // allow custom memory allocation strategies
@@ -50,6 +43,9 @@
 /* Declaration: Helpers */
 float _cn_randf(void);
 void _cn_fill_floats(float *ptr, size_t len, float val);
+
+/* Declaration: Hyper Parameters */
+void cn_default_hparams(void);
 
 /* Declaration: Activation Functions */
 typedef enum {
@@ -116,80 +112,94 @@ Vector _cn_alloc_vector(size_t nelem);
 void _cn_dealloc_vector(Vector *vec);
 Vector cn_form_vector(size_t nelem, float *elements);
 void _cn_randomize_vector(Vector vec, float lower, float upper);
+void _cn_copy_vec_elem(GradientStore *gs, Vector *vec);
 void _cn_print_vector(Vector vec, char *name);
 void _cn_print_vector_res(Vector vec);
 
 /* Declaration: Net Structs */
-typedef struct NetConfig NetConfig;
 typedef struct DenseLayer DenseLayer;
 typedef struct ConvolutionalLayer ConvolutionalLayer;
 typedef struct Filter Filter;
 typedef enum {
-  Same,
-  Valid,
-  Full,
+    Same,
+    Valid,
+    Full,
 } Padding;
 typedef struct PoolingLayer PoolingLayer;
 typedef struct GlobalPoolingLayer GlobalPoolingLayer;
 typedef enum {
-  Max,
-  Average,
-} Pooling;
+    Max,
+    Average,
+} PoolingStrategy;
+typedef union LayerData LayerData;
+typedef enum {
+    Dense,
+    Convolutional,
+    Pooling,
+    GlobalPooling,
+} LayerType;
+typedef struct Layer Layer;
 typedef struct Net Net;
 
 /* Declaration: Net Config */
-NetConfig cn_init_net_conf(void);
-void cn_with_momentum(NetConfig *nc, float momentum_beta);
+void cn_with_momentum(float momentum_beta);
 void cn_set_neg_scale(float neg_scale);
+void cn_set_rate(float rate);
 
 /* Declaration: DenseLayer */
 void cn_alloc_dense_layer(Net *net, size_t dim_input, size_t dim_output,
                           Activation act);
-Vector cn_predict_layer(DenseLayer layer, Vector prev_output);
-Vector _cn_predict_layer(DenseLayer layer, GradientStore *nl,
-                         Vector prev_output);
+void _cn_dealloc_dense_layer(DenseLayer *layer);
+void _cn_randomize_dense_layer(DenseLayer *layer, float lower, float upper);
+void _cn_copy_dense_params(GradientStore *gs, DenseLayer dense);
+Vector cn_predict_vec_layer(DenseLayer layer, Vector prev_output);
+void _cn_dense_apply_grads(GradientStore *gs, DenseLayer layer, float coef);
+void _cn_save_dense_layer_to_file(FILE *fp, DenseLayer dense);
+void _cn_alloc_dense_from_file(FILE *fp, Net *net, size_t layer_id);
+void _cn_print_dense(DenseLayer dense, size_t index, char buf[256], size_t buf_size);
 
 /* Declaration: Convolutional Layer */
-// TODO do the deallocations
 ConvolutionalLayer cn_init_convolutional_layer(Padding padding, Activation act,
                                                size_t input_nrows,
                                                size_t input_ncols,
                                                size_t kernel_nrows,
                                                size_t kernel_ncols);
+void _cn_dealloc_convolutional_layer(ConvolutionalLayer *layer);
 void _cn_randomize_convolutional_layer(ConvolutionalLayer *layer, float lower,
                                        float upper);
 void cn_alloc_filter(ConvolutionalLayer *c_layer, size_t nkernels);
 float cn_correlate(Matrix kern, Matrix input, long top_left_row,
                     long top_left_col);
 void cn_correlate_layer(ConvolutionalLayer *layer, Matrix *input, size_t nimput);
-void cn_apply_bias_and_act(ConvolutionalLayer *layer);
-float padded_mat_at(Matrix mat, long row, long col);
 
 /* Declaration: Pooling Layer */
-GlobalPoolingLayer cn_alloc_global_pooling_layer(Pooling pooling, size_t noutput);
-PoolingLayer cn_alloc_pooling_layer(Pooling pooling, size_t nimput,
+GlobalPoolingLayer cn_alloc_global_pooling_layer(PoolingStrategy pooling, size_t noutput);
+PoolingLayer cn_alloc_pooling_layer(PoolingStrategy pooling, size_t nimput,
                                  size_t input_nrows, size_t input_ncols,
                                  size_t kernel_nrows, size_t kernel_ncols);
 void cn_global_pool_layer(GlobalPoolingLayer *pooler, Matrix *input,
                        size_t nimput);
 void cn_pool_layer(PoolingLayer *pooler, Matrix *input, size_t nimput);
 
+/* Declaration: Layer */
+Layer _cn_init_layer(LayerType type);
+
 /* Declaration: Net */
-Net cn_init_net(NetConfig net_conf);
+Net cn_init_net(void);
 void cn_dealloc_net(Net *net);
 void cn_randomize_net(Net net, float lower, float upper);
-float cn_learn(Net *net, Matrix input, Matrix target);
-float _cn_find_grad(Net *net, GradientStore *gs, Vector input, Vector target);
-Vector cn_predict(Net net, Vector input);
-Vector _cn_predict(Net *net, GradientStore *nl, Vector input);
+float cn_learn_mlp(Net *net, Matrix input, Matrix target);
+float _cn_find_grad_mlp(Net *net, GradientStore *gs, Vector input, Vector target);
+Vector cn_predict_mlp(Net net, Vector input);
+Vector _cn_predict_mlp(Net *net, GradientStore *nl, Vector input);
 float cn_loss(Net net, Matrix input, Matrix target);
 void cn_get_batch(Matrix *batch_in, Matrix *batch_tar, Matrix all_input,
                   Matrix all_target, size_t batch_num, size_t batch_size);
-void cn_print_net(Net net, char *name);
-void cn_print_net_results(Net net, Matrix input, Matrix target);
-void cn_print_target_output_pairs(Net net, Matrix input, Matrix target);
 void cn_save_net_to_file(Net net, char *file_name);
 Net cn_alloc_net_from_file(char *file_name);
+void cn_print_net(Net net, char *name);
+void cn_print_mlp_results(Net net, Matrix input, Matrix target);
+void cn_print_target_output_pairs(Net net, Matrix input, Matrix target);
 
 #endif // CLEAR_NET
 
@@ -206,18 +216,33 @@ void _cn_fill_floats(float *ptr, size_t len, float val) {
 
 #define RAND_RANGE(upper, lower) _cn_randf() * ((upper) - (lower)) + (lower);
 
-/* Implement: Activation Functions */
-float NEG_SCALE = 0.1;
+/* Implement: Hyper parameters */
+float CN_NEG_SCALE;
+float CN_RATE;
+size_t CN_NLAYERS;
+size_t CN_NPARAMS;
+size_t CN_WITH_MOMENTUM;
+float CN_MOMENTUM_BETA;
 
+void cn_default_hparams(void) {
+    CN_NEG_SCALE = 0.1;
+    CN_RATE = 0.5;
+    CN_NLAYERS = 0;
+    CN_NPARAMS = 0;
+    CN_WITH_MOMENTUM = 0;
+    CN_MOMENTUM_BETA = 0;
+}
+
+/* Implement: Activation Functions */
 float cn_sigmoid(float x) { return 1 / (1 + expf(-x)); }
 
 float cn_relu(float x) { return x > 0 ? x : 0; }
 
 float cn_hyper_tan(float x) { return tanhf(x); }
 
-float cn_leaky_relu(float x) { return x >= 0 ? x : NEG_SCALE * x; }
+float cn_leaky_relu(float x) { return x >= 0 ? x : CN_NEG_SCALE * x; }
 
-float cn_elu(float x) { return x > 0 ? x : NEG_SCALE * (expf(x) - 1); }
+float cn_elu(float x) { return x > 0 ? x : CN_NEG_SCALE * (expf(x) - 1); }
 
 float cn_activate(float x, Activation act) {
     switch (act) {
@@ -380,7 +405,7 @@ size_t cn_sigmoidv(GradientStore *gs, size_t x) {
 }
 
 void _cn_leaky_relu_backward(GradientStore *gs, VarNode *var) {
-    float change = var->num >= 0 ? 1 : NEG_SCALE;
+    float change = var->num >= 0 ? 1 : CN_NEG_SCALE;
     GET_NODE(var->prev_left).grad += change * var->grad;
 }
 
@@ -391,7 +416,7 @@ size_t cn_leaky_reluv(GradientStore *gs, size_t x) {
 }
 
 void _cn_elu_backward(GradientStore *gs, VarNode *var) {
-    float change = var->num > 0 ? 1 : var->num + NEG_SCALE;
+    float change = var->num > 0 ? 1 : var->num + CN_NEG_SCALE;
     GET_NODE(var->prev_left).grad += change * var->grad;
 }
 
@@ -431,6 +456,8 @@ void cn_backward(GradientStore *gs, size_t y) {
 /* Implement: Linear Algebra */
 #define MAT_ID(mat, r, c) (mat).gs_id + ((r) * (mat).stride) + (c)
 #define MAT_AT(mat, r, c) (mat).elements[(r) * (mat).stride + (c)]
+#define PADDED_MAT_AT(mat, r, c)                                    \
+    (((r) < 0 || (c) < 0 || (r) >= (long)mat.nrows || (c) >= (long)mat.ncols) ? 0 : MAT_AT(mat, (r), (c)))
 #define VEC_ID(vec, i) (vec).gs_id + (i)
 #define VEC_AT(vec, i) (vec).elements[i]
 #define CN_PRINT_MATRIX(mat) cn_print_matrix((mat), #mat)
@@ -551,6 +578,13 @@ void _cn_randomize_vector(Vector vec, float lower, float upper) {
     }
 }
 
+void _cn_copy_vec_elem(GradientStore *gs, Vector* vec) {
+    vec->gs_id = gs->length;
+    for (size_t i = 0; i < vec->nelem; ++i) {
+        cn_init_leaf_var(gs, VEC_AT(*vec, i));
+    }
+}
+
 void _cn_print_vector(Vector vec, char *name) {
     printf("%s = [\n", name);
     printf("    ");
@@ -568,21 +602,6 @@ void _cn_print_vector_res(Vector vec) {
 }
 
 /* Implement: Net Structs */
-struct NetConfig {
-    size_t nparams;
-    size_t nlayers;
-    size_t with_momentum;
-    float momentum_beta;
-    float neg_scale;
-    float rate;
-};
-
-struct Net {
-    DenseLayer *layers;
-    GradientStore computation_graph;
-    NetConfig hparams;
-};
-
 struct DenseLayer {
     Matrix weights;
     Vector biases;
@@ -613,7 +632,7 @@ struct Filter {
 
 struct PoolingLayer {
     Matrix *outputs;
-    Pooling pooling;
+    PoolingStrategy strat;
     size_t noutput;
     size_t k_nrows;
     size_t k_ncols;
@@ -623,69 +642,112 @@ struct PoolingLayer {
 
 struct GlobalPoolingLayer {
     Vector output;
-    Pooling pooling;
+    PoolingStrategy strat;
+};
+
+struct Net {
+    Layer *layers;
+    GradientStore computation_graph;
+};
+
+union LayerData {
+    DenseLayer dense;
+    ConvolutionalLayer conv;
+    PoolingLayer pooling;
+    GlobalPoolingLayer global_pooling;
+};
+
+struct Layer {
+    LayerType type;
+    LayerData data;
 };
 
 /* Implement: Net Config */
-NetConfig cn_init_net_conf(void) {
-    return (NetConfig){
-        .nparams = 0,
-        .rate = 0.5f,
-        .nlayers = 0,
-        .neg_scale = 0.1,
-        .with_momentum = 0,
-        .momentum_beta = 0,
-    };
+void cn_with_momentum(float momentum_beta) {
+    CN_WITH_MOMENTUM = 1;
+    CN_MOMENTUM_BETA = momentum_beta;
 }
 
-void cn_with_momentum(NetConfig *nc, float momentum_beta) {
-    nc->with_momentum = 1;
-    nc->momentum_beta = momentum_beta;
-}
+void cn_set_neg_scale(float neg_scale) { CN_NEG_SCALE = neg_scale; }
 
-void cn_set_neg_scale(float neg_scale) { NEG_SCALE = neg_scale; }
+void cn_set_rate(float rate) { CN_RATE = rate; }
 
 /* Implement: DenseLayer */
 void cn_alloc_dense_layer(Net *net, size_t dim_input, size_t dim_output, Activation act) {
-    if (net->hparams.nlayers != 0) {
-        CLEAR_NET_ASSERT(net->layers[net->hparams.nlayers - 1].output.nelem == dim_input);
-    }
-    net->layers = CLEAR_NET_REALLOC(net->layers, (net->hparams.nlayers + 1) * sizeof(*net->layers));
-    DenseLayer layer;
-    layer.act = act;
+    if (CN_NLAYERS != 0) {
+        Layer player = net->layers[CN_NLAYERS - 1];
+        CLEAR_NET_ASSERT(player.type == Dense || player.type == GlobalPooling);
+        if (player.type == Dense) {
+            CLEAR_NET_ASSERT(player.data.dense.output.nelem == dim_input);
+        }
+        if (player.type == GlobalPooling) {
+            CLEAR_NET_ASSERT(player.data.global_pooling.output.nelem == dim_input);
+        }
 
-    size_t offset = net->hparams.nparams + 1;
+    }
+    net->layers = CLEAR_NET_REALLOC(net->layers, (CN_NLAYERS + 1) * sizeof(*net->layers));
+    DenseLayer dense_layer;
+    dense_layer.act = act;
+
+    size_t offset = CN_NPARAMS + 1;
     Matrix weights = cn_alloc_matrix(dim_input, dim_output);
-    if (net->hparams.with_momentum) {
+    if (CN_WITH_MOMENTUM) {
         weights.grad_stores = CLEAR_NET_ALLOC(weights.nrows * weights.ncols * sizeof(*weights.grad_stores));
         _cn_fill_floats(weights.grad_stores, weights.nrows * weights.ncols, 0);
     }
     weights.gs_id = offset;
-    layer.weights = weights;
-    offset += layer.weights.nrows * layer.weights.ncols;
+    dense_layer.weights = weights;
+    offset += dense_layer.weights.nrows * dense_layer.weights.ncols;
 
     Vector biases = _cn_alloc_vector(dim_output);
     biases.gs_id = offset;
-    if (net->hparams.with_momentum) {
+    if (CN_WITH_MOMENTUM) {
         biases.grad_stores = CLEAR_NET_ALLOC(biases.nelem * sizeof(*biases.grad_stores));
         _cn_fill_floats(biases.grad_stores, biases.nelem, 0);
     }
-    layer.biases = biases;
-    offset += layer.biases.nelem;
+    dense_layer.biases = biases;
+    offset += dense_layer.biases.nelem;
 
     Vector out = _cn_alloc_vector(dim_output);
     out.gs_id = 0;
-    layer.output = out;
-    layer.output_gs_ids =
-        CLEAR_NET_ALLOC(layer.biases.nelem * sizeof(*layer.output_gs_ids));
+    dense_layer.output = out;
+    dense_layer.output_gs_ids =
+        CLEAR_NET_ALLOC(dense_layer.biases.nelem * sizeof(*dense_layer.output_gs_ids));
 
-    net->hparams.nparams = offset - 1;
-    net->layers[net->hparams.nlayers] = layer;
-    net->hparams.nlayers++;
-    cn_realloc_gradient_store(&net->computation_graph, net->hparams.nparams);
+    CN_NPARAMS = offset - 1;
+    Layer layer = _cn_init_layer(Dense);
+    LayerData data;
+    data.dense = dense_layer;
+    layer.data = data;
+    net->layers[CN_NLAYERS] = layer;
+    CN_NLAYERS++;
+    cn_realloc_gradient_store(&net->computation_graph, CN_NPARAMS);
 }
 
-Vector cn_predict_layer(DenseLayer layer, Vector prev_output) {
+void _cn_dealloc_dense_layer(DenseLayer *layer) {
+    cn_dealloc_matrix(&layer->weights);
+    _cn_dealloc_vector(&layer->biases);
+    _cn_dealloc_vector(&layer->output);
+    CLEAR_NET_DEALLOC(layer->output_gs_ids);
+}
+
+void _cn_randomize_dense_layer(DenseLayer *layer, float lower, float upper) {
+    _cn_randomize_matrix(layer->weights, lower, upper);
+    _cn_randomize_vector(layer->biases, lower, upper);
+}
+
+void _cn_copy_dense_params(GradientStore *gs, DenseLayer dense) {
+    for (size_t j = 0; j < dense.weights.nrows; ++j) {
+        for (size_t k = 0; k < dense.weights.ncols; ++k) {
+            cn_init_leaf_var(gs, MAT_AT(dense.weights, j, k));
+        }
+    }
+    for (size_t j = 0; j < dense.biases.nelem; ++j) {
+        cn_init_leaf_var(gs, VEC_AT(dense.biases, j));
+    }
+}
+
+Vector cn_forward_dense(DenseLayer layer, Vector prev_output) {
     for (size_t i = 0; i < layer.weights.ncols; ++i) {
         float res = 0;
         for (size_t j = 0; j < prev_output.nelem; ++j) {
@@ -698,7 +760,7 @@ Vector cn_predict_layer(DenseLayer layer, Vector prev_output) {
     return layer.output;
 }
 
-Vector _cn_predict_layer(DenseLayer layer, GradientStore *gs,
+Vector _cn_forward_dense(DenseLayer layer, GradientStore *gs,
                          Vector prev_output) {
     for (size_t i = 0; i < layer.weights.ncols; ++i) {
         size_t res = cn_init_leaf_var(gs, 0);
@@ -723,6 +785,72 @@ Vector _cn_predict_layer(DenseLayer layer, GradientStore *gs,
                      to_copy.backward);
     }
     return out;
+}
+
+void _cn_dense_apply_grads(GradientStore *gs, DenseLayer layer, float coef) {
+    for (size_t i = 0; i < layer.weights.nrows; ++i) {
+        for (size_t j = 0; j < layer.weights.ncols; ++j) {
+            float change =
+                coef * GET_NODE(MAT_ID(layer.weights, i, j)).grad;
+            if (CN_WITH_MOMENTUM) {
+                size_t id = (i * layer.weights.stride) + j;
+                layer.weights.grad_stores[id] =
+                    CN_MOMENTUM_BETA *
+                    layer.weights.grad_stores[id] +
+                    ((1 - CN_MOMENTUM_BETA) * change);
+                change = layer.weights.grad_stores[id];
+            }
+            MAT_AT(layer.weights, i, j) -= change;
+        }
+    }
+    for (size_t i = 0; i < layer.biases.nelem; ++i) {
+        float change =
+            coef * GET_NODE(VEC_ID(layer.biases, i)).grad;
+        if (CN_WITH_MOMENTUM) {
+            layer.biases.grad_stores[i] =
+                CN_MOMENTUM_BETA *
+                layer.biases.grad_stores[i] +
+                ((1 - CN_MOMENTUM_BETA) * change);
+            change = layer.biases.grad_stores[i];
+        }
+        VEC_AT(layer.biases, i) -= change;
+    }
+}
+
+void _cn_save_dense_layer_to_file(FILE *fp, DenseLayer dense) {
+    fwrite(&dense.act, sizeof(dense.act), 1, fp);
+    Matrix weights = dense.weights;
+    Vector biases = dense.biases;
+    fwrite(&weights.nrows, sizeof(weights.nrows), 1, fp);
+    fwrite(&weights.ncols, sizeof(weights.ncols), 1, fp);
+    fwrite(weights.elements, sizeof(*weights.elements),
+           weights.nrows * weights.ncols, fp);
+    fwrite(biases.elements, sizeof(*biases.elements), biases.nelem, fp);
+}
+
+void _cn_alloc_dense_from_file(FILE *fp, Net *net, size_t layer_id) {
+    Activation act;
+    size_t input_dim;
+    size_t output_dim;
+    Matrix weights;
+    Vector biases;
+
+    fread(&act, sizeof(act), 1, fp);
+    fread(&input_dim, sizeof(input_dim), 1, fp);
+    fread(&output_dim, sizeof(output_dim), 1, fp);
+    cn_alloc_dense_layer(net, input_dim, output_dim, act);
+    weights = net->layers[layer_id].data.dense.weights;
+    fread(weights.elements, sizeof(*weights.elements),
+          weights.nrows * weights.ncols, fp);
+    biases = net->layers[layer_id].data.dense.biases;
+    fread(biases.elements, sizeof(*biases.elements), biases.nelem, fp);
+}
+
+void _cn_print_dense(DenseLayer dense, size_t index, char buf[256], size_t buf_size) {
+    snprintf(buf, buf_size, "weight matrix: %zu", index);
+    cn_print_matrix(dense.weights, buf);
+    snprintf(buf, buf_size, "bias vector: %zu", index);
+    _cn_print_vector(dense.biases, buf);
 }
 
 /* Implement: Convolutional Layer */
@@ -762,6 +890,31 @@ ConvolutionalLayer cn_init_convolutional_layer(Padding padding, Activation act,
     };
 }
 
+void _cn_dealloc_convolutional_layer(ConvolutionalLayer *layer) {
+    for (size_t i = 0; i < layer->nfilters; ++i) {
+        Filter *cfilter = &layer->filters[i];
+        for (size_t j = 0; j < cfilter->nkernels; ++j) {
+            cn_dealloc_matrix(&cfilter->kernels[j]);
+        }
+        CLEAR_NET_DEALLOC(cfilter->kernels);
+        cfilter->nkernels = 0;
+        cn_dealloc_matrix(&cfilter->biases);
+        cn_dealloc_matrix(&layer->outputs[i]);
+    }
+    cn_dealloc_matrix(layer->outputs);
+    layer->filters = NULL;
+    layer->outputs = NULL;
+    layer->nfilters = 0;
+    layer->padding = 0;
+    layer->act = 0;
+    layer->input_nrows = 0;
+    layer->input_ncols = 0;
+    layer->output_nrows = 0;
+    layer->output_ncols = 0;
+    layer->k_nrows = 0;
+    layer->k_ncols = 0;
+}
+
 void _cn_randomize_convolutional_layer(ConvolutionalLayer *layer, float lower,
                                        float upper) {
     for (size_t i = 0; i < layer->nfilters; ++i) {
@@ -790,27 +943,24 @@ void cn_alloc_filter(ConvolutionalLayer *c_layer, size_t nkernels) {
 float cn_correlate(Matrix kern, Matrix input, long top_left_row,
                     long top_left_col) {
     float res = 0;
-    for (size_t i = 0; i < kern.nrows; ++i) {
-        for (size_t j = 0; j < kern.ncols; ++j) {
-            res += padded_mat_at(input, top_left_row + i, top_left_col + j) * MAT_AT(kern, i, j);
+    long lrows = (long)kern.nrows;
+    long lcols = (long)kern.ncols;
+    for (long i = 0; i < lrows; ++i) {
+        for (long j = 0; j < lcols; ++j) {
+            res += PADDED_MAT_AT(input, top_left_row + i, top_left_col + j) * MAT_AT(kern, i, j);
         }
     }
     return res;
 }
 
-void cn_correlate_layer(ConvolutionalLayer *layer, Matrix *input,
-                         size_t nimput) {
+void cn_forward_convolutional(ConvolutionalLayer *layer, Matrix *input, size_t nimput) {
     float res;
     size_t row_padding;
     size_t col_padding;
 
-    // Traversing the output with k and l
-    // Applying that to those indices to input causes segfault
-    // Each filter goes through the whole input
-    // so we need to go through the whole input for each filter, which creates its own output
     for (size_t i = 0; i < nimput; ++i) {
         for (size_t j = 0; j < layer->nfilters; ++j) {
-            for (size_t k = 0; k < layer->outputs[j].nrows; ++k) { // this should traverse the input
+            for (size_t k = 0; k < layer->outputs[j].nrows; ++k) {
                 for (size_t l = 0; l < layer->outputs[j].ncols; ++l) {
                     for (size_t m = 0; m < layer->filters[j].nkernels; ++m) {
                         switch (layer->padding) {
@@ -843,10 +993,8 @@ void cn_correlate_layer(ConvolutionalLayer *layer, Matrix *input,
             }
         }
     }
-}
 
-void cn_apply_bias_and_act(ConvolutionalLayer *layer) {
-        for (size_t i = 0; i < layer->nfilters; ++i) {
+    for (size_t i = 0; i < layer->nfilters; ++i) {
         for (size_t j = 0; j < layer->outputs[i].nrows; ++j) {
             for (size_t k = 0; k < layer->outputs[i].ncols; ++k) {
                 MAT_AT(layer->outputs[i], j, k) =
@@ -856,28 +1004,13 @@ void cn_apply_bias_and_act(ConvolutionalLayer *layer) {
         }
     }
 }
-float padded_mat_at(Matrix mat, long row, long col) {
-    if (row < 0 || col < 0 || row >= (long)mat.nrows ||
-        col >= (long)mat.ncols) {
-        return 0;
-    }
-    return MAT_AT(mat, row, col);
-}
 
 /* Implement: Pooling Layer */
-GlobalPoolingLayer cn_alloc_global_pooling_layer(Pooling pooling,
-                                                  size_t noutput) {
-    return (GlobalPoolingLayer) {
-        .pooling = pooling,
-        .output = _cn_alloc_vector(noutput),
-    };
-}
-
-PoolingLayer cn_alloc_pooling_layer(Pooling pooling, size_t nimput,
+PoolingLayer cn_alloc_pooling_layer(PoolingStrategy strat, size_t nimput,
                                      size_t input_nrows, size_t input_ncols,
                                      size_t kernel_nrows, size_t kernel_ncols) {
     PoolingLayer pooler;
-    pooler.pooling = pooling;
+    pooler.strat = strat;
     pooler.k_nrows = kernel_nrows;
     pooler.k_ncols = kernel_ncols;
     pooler.output_nrows = input_nrows / kernel_nrows;
@@ -891,37 +1024,17 @@ PoolingLayer cn_alloc_pooling_layer(Pooling pooling, size_t nimput,
     return pooler;
 }
 
-void cn_global_pool_layer(GlobalPoolingLayer *pooler, Matrix *input,
-                       size_t nimput) {
-    for (size_t i = 0; i < nimput; ++i) {
-        float max_store = -1 * FLT_MAX;
-        float avg_res = 0;
-        float cur;
-        size_t nelements = input[i].nrows * input[i].ncols;
-        for (size_t j = 0; j < input[i].nrows; ++j) {
-            for (size_t k = 0; k < input[i].ncols; ++k) {
-                cur = MAT_AT(input[i], j, k);
-                switch (pooler->pooling) {
-                case(Max):
-                    if (cur > max_store) {
-                        max_store = cur;
-                    }
-                    break;
-                case(Average):
-                    avg_res += cur;
-                    break;
-                }
-            }
-        }
-        switch(pooler->pooling) {
-        case(Max):
-            VEC_AT(pooler->output, i) = max_store;
-            break;
-        case(Average):
-            VEC_AT(pooler->output, i) = avg_res / nelements;
-            break;
-        }
+void _cn_dealloc_pooling_layer(PoolingLayer *layer) {
+    layer->strat = 0;
+    layer->k_nrows = 0;
+    layer->k_ncols = 0;
+    layer->output_nrows = 0;
+    layer->output_ncols = 0;
+    for (size_t i = 0; i < layer->noutput; ++i) {
+        cn_dealloc_matrix(&layer->outputs[i]);
     }
+    CLEAR_NET_DEALLOC(layer->outputs);
+    layer->noutput = 0;
 }
 
 void cn_pool_layer(PoolingLayer *pooler, Matrix *input, size_t nimput) {
@@ -935,7 +1048,7 @@ void cn_pool_layer(PoolingLayer *pooler, Matrix *input, size_t nimput) {
                 for (size_t l = 0; l < pooler->k_nrows; ++l) {
                     for (size_t m = 0; m < pooler->k_ncols; ++m) {
                         cur = MAT_AT(input[i], j + l, k + m);
-                        switch(pooler->pooling) {
+                        switch(pooler->strat) {
                         case(Max):
                             if (cur > max_store) {
                                 max_store = cur;
@@ -947,7 +1060,7 @@ void cn_pool_layer(PoolingLayer *pooler, Matrix *input, size_t nimput) {
                         }
                     }
                 }
-                switch(pooler->pooling) {
+                switch(pooler->strat) {
                 case(Max):
                     MAT_AT(pooler->outputs[i], j / pooler->k_nrows, k / pooler->k_ncols) = max_store;
                     break;
@@ -960,47 +1073,106 @@ void cn_pool_layer(PoolingLayer *pooler, Matrix *input, size_t nimput) {
     }
 }
 
+GlobalPoolingLayer cn_alloc_global_pooling_layer(PoolingStrategy strat,
+                                                  size_t noutput) {
+    return (GlobalPoolingLayer) {
+        .strat = strat,
+        .output = _cn_alloc_vector(noutput),
+    };
+}
+
+void _cn_dealloc_global_pooling_layer(GlobalPoolingLayer *layer) {
+    _cn_dealloc_vector(&layer->output);
+    layer->strat = 0;
+}
+
+void cn_global_pool_layer(GlobalPoolingLayer *pooler, Matrix *input,
+                          size_t nimput) {
+    for (size_t i = 0; i < nimput; ++i) {
+        float max_store = -1 * FLT_MAX;
+        float avg_res = 0;
+        float cur;
+        size_t nelements = input[i].nrows * input[i].ncols;
+        for (size_t j = 0; j < input[i].nrows; ++j) {
+            for (size_t k = 0; k < input[i].ncols; ++k) {
+                cur = MAT_AT(input[i], j, k);
+                switch (pooler->strat) {
+                case(Max):
+                    if (cur > max_store) {
+                        max_store = cur;
+                    }
+                    break;
+                case(Average):
+                    avg_res += cur;
+                    break;
+                }
+            }
+        }
+        switch(pooler->strat) {
+        case(Max):
+            VEC_AT(pooler->output, i) = max_store;
+            break;
+        case(Average):
+            VEC_AT(pooler->output, i) = avg_res / nelements;
+            break;
+        }
+    }
+}
+
+/* Implement: Layer */
+Layer _cn_init_layer(LayerType type) {
+    return (Layer) {
+        .type = type,
+    };
+}
+
 /* Implement: Net */
-Net cn_init_net(NetConfig net_conf) {
+Net cn_init_net(void) {
     return (Net) {
-        .hparams = net_conf,
-        .layers = NULL,
         .computation_graph = cn_alloc_gradient_store(0),
+        .layers = NULL,
     };
 }
 
 void cn_dealloc_net(Net *net) {
-    for (size_t i = 0; i < net->hparams.nlayers - 1; ++i) {
-        cn_dealloc_matrix(&net->layers[i].weights);
-        _cn_dealloc_vector(&net->layers[i].biases);
-        _cn_dealloc_vector(&net->layers[i].output);
-        CLEAR_NET_DEALLOC(net->layers[i].output_gs_ids);
+    for (size_t i = 0; i < CN_NLAYERS - 1; ++i) {
+        Layer layer = net->layers[i];
+        switch(layer.type) {
+        case (Dense):
+            _cn_dealloc_dense_layer(&layer.data.dense);
+            break;
+        case (Convolutional):
+            _cn_dealloc_convolutional_layer(&layer.data.conv);
+            break;
+        case (Pooling):
+            break;
+        case (GlobalPooling):
+            break;
+        }
     }
     cn_dealloc_gradient_store(&net->computation_graph);
+    cn_default_hparams();
 }
 
 void cn_randomize_net(Net net, float lower, float upper) {
-    for (size_t i = 0; i < net.hparams.nlayers; ++i) {
-        _cn_randomize_matrix(net.layers[i].weights, lower, upper);
-        _cn_randomize_vector(net.layers[i].biases, lower, upper);
+    for (size_t i = 0; i < CN_NLAYERS; ++i) {
+        Layer layer = net.layers[i];
+        if (layer.type == Dense) {
+            _cn_randomize_dense_layer(&layer.data.dense, lower, upper);
+        } else if (layer.type == Convolutional) {
+            _cn_randomize_convolutional_layer(&layer.data.conv, lower, upper);
+        }
     }
 }
 
-float cn_learn(Net *net, Matrix input, Matrix target) {
+float cn_learn_mlp(Net *net, Matrix input, Matrix target) {
     CLEAR_NET_ASSERT(input.nrows == target.nrows);
     size_t train_size = input.nrows;
     net->computation_graph.length = 1;
     GradientStore *gs = &net->computation_graph;
 
-    for (size_t i = 0; i < net->hparams.nlayers; ++i) {
-        for (size_t j = 0; j < net->layers[i].weights.nrows; ++j) {
-            for (size_t k = 0; k < net->layers[i].weights.ncols; ++k) {
-                cn_init_leaf_var(gs, MAT_AT(net->layers[i].weights, j, k));
-            }
-        }
-        for (size_t j = 0; j < net->layers[i].biases.nelem; ++j) {
-            cn_init_leaf_var(gs, VEC_AT(net->layers[i].biases, j));
-        }
+    for (size_t i = 0; i < CN_NLAYERS; ++i) {
+        _cn_copy_dense_params(gs, net->layers[i].data.dense);
     }
 
     float total_loss = 0;
@@ -1009,54 +1181,23 @@ float cn_learn(Net *net, Matrix input, Matrix target) {
     for (size_t i = 0; i < train_size; ++i) {
         input_vec = cn_form_vector(input.ncols, &MAT_AT(input, i, 0));
         target_vec = cn_form_vector(target.ncols, &MAT_AT(target, i, 0));
-        total_loss += _cn_find_grad(net, gs, input_vec, target_vec);
-        gs->length = net->hparams.nparams + 1;
+        total_loss += _cn_find_grad_mlp(net, gs, input_vec, target_vec);
+        gs->length = CN_NPARAMS + 1;
     }
-    float coef = net->hparams.rate / train_size;
+    float coef = CN_RATE / train_size;
 
-    for (size_t i = 0; i < net->hparams.nlayers; ++i) {
-        for (size_t j = 0; j < net->layers[i].weights.nrows; ++j) {
-            for (size_t k = 0; k < net->layers[i].weights.ncols; ++k) {
-                float change =
-                    coef * GET_NODE(MAT_ID(net->layers[i].weights, j, k)).grad;
-                if (net->hparams.with_momentum) {
-                    net->layers[i].weights.grad_stores[j * k] =
-                        net->hparams.momentum_beta *
-                            net->layers[i].weights.grad_stores[j * k] +
-                        ((1 - net->hparams.momentum_beta) * change);
-                    change = net->layers[i].weights.grad_stores[j * k];
-                }
-                MAT_AT(net->layers[i].weights, j, k) -= change;
-            }
-        }
-        for (size_t j = 0; j < net->layers[i].biases.nelem; ++j) {
-            float change =
-                coef * GET_NODE(VEC_ID(net->layers[i].biases, j)).grad;
-            if (net->hparams.with_momentum) {
-                net->layers[i].biases.grad_stores[j] =
-                    net->hparams.momentum_beta *
-                        net->layers[i].biases.grad_stores[j] +
-                    ((1 - net->hparams.momentum_beta) * change);
-                change = net->layers[i].biases.grad_stores[j];
-            }
-            VEC_AT(net->layers[i].biases, j) -= change;
-        }
+    for (size_t i = 0; i < CN_NLAYERS; ++i) {
+        _cn_dense_apply_grads(gs, net->layers[i].data.dense, coef);
     }
 
     return total_loss / train_size;
 }
 
-float _cn_find_grad(Net *net, GradientStore *gs, Vector input, Vector target) {
-    input.gs_id = gs->length;
-    for (size_t i = 0; i < input.nelem; ++i) {
-        cn_init_leaf_var(gs, VEC_AT(input, i));
-    }
-    Vector prediction = _cn_predict(net, gs, input);
+float _cn_find_grad_mlp(Net *net, GradientStore *gs, Vector input, Vector target) {
+    _cn_copy_vec_elem(gs, &input);
+    Vector prediction = _cn_predict_mlp(net, gs, input);
+    _cn_copy_vec_elem(gs, &target);
 
-    target.gs_id = gs->length;
-    for (size_t i = 0; i < target.nelem; ++i) {
-        cn_init_leaf_var(gs, VEC_AT(target, i));
-    }
     size_t loss = cn_init_leaf_var(gs, 0);
     for (size_t i = 0; i < target.nelem; ++i) {
         loss = cn_add(
@@ -1070,33 +1211,33 @@ float _cn_find_grad(Net *net, GradientStore *gs, Vector input, Vector target) {
     return GET_NODE(loss).num;
 }
 
-Vector cn_predict(Net net, Vector input) {
-    Vector guess = input;
+Vector cn_predict_mlp(Net net, Vector input) {
+    Vector out = input;
 
-    for (size_t i = 0; i < net.hparams.nlayers; ++i) {
-        guess = cn_predict_layer(net.layers[i], guess);
+    for (size_t i = 0; i < CN_NLAYERS; ++i) {
+        out = cn_forward_dense(net.layers[i].data.dense, out);
     }
 
+    return out;
+}
+
+Vector _cn_predict_mlp(Net *net, GradientStore *gs, Vector input) {
+    CLEAR_NET_ASSERT(input.nelem == net->layers[0].data.dense.weights.nrows);
+    Vector guess = input;
+    for (size_t i = 0; i < CN_NLAYERS; ++i) {
+        guess = _cn_forward_dense(net->layers[i].data.dense, gs, guess);
+    }
     return guess;
 }
 
-Vector _cn_predict(Net *net, GradientStore *gs, Vector input) {
-    CLEAR_NET_ASSERT(input.nelem == net->layers[0].weights.nrows);
-    Vector guess = input;
-    for (size_t i = 0; i < net->hparams.nlayers; ++i) {
-        guess = _cn_predict_layer(net->layers[i], gs, guess);
-    }
-    return guess;
-}
-
-float cn_loss(Net net, Matrix input, Matrix target) {
+float cn_loss_mlp(Net net, Matrix input, Matrix target) {
     CLEAR_NET_ASSERT(input.nrows == target.nrows);
     size_t size = input.nrows;
     float loss = 0;
     for (size_t i = 0; i < size; ++i) {
         Vector in = cn_form_vector(input.ncols, &MAT_AT(input, i, 0));
         Vector tar = cn_form_vector(target.ncols, &MAT_AT(target, i, 0));
-        Vector out = cn_predict(net, in);
+        Vector out = cn_predict_mlp(net, in);
         for (size_t j = 0; j < out.nelem; ++j) {
             loss += powf(VEC_AT(out, j) - VEC_AT(tar, j), 2);
         }
@@ -1112,19 +1253,80 @@ void cn_get_batch(Matrix *batch_in, Matrix *batch_tar, Matrix all_input,
                                 &MAT_AT(all_target, batch_num * batch_size, 0));
 }
 
+void cn_save_net_to_file(Net net, char *file_name) {
+    FILE *fp = fopen(file_name, "wb");
+    fwrite(&CN_NLAYERS, sizeof(CN_NLAYERS), 1, fp);
+    fwrite(&CN_RATE, sizeof(CN_RATE), 1, fp);
+    fwrite(&CN_WITH_MOMENTUM, sizeof(CN_WITH_MOMENTUM), 1, fp);
+    fwrite(&CN_MOMENTUM_BETA, sizeof(CN_MOMENTUM_BETA), 1, fp);
+    fwrite(&CN_NEG_SCALE, sizeof(CN_NEG_SCALE), 1, fp);
+    for (size_t i = 0; i < CN_NLAYERS; ++i) {
+        fwrite(&net.layers[i].type, sizeof(net.layers[i].type), 1, fp);
+        switch(net.layers[i].type) {
+        case(Dense):
+            _cn_save_dense_layer_to_file(fp, net.layers[i].data.dense);
+            break;
+        case (Convolutional):
+            break;
+        case (Pooling):
+            break;
+        case (GlobalPooling):
+            break;
+        }
+    }
+    fclose(fp);
+}
+
+Net cn_alloc_net_from_file(char *file_name) {
+    FILE *fp = fopen(file_name, "rb");
+    CLEAR_NET_ASSERT(fp != NULL);
+    size_t nlayers;
+    fread(&nlayers, sizeof(CN_NLAYERS), 1, fp);
+    fread(&CN_RATE, sizeof(CN_RATE), 1, fp);
+    fread(&CN_WITH_MOMENTUM, sizeof(CN_WITH_MOMENTUM), 1, fp);
+    fread(&CN_MOMENTUM_BETA, sizeof(CN_MOMENTUM_BETA), 1, fp);
+    fread(&CN_NEG_SCALE, sizeof(CN_NEG_SCALE), 1, fp);
+    Net net = cn_init_net();
+    LayerType ctype;
+    for (size_t i = 0; i < nlayers; ++i) {
+        fread(&ctype, sizeof(ctype), 1, fp);
+        switch (ctype) {
+        case (Dense):
+            _cn_alloc_dense_from_file(fp, &net, i);
+            break;
+        case (Convolutional):
+            break;
+        case (Pooling):
+            break;
+        case (GlobalPooling):
+            break;
+        }
+    }
+    fclose(fp);
+    return net;
+}
+
 void cn_print_net(Net net, char *name) {
-    char buf[256];
+    size_t buf_size = 256;
+    char buf[buf_size];
     printf("%s = [\n", name);
-    for (size_t i = 0; i < net.hparams.nlayers; ++i) {
-        DenseLayer layer = net.layers[i];
-        snprintf(buf, sizeof(buf), "weight matrix: %zu", i);
-        cn_print_matrix(layer.weights, buf);
-        snprintf(buf, sizeof(buf), "bias vector: %zu", i);
-        _cn_print_vector(layer.biases, buf);
+    for (size_t i = 0; i < CN_NLAYERS; ++i) {
+        Layer layer = net.layers[i];
+        switch (layer.type) {
+        case(Dense):
+            _cn_print_dense(layer.data.dense, i, buf, buf_size);
+            break;
+        case (Convolutional):
+            break;
+        case (Pooling):
+            break;
+        case (GlobalPooling):
+            break;
+        }
     }
 }
 
-void cn_print_net_results(Net net, Matrix input, Matrix target) {
+void cn_print_mlp_results(Net net, Matrix input, Matrix target) {
     CLEAR_NET_ASSERT(input.nrows == target.nrows);
     size_t size = input.nrows;
     printf("Input | Net Output | Target\n");
@@ -1132,7 +1334,7 @@ void cn_print_net_results(Net net, Matrix input, Matrix target) {
     for (size_t i = 0; i < size; ++i) {
         Vector in = cn_form_vector(input.ncols, &MAT_AT(input, i, 0));
         Vector tar = cn_form_vector(target.ncols, &MAT_AT(target, i, 0));
-        Vector out = cn_predict(net, in);
+        Vector out = cn_predict_mlp(net, in);
         for (size_t j = 0; j < out.nelem; ++j) {
             loss += powf(VEC_AT(out, j) - VEC_AT(tar, j), 2);
         }
@@ -1144,7 +1346,7 @@ void cn_print_net_results(Net net, Matrix input, Matrix target) {
     printf("Average Loss: %f\n", loss / size);
 }
 
-void cn_print_target_output_pairs(Net net, Matrix input, Matrix target) {
+void cn_print_target_output_pairs_mlp(Net net, Matrix input, Matrix target) {
     CLEAR_NET_ASSERT(input.nrows == target.nrows);
     Vector in;
     Vector tar;
@@ -1152,7 +1354,7 @@ void cn_print_target_output_pairs(Net net, Matrix input, Matrix target) {
     for (size_t i = 0; i < input.nrows; ++i) {
         in = cn_form_vector(input.ncols, &MAT_AT(input, i, 0));
         tar = cn_form_vector(target.ncols, &MAT_AT(target, i, 0));
-        out = cn_predict(net, in);
+        out = cn_predict_mlp(net, in);
         printf("------------\n");
         printf("target: ");
         for (size_t j = 0; j < tar.nelem; ++j) {
@@ -1167,182 +1369,403 @@ void cn_print_target_output_pairs(Net net, Matrix input, Matrix target) {
     }
 }
 
-void cn_save_net_to_file(Net net, char *file_name) {
-    FILE *fp = fopen(file_name, "wb");
-    Matrix weights;
-    Vector biases;
-    fwrite(&net.hparams.nlayers, sizeof(net.hparams.nlayers), 1, fp);
-    fwrite(&net.hparams.rate, sizeof(net.hparams.rate), 1, fp);
-    fwrite(&net.hparams.with_momentum, sizeof(net.hparams.with_momentum), 1, fp);
-    fwrite(&net.hparams.momentum_beta, sizeof(net.hparams.momentum_beta), 1, fp);
-    fwrite(&NEG_SCALE, sizeof(NEG_SCALE), 1, fp);
-    for (size_t i = 0; i < net.hparams.nlayers; ++i) {
-        fwrite(&net.layers[i].act, sizeof(net.layers[i].act), 1, fp);
-        weights = net.layers[i].weights;
-        biases = net.layers[i].biases;
-        fwrite(&weights.nrows, sizeof(weights.nrows), 1, fp);
-        fwrite(&weights.ncols, sizeof(weights.ncols), 1, fp);
-        fwrite(weights.elements, sizeof(*weights.elements),
-               weights.nrows * weights.ncols, fp);
-        fwrite(biases.elements, sizeof(*biases.elements), biases.nelem, fp);
-    }
-    fclose(fp);
-}
-
-Net cn_alloc_net_from_file(char *file_name) {
-    FILE *fp = fopen(file_name, "rb");
-    CLEAR_NET_ASSERT(fp != NULL);
-    NetConfig nc = cn_init_net_conf();
-    size_t nlayers;
-    fread(&nlayers, sizeof(nc.nlayers), 1, fp);
-    fread(&nc.rate, sizeof(nc.rate), 1, fp);
-    fread(&nc.with_momentum, sizeof(nc.with_momentum), 1, fp);
-    fread(&nc.momentum_beta, sizeof(nc.momentum_beta), 1, fp);
-    fread(&NEG_SCALE, sizeof(NEG_SCALE), 1, fp);
-    Net net = cn_init_net(nc);
-    Activation act;
-    size_t input_dim;
-    size_t output_dim;
-    Matrix weights;
-    Vector biases;
-    for (size_t i = 0; i < nlayers; ++i) {
-        fread(&act, sizeof(act), 1, fp);
-        fread(&input_dim, sizeof(input_dim), 1, fp);
-        fread(&output_dim, sizeof(output_dim), 1, fp);
-        cn_alloc_dense_layer(&net, input_dim, output_dim, act);
-        weights = net.layers[i].weights;
-        fread(weights.elements, sizeof(*weights.elements),
-              weights.nrows * weights.ncols, fp);
-        biases = net.layers[i].biases;
-        fread(biases.elements, sizeof(*biases.elements), biases.nelem, fp);
-    }
-    fclose(fp);
-    return net;
-}
-
 #endif // CLEAR_NET_IMPLEMENTATION
 /* Ending */
 
 /* License
-   Creative Commons Legal Code
+   Attribution 4.0 International
 
-   CC0 1.0 Universal
+   =======================================================================
 
-   CREATIVE COMMONS CORPORATION IS NOT A LAW FIRM AND DOES NOT PROVIDE
-   LEGAL SERVICES. DISTRIBUTION OF THIS DOCUMENT DOES NOT CREATE AN
-   ATTORNEY-CLIENT RELATIONSHIP. CREATIVE COMMONS PROVIDES THIS
-   INFORMATION ON AN "AS-IS" BASIS. CREATIVE COMMONS MAKES NO WARRANTIES
-   REGARDING THE USE OF THIS DOCUMENT OR THE INFORMATION OR WORKS
-   PROVIDED HEREUNDER, AND DISCLAIMS LIABILITY FOR DAMAGES RESULTING FROM
-   THE USE OF THIS DOCUMENT OR THE INFORMATION OR WORKS PROVIDED
-   HEREUNDER.
+   Creative Commons Corporation ("Creative Commons") is not a law firm and
+   does not provide legal services or legal advice. Distribution of
+   Creative Commons public licenses does not create a lawyer-client or
+   other relationship. Creative Commons makes its licenses and related
+   information available on an "as-is" basis. Creative Commons gives no
+   warranties regarding its licenses, any material licensed under their
+   terms and conditions, or any related information. Creative Commons
+   disclaims all liability for damages resulting from their use to the
+   fullest extent possible.
 
-   Statement of Purpose
+   Using Creative Commons Public Licenses
 
-   The laws of most jurisdictions throughout the world automatically confer
-   exclusive Copyright and Related Rights (defined below) upon the creator
-   and subsequent owner(s) (each and all, an "owner") of an original work of
-   authorship and/or a database (each, a "Work").
+   Creative Commons public licenses provide a standard set of terms and
+   conditions that creators and other rights holders may use to share
+   original works of authorship and other material subject to copyright
+   and certain other rights specified in the public license below. The
+   following considerations are for informational purposes only, are not
+   exhaustive, and do not form part of our licenses.
 
-   Certain owners wish to permanently relinquish those rights to a Work for
-   the purpose of contributing to a commons of creative, cultural and
-   scientific works ("Commons") that the public can reliably and without fear
-   of later claims of infringement build upon, modify, incorporate in other
-   works, reuse and redistribute as freely as possible in any form whatsoever
-   and for any purposes, including without limitation commercial purposes.
-   These owners may contribute to the Commons to promote the ideal of a free
-   culture and the further production of creative, cultural and scientific
-   works, or to gain reputation or greater distribution for their Work in
-   part through the use and efforts of others.
+   Considerations for licensors: Our public licenses are
+   intended for use by those authorized to give the public
+   permission to use material in ways otherwise restricted by
+   copyright and certain other rights. Our licenses are
+   irrevocable. Licensors should read and understand the terms
+   and conditions of the license they choose before applying it.
+   Licensors should also secure all rights necessary before
+   applying our licenses so that the public can reuse the
+   material as expected. Licensors should clearly mark any
+   material not subject to the license. This includes other CC-
+   licensed material, or material used under an exception or
+   limitation to copyright. More considerations for licensors:
+   wiki.creativecommons.org/Considerations_for_licensors
 
-   For these and/or other purposes and motivations, and without any
-   expectation of additional consideration or compensation, the person
-   associating CC0 with a Work (the "Affirmer"), to the extent that he or she
-   is an owner of Copyright and Related Rights in the Work, voluntarily
-   elects to apply CC0 to the Work and publicly distribute the Work under its
-   terms, with knowledge of his or her Copyright and Related Rights in the
-   Work and the meaning and intended legal effect of CC0 on those rights.
+   Considerations for the public: By using one of our public
+   licenses, a licensor grants the public permission to use the
+   licensed material under specified terms and conditions. If
+   the licensor's permission is not necessary for any reason--for
+   example, because of any applicable exception or limitation to
+   copyright--then that use is not regulated by the license. Our
+   licenses grant only permissions under copyright and certain
+   other rights that a licensor has authority to grant. Use of
+   the licensed material may still be restricted for other
+   reasons, including because others have copyright or other
+   rights in the material. A licensor may make special requests,
+   such as asking that all changes be marked or described.
+   Although not required by our licenses, you are encouraged to
+   respect those requests where reasonable. More considerations
+   for the public:
+   wiki.creativecommons.org/Considerations_for_licensees
 
-   1. Copyright and Related Rights. A Work made available under CC0 may be
-   protected by copyright and related or neighboring rights ("Copyright and
-   Related Rights"). Copyright and Related Rights include, but are not
-   limited to, the following:
+   =======================================================================
 
-   i. the right to reproduce, adapt, distribute, perform, display,
-   communicate, and translate a Work;
-   ii. moral rights retained by the original author(s) and/or performer(s);
-   iii. publicity and privacy rights pertaining to a person's image or
-   likeness depicted in a Work;
-   iv. rights protecting against unfair competition in regards to a Work,
-   subject to the limitations in paragraph 4(a), below;
-   v. rights protecting the extraction, dissemination, use and reuse of data
-   in a Work;
-   vi. database rights (such as those arising under Directive 96/9/EC of the
-   European Parliament and of the Council of 11 March 1996 on the legal
-   protection of databases, and under any national implementation
-   thereof, including any amended or successor version of such
-   directive); and
-   vii. other similar, equivalent or corresponding rights throughout the
-   world based on applicable law or treaty, and any national
-   implementations thereof.
+   Creative Commons Attribution 4.0 International Public License
 
-   2. Waiver. To the greatest extent permitted by, but not in contravention
-   of, applicable law, Affirmer hereby overtly, fully, permanently,
-   irrevocably and unconditionally waives, abandons, and surrenders all of
-   Affirmer's Copyright and Related Rights and associated claims and causes
-   of action, whether now known or unknown (including existing as well as
-   future claims and causes of action), in the Work (i) in all territories
-   worldwide, (ii) for the maximum duration provided by applicable law or
-   treaty (including future time extensions), (iii) in any current or future
-   medium and for any number of copies, and (iv) for any purpose whatsoever,
-   including without limitation commercial, advertising or promotional
-   purposes (the "Waiver"). Affirmer makes the Waiver for the benefit of each
-   member of the public at large and to the detriment of Affirmer's heirs and
-   successors, fully intending that such Waiver shall not be subject to
-   revocation, rescission, cancellation, termination, or any other legal or
-   equitable action to disrupt the quiet enjoyment of the Work by the public
-   as contemplated by Affirmer's express Statement of Purpose.
+   By exercising the Licensed Rights (defined below), You accept and agree
+   to be bound by the terms and conditions of this Creative Commons
+   Attribution 4.0 International Public License ("Public License"). To the
+   extent this Public License may be interpreted as a contract, You are
+   granted the Licensed Rights in consideration of Your acceptance of
+   these terms and conditions, and the Licensor grants You such rights in
+   consideration of benefits the Licensor receives from making the
+   Licensed Material available under these terms and conditions.
 
-   3. Public License Fallback. Should any part of the Waiver for any reason
-   be judged legally invalid or ineffective under applicable law, then the
-   Waiver shall be preserved to the maximum extent permitted taking into
-   account Affirmer's express Statement of Purpose. In addition, to the
-   extent the Waiver is so judged Affirmer hereby grants to each affected
-   person a royalty-free, non transferable, non sublicensable, non exclusive,
-   irrevocable and unconditional license to exercise Affirmer's Copyright and
-   Related Rights in the Work (i) in all territories worldwide, (ii) for the
-   maximum duration provided by applicable law or treaty (including future
-   time extensions), (iii) in any current or future medium and for any number
-   of copies, and (iv) for any purpose whatsoever, including without
-   limitation commercial, advertising or promotional purposes (the
-   "License"). The License shall be deemed effective as of the date CC0 was
-   applied by Affirmer to the Work. Should any part of the License for any
-   reason be judged legally invalid or ineffective under applicable law, such
-   partial invalidity or ineffectiveness shall not invalidate the remainder
-   of the License, and in such case Affirmer hereby affirms that he or she
-   will not (i) exercise any of his or her remaining Copyright and Related
-   Rights in the Work or (ii) assert any associated claims and causes of
-   action with respect to the Work, in either case contrary to Affirmer's
-   express Statement of Purpose.
 
-   4. Limitations and Disclaimers.
+   Section 1 -- Definitions.
 
-   a. No trademark or patent rights held by Affirmer are waived, abandoned,
-   surrendered, licensed or otherwise affected by this document.
-   b. Affirmer offers the Work as-is and makes no representations or
-   warranties of any kind concerning the Work, express, implied,
-   statutory or otherwise, including without limitation warranties of
-   title, merchantability, fitness for a particular purpose, non
-   infringement, or the absence of latent or other defects, accuracy, or
-   the present or absence of errors, whether or not discoverable, all to
-   the greatest extent permissible under applicable law.
-   c. Affirmer disclaims responsibility for clearing rights of other persons
-   that may apply to the Work or any use thereof, including without
-   limitation any person's Copyright and Related Rights in the Work.
-   Further, Affirmer disclaims responsibility for obtaining any necessary
-   consents, permissions or other rights required for any use of the
-   Work.
-   d. Affirmer understands and acknowledges that Creative Commons is not a
-   party to this document and has no duty or obligation with respect to
-   this CC0 or use of the Work.
+   a. Adapted Material means material subject to Copyright and Similar
+   Rights that is derived from or based upon the Licensed Material
+   and in which the Licensed Material is translated, altered,
+   arranged, transformed, or otherwise modified in a manner requiring
+   permission under the Copyright and Similar Rights held by the
+   Licensor. For purposes of this Public License, where the Licensed
+   Material is a musical work, performance, or sound recording,
+   Adapted Material is always produced where the Licensed Material is
+   synched in timed relation with a moving image.
+
+   b. Adapter's License means the license You apply to Your Copyright
+   and Similar Rights in Your contributions to Adapted Material in
+   accordance with the terms and conditions of this Public License.
+
+   c. Copyright and Similar Rights means copyright and/or similar rights
+   closely related to copyright including, without limitation,
+   performance, broadcast, sound recording, and Sui Generis Database
+   Rights, without regard to how the rights are labeled or
+   categorized. For purposes of this Public License, the rights
+   specified in Section 2(b)(1)-(2) are not Copyright and Similar
+   Rights.
+
+   d. Effective Technological Measures means those measures that, in the
+   absence of proper authority, may not be circumvented under laws
+   fulfilling obligations under Article 11 of the WIPO Copyright
+   Treaty adopted on December 20, 1996, and/or similar international
+   agreements.
+
+   e. Exceptions and Limitations means fair use, fair dealing, and/or
+   any other exception or limitation to Copyright and Similar Rights
+   that applies to Your use of the Licensed Material.
+
+   f. Licensed Material means the artistic or literary work, database,
+   or other material to which the Licensor applied this Public
+   License.
+
+   g. Licensed Rights means the rights granted to You subject to the
+   terms and conditions of this Public License, which are limited to
+   all Copyright and Similar Rights that apply to Your use of the
+   Licensed Material and that the Licensor has authority to license.
+
+   h. Licensor means the individual(s) or entity(ies) granting rights
+   under this Public License.
+
+   i. Share means to provide material to the public by any means or
+   process that requires permission under the Licensed Rights, such
+   as reproduction, public display, public performance, distribution,
+   dissemination, communication, or importation, and to make material
+   available to the public including in ways that members of the
+   public may access the material from a place and at a time
+   individually chosen by them.
+
+   j. Sui Generis Database Rights means rights other than copyright
+   resulting from Directive 96/9/EC of the European Parliament and of
+   the Council of 11 March 1996 on the legal protection of databases,
+   as amended and/or succeeded, as well as other essentially
+   equivalent rights anywhere in the world.
+
+   k. You means the individual or entity exercising the Licensed Rights
+   under this Public License. Your has a corresponding meaning.
+
+
+   Section 2 -- Scope.
+
+   a. License grant.
+
+   1. Subject to the terms and conditions of this Public License,
+   the Licensor hereby grants You a worldwide, royalty-free,
+   non-sublicensable, non-exclusive, irrevocable license to
+   exercise the Licensed Rights in the Licensed Material to:
+
+   a. reproduce and Share the Licensed Material, in whole or
+   in part; and
+
+   b. produce, reproduce, and Share Adapted Material.
+
+   2. Exceptions and Limitations. For the avoidance of doubt, where
+   Exceptions and Limitations apply to Your use, this Public
+   License does not apply, and You do not need to comply with
+   its terms and conditions.
+
+   3. Term. The term of this Public License is specified in Section
+   6(a).
+
+   4. Media and formats; technical modifications allowed. The
+   Licensor authorizes You to exercise the Licensed Rights in
+   all media and formats whether now known or hereafter created,
+   and to make technical modifications necessary to do so. The
+   Licensor waives and/or agrees not to assert any right or
+   authority to forbid You from making technical modifications
+   necessary to exercise the Licensed Rights, including
+   technical modifications necessary to circumvent Effective
+   Technological Measures. For purposes of this Public License,
+   simply making modifications authorized by this Section 2(a)
+   (4) never produces Adapted Material.
+
+   5. Downstream recipients.
+
+   a. Offer from the Licensor -- Licensed Material. Every
+   recipient of the Licensed Material automatically
+   receives an offer from the Licensor to exercise the
+   Licensed Rights under the terms and conditions of this
+   Public License.
+
+   b. No downstream restrictions. You may not offer or impose
+   any additional or different terms or conditions on, or
+   apply any Effective Technological Measures to, the
+   Licensed Material if doing so restricts exercise of the
+   Licensed Rights by any recipient of the Licensed
+   Material.
+
+   6. No endorsement. Nothing in this Public License constitutes or
+   may be construed as permission to assert or imply that You
+   are, or that Your use of the Licensed Material is, connected
+   with, or sponsored, endorsed, or granted official status by,
+   the Licensor or others designated to receive attribution as
+   provided in Section 3(a)(1)(A)(i).
+
+   b. Other rights.
+
+   1. Moral rights, such as the right of integrity, are not
+   licensed under this Public License, nor are publicity,
+   privacy, and/or other similar personality rights; however, to
+   the extent possible, the Licensor waives and/or agrees not to
+   assert any such rights held by the Licensor to the limited
+   extent necessary to allow You to exercise the Licensed
+   Rights, but not otherwise.
+
+   2. Patent and trademark rights are not licensed under this
+   Public License.
+
+   3. To the extent possible, the Licensor waives any right to
+   collect royalties from You for the exercise of the Licensed
+   Rights, whether directly or through a collecting society
+   under any voluntary or waivable statutory or compulsory
+   licensing scheme. In all other cases the Licensor expressly
+   reserves any right to collect such royalties.
+
+
+   Section 3 -- License Conditions.
+
+   Your exercise of the Licensed Rights is expressly made subject to the
+   following conditions.
+
+   a. Attribution.
+
+   1. If You Share the Licensed Material (including in modified
+   form), You must:
+
+   a. retain the following if it is supplied by the Licensor
+   with the Licensed Material:
+
+   i. identification of the creator(s) of the Licensed
+   Material and any others designated to receive
+   attribution, in any reasonable manner requested by
+   the Licensor (including by pseudonym if
+   designated);
+
+   ii. a copyright notice;
+
+   iii. a notice that refers to this Public License;
+
+   iv. a notice that refers to the disclaimer of
+   warranties;
+
+   v. a URI or hyperlink to the Licensed Material to the
+   extent reasonably practicable;
+
+   b. indicate if You modified the Licensed Material and
+   retain an indication of any previous modifications; and
+
+   c. indicate the Licensed Material is licensed under this
+   Public License, and include the text of, or the URI or
+   hyperlink to, this Public License.
+
+   2. You may satisfy the conditions in Section 3(a)(1) in any
+   reasonable manner based on the medium, means, and context in
+   which You Share the Licensed Material. For example, it may be
+   reasonable to satisfy the conditions by providing a URI or
+   hyperlink to a resource that includes the required
+   information.
+
+   3. If requested by the Licensor, You must remove any of the
+   information required by Section 3(a)(1)(A) to the extent
+   reasonably practicable.
+
+   4. If You Share Adapted Material You produce, the Adapter's
+   License You apply must not prevent recipients of the Adapted
+   Material from complying with this Public License.
+
+
+   Section 4 -- Sui Generis Database Rights.
+
+   Where the Licensed Rights include Sui Generis Database Rights that
+   apply to Your use of the Licensed Material:
+
+   a. for the avoidance of doubt, Section 2(a)(1) grants You the right
+   to extract, reuse, reproduce, and Share all or a substantial
+   portion of the contents of the database;
+
+   b. if You include all or a substantial portion of the database
+   contents in a database in which You have Sui Generis Database
+   Rights, then the database in which You have Sui Generis Database
+   Rights (but not its individual contents) is Adapted Material; and
+
+   c. You must comply with the conditions in Section 3(a) if You Share
+   all or a substantial portion of the contents of the database.
+
+   For the avoidance of doubt, this Section 4 supplements and does not
+   replace Your obligations under this Public License where the Licensed
+   Rights include other Copyright and Similar Rights.
+
+
+   Section 5 -- Disclaimer of Warranties and Limitation of Liability.
+
+   a. UNLESS OTHERWISE SEPARATELY UNDERTAKEN BY THE LICENSOR, TO THE
+   EXTENT POSSIBLE, THE LICENSOR OFFERS THE LICENSED MATERIAL AS-IS
+   AND AS-AVAILABLE, AND MAKES NO REPRESENTATIONS OR WARRANTIES OF
+   ANY KIND CONCERNING THE LICENSED MATERIAL, WHETHER EXPRESS,
+   IMPLIED, STATUTORY, OR OTHER. THIS INCLUDES, WITHOUT LIMITATION,
+   WARRANTIES OF TITLE, MERCHANTABILITY, FITNESS FOR A PARTICULAR
+   PURPOSE, NON-INFRINGEMENT, ABSENCE OF LATENT OR OTHER DEFECTS,
+   ACCURACY, OR THE PRESENCE OR ABSENCE OF ERRORS, WHETHER OR NOT
+   KNOWN OR DISCOVERABLE. WHERE DISCLAIMERS OF WARRANTIES ARE NOT
+   ALLOWED IN FULL OR IN PART, THIS DISCLAIMER MAY NOT APPLY TO YOU.
+
+   b. TO THE EXTENT POSSIBLE, IN NO EVENT WILL THE LICENSOR BE LIABLE
+   TO YOU ON ANY LEGAL THEORY (INCLUDING, WITHOUT LIMITATION,
+   NEGLIGENCE) OR OTHERWISE FOR ANY DIRECT, SPECIAL, INDIRECT,
+   INCIDENTAL, CONSEQUENTIAL, PUNITIVE, EXEMPLARY, OR OTHER LOSSES,
+   COSTS, EXPENSES, OR DAMAGES ARISING OUT OF THIS PUBLIC LICENSE OR
+   USE OF THE LICENSED MATERIAL, EVEN IF THE LICENSOR HAS BEEN
+   ADVISED OF THE POSSIBILITY OF SUCH LOSSES, COSTS, EXPENSES, OR
+   DAMAGES. WHERE A LIMITATION OF LIABILITY IS NOT ALLOWED IN FULL OR
+   IN PART, THIS LIMITATION MAY NOT APPLY TO YOU.
+
+   c. The disclaimer of warranties and limitation of liability provided
+   above shall be interpreted in a manner that, to the extent
+   possible, most closely approximates an absolute disclaimer and
+   waiver of all liability.
+
+
+   Section 6 -- Term and Termination.
+
+   a. This Public License applies for the term of the Copyright and
+   Similar Rights licensed here. However, if You fail to comply with
+   this Public License, then Your rights under this Public License
+   terminate automatically.
+
+   b. Where Your right to use the Licensed Material has terminated under
+   Section 6(a), it reinstates:
+
+   1. automatically as of the date the violation is cured, provided
+   it is cured within 30 days of Your discovery of the
+   violation; or
+
+   2. upon express reinstatement by the Licensor.
+
+   For the avoidance of doubt, this Section 6(b) does not affect any
+   right the Licensor may have to seek remedies for Your violations
+   of this Public License.
+
+   c. For the avoidance of doubt, the Licensor may also offer the
+   Licensed Material under separate terms or conditions or stop
+   distributing the Licensed Material at any time; however, doing so
+   will not terminate this Public License.
+
+   d. Sections 1, 5, 6, 7, and 8 survive termination of this Public
+   License.
+
+
+   Section 7 -- Other Terms and Conditions.
+
+   a. The Licensor shall not be bound by any additional or different
+   terms or conditions communicated by You unless expressly agreed.
+
+   b. Any arrangements, understandings, or agreements regarding the
+   Licensed Material not stated herein are separate from and
+   independent of the terms and conditions of this Public License.
+
+
+   Section 8 -- Interpretation.
+
+   a. For the avoidance of doubt, this Public License does not, and
+   shall not be interpreted to, reduce, limit, restrict, or impose
+   conditions on any use of the Licensed Material that could lawfully
+   be made without permission under this Public License.
+
+   b. To the extent possible, if any provision of this Public License is
+   deemed unenforceable, it shall be automatically reformed to the
+   minimum extent necessary to make it enforceable. If the provision
+   cannot be reformed, it shall be severed from this Public License
+   without affecting the enforceability of the remaining terms and
+   conditions.
+
+   c. No term or condition of this Public License will be waived and no
+   failure to comply consented to unless expressly agreed to by the
+   Licensor.
+
+   d. Nothing in this Public License constitutes or may be interpreted
+   as a limitation upon, or waiver of, any privileges and immunities
+   that apply to the Licensor or You, including from the legal
+   processes of any jurisdiction or authority.
+
+
+   =======================================================================
+
+   Creative Commons is not a party to its public
+   licenses. Notwithstanding, Creative Commons may elect to apply one of
+   its public licenses to material it publishes and in those instances
+   will be considered the “Licensor.” The text of the Creative Commons
+   public licenses is dedicated to the public domain under the CC0 Public
+   Domain Dedication. Except for the limited purpose of indicating that
+   material is shared under a Creative Commons public license or as
+   otherwise permitted by the Creative Commons policies published at
+   creativecommons.org/policies, Creative Commons does not authorize the
+   use of the trademark "Creative Commons" or any other trademark or logo
+   of Creative Commons without its prior written consent including,
+   without limitation, in connection with any unauthorized modifications
+   to any of its public licenses or any other arrangements,
+   understandings, or agreements concerning use of licensed material. For
+   the avoidance of doubt, this paragraph does not form part of the
+   public licenses.
+
+   Creative Commons may be contacted at creativecommons.org.
 */

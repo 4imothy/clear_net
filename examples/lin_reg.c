@@ -72,15 +72,14 @@ int main(void) {
     Matrix val_in = cn_form_matrix(num_train, dim_input, num_var, val);
     Matrix val_out = cn_form_matrix(num_train, 1, num_var, &val[dim_input]);
 
-    NetConfig hparams = cn_init_net_conf();
-    Net net = cn_init_net(hparams);
+    Net net = cn_init_net();
     cn_alloc_dense_layer(&net, 8, 1, Tanh);
     cn_randomize_net(net, -1, 1);
     size_t num_epochs = 200000;
     float error_break = 0.01f;
     float loss;
     for (size_t i = 0; i < num_epochs; ++i) {
-        loss = cn_learn(&net, input, output);
+        loss = cn_learn_mlp(&net, input, output);
         if (i % (num_epochs / 20) == 0) {
             printf("Cost at %zu: %f\n", i, loss);
         }
@@ -89,13 +88,13 @@ int main(void) {
             break;
         }
     }
-    cn_print_net_results(net, input, output);
+    cn_print_mlp_results(net, input, output);
     char *file_name = "model";
     cn_save_net_to_file(net, file_name);
     cn_dealloc_net(&net);
     net = cn_alloc_net_from_file(file_name);
     printf("After Loading From File\n");
-    cn_print_net_results(net, val_in, val_out);
+    cn_print_mlp_results(net, val_in, val_out);
     cn_dealloc_net(&net);
     return 0;
 }

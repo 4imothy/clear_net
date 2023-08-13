@@ -198,8 +198,7 @@ int main(int argc, char *argv[]) {
         MAT_AT(val_target, i, 0) /= 2;
     }
 
-    NetConfig hparams = cn_init_net_conf();
-    Net net = cn_init_net(hparams);
+    Net net = cn_init_net();
     cn_alloc_dense_layer(&net, input_dim, 1, Sigmoid);
     cn_randomize_net(net, -1, 1);
     size_t num_epochs = 10000;
@@ -216,9 +215,9 @@ int main(int argc, char *argv[]) {
              ++batch_num) {
             cn_get_batch(&batch_in, &batch_tar, input, target, batch_num,
                          batch_size);
-            cn_learn(&net, batch_in, batch_tar);
+            cn_learn_mlp(&net, batch_in, batch_tar);
         }
-        loss = cn_loss(net, input, target);
+        loss = cn_loss_mlp(net, input, target);
         if (loss < error_break) {
             break;
         }
@@ -228,15 +227,15 @@ int main(int argc, char *argv[]) {
     }
     if (print) {
         printf("Final loss at %zu : %g\n", i, loss);
-        cn_print_net_results(net, input, target);
+        cn_print_mlp_results(net, input, target);
         char *file = "model";
         cn_save_net_to_file(net, file);
         cn_dealloc_net(&net);
         printf("After loading from file\n");
         net = cn_alloc_net_from_file(file);
-        cn_print_net_results(net, input, target);
+        cn_print_mlp_results(net, input, target);
         printf("On validation set\n");
-        cn_print_net_results(net, val_input, val_target);
+        cn_print_mlp_results(net, val_input, val_target);
         cn_dealloc_net(&net);
     }
     return 0;

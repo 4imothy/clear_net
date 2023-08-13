@@ -28,9 +28,9 @@ int main(void) {
     Matrix target =
         cn_form_matrix(num_combinations, num_outputs, stride, &data[num_inputs]);
     size_t num_epochs = 20000;
-    NetConfig hparams = cn_init_net_conf();
-    cn_with_momentum(&hparams, 0.1);
-    Net net = cn_init_net(hparams);
+    cn_default_hparams();
+    Net net = cn_init_net();
+    cn_with_momentum(0.9);
     cn_set_neg_scale(1);
     cn_alloc_dense_layer(&net, num_inputs, 3, Tanh);
     cn_alloc_dense_layer(&net, 3, 8, LeakyReLU);
@@ -39,19 +39,19 @@ int main(void) {
     cn_print_net(net, "net");
     float loss;
     for (size_t i = 0; i < num_epochs; ++i) {
-        loss = cn_learn(&net, input, target);
+        loss = cn_learn_mlp(&net, input, target);
         if (i % (num_epochs / 10) == 0) {
             printf("Average loss: %g\n", loss);
         }
     }
     printf("Final loss: %g\n", loss);
-    cn_print_net_results(net, input, target);
+    cn_print_mlp_results(net, input, target);
     char *name = "model";
     cn_save_net_to_file(net, name);
     cn_dealloc_net(&net);
     net = cn_alloc_net_from_file(name);
     printf("After loading file\n");
-    cn_print_net_results(net, input, target);
+    cn_print_mlp_results(net, input, target);
     cn_dealloc_net(&net);
 
     return 0;
