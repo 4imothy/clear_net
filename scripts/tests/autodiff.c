@@ -7,6 +7,7 @@
     printf("%s %f %f\n", #x, GET_NODE((x)).num, GET_NODE((x)).grad)
 
 int main(int argc, char *argv[]) {
+    cn_default_hparams();
     CLEAR_NET_ASSERT(argc == 2);
     GradientStore gradient_store = cn_alloc_gradient_store(0);
     GradientStore *gs = &gradient_store;
