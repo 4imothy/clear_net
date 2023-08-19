@@ -11,6 +11,7 @@ bench_mul
 mnist
 autodiff
 convolution
+mnist_conv
 # model save files
 model
 # ignore file of youtube demo
