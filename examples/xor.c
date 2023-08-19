@@ -3,10 +3,10 @@
 
 int main(void) {
     srand(0);
-    NetConfig hparams = cn_init_net_conf();
-    Net net = cn_init_net(hparams);
-    cn_alloc_dense_layer(&net, 2, 2, Sigmoid);
-    cn_alloc_dense_layer(&net, 2, 1, Sigmoid);
+    cn_default_hparams();
+    Net net = cn_init_net();
+    cn_alloc_dense_layer(&net, Sigmoid, 2, 2);
+    cn_alloc_secondary_dense_layer(&net, Sigmoid, 1);
     cn_randomize_net(net, -1, 1);
     Matrix data = cn_alloc_matrix(4, 3);
     for (size_t i = 0; i < 2; ++i) {
@@ -24,18 +24,18 @@ int main(void) {
     float loss;
     size_t num_epochs = 10000;
     for (size_t i = 0; i < num_epochs; ++i) {
-        loss = cn_learn(&net, input, target);
+        loss = cn_learn_mlp(&net, input, target);
         if (i % 100 == 0) {
             printf("Average loss: %f\n", loss);
         }
     }
     printf("Final loss: %g\n", loss);
-    cn_print_net_results(net, input, target);
+    cn_print_mlp_results(net, input, target);
     char *file = "model";
     cn_save_net_to_file(net, file);
     cn_dealloc_net(&net);
     net = cn_alloc_net_from_file(file);
-    cn_print_net_results(net, input, target);
+    cn_print_mlp_results(net, input, target);
     cn_dealloc_net(&net);
     cn_dealloc_matrix(&data);
 }

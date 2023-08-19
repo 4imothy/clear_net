@@ -72,8 +72,10 @@ int main(void) {
     Matrix val_in = cn_form_matrix(num_train, dim_input, num_var, val);
     Matrix val_out = cn_form_matrix(num_train, 1, num_var, &val[dim_input]);
 
+    cn_default_hparams();
+    cn_set_rate(0.01);
     Net net = cn_init_net();
-    cn_alloc_dense_layer(&net, 8, 1, Tanh);
+    cn_alloc_dense_layer(&net, Tanh, 8, 1);
     cn_randomize_net(net, -1, 1);
     size_t num_epochs = 200000;
     float error_break = 0.01f;
@@ -88,6 +90,7 @@ int main(void) {
             break;
         }
     }
+    printf("Final output: %f\n", cn_loss_mlp(net, input, output));
     cn_print_mlp_results(net, input, output);
     char *file_name = "model";
     cn_save_net_to_file(net, file_name);

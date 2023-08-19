@@ -13,8 +13,6 @@ const size_t num_train_files = 60000;
 const size_t num_test_files = 10000;
 const size_t dim_output = 10;
 
-float fix_output(float x) { return x; }
-
 int get_data_from_dir(Matrix *data, char *path, int num_files) {
     DIR *directory = opendir(path);
     if (directory == NULL) {
@@ -95,11 +93,13 @@ int main(void) {
     Matrix test_output = cn_form_matrix(num_test_files, dim_output, test.ncols,
                                         &MAT_AT(test, 0, num_pixels));
 
+    cn_default_hparams();
+    cn_set_rate(0.005);
     cn_with_momentum(0.9);
     Net net = cn_init_net();
-    cn_alloc_dense_layer(&net, num_pixels, 16, Sigmoid);
-    cn_alloc_dense_layer(&net, 16, 16, Sigmoid);
-    cn_alloc_dense_layer(&net, 16, dim_output, Sigmoid);
+    cn_alloc_dense_layer(&net, Sigmoid, num_pixels, 16);
+    cn_alloc_secondary_dense_layer(&net, Sigmoid, 16);
+    cn_alloc_secondary_dense_layer(&net, Sigmoid, dim_output);
     cn_randomize_net(net, -1, 1);
     size_t num_epochs = 20000;
     float error;
@@ -109,12 +109,12 @@ int main(void) {
     Matrix batch_output;
     size_t batch_size = 100;
     CLEAR_NET_ASSERT(num_train_files % batch_size == 0);
-    printf("Beginning Training\n");
     printf("Initial Cost: %f\n", cn_loss_mlp(net, train_input, train_output));
+    printf("Beginning Training\n");
     for (size_t i = 0; i < num_epochs; ++i) {
         for (size_t batch_num = 0; batch_num < (num_train_files / batch_size);
              ++batch_num) {
-            cn_get_batch(&batch_input, &batch_output, train_input, train_output,
+            cn_get_batch_mlp(&batch_input, &batch_output, train_input, train_output,
                          batch_num, batch_size);
             cn_learn_mlp(&net, batch_input, batch_output);
         }

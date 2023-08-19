@@ -197,9 +197,10 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < val_size; ++i) {
         MAT_AT(val_target, i, 0) /= 2;
     }
-
+    cn_default_hparams();
+    cn_set_rate(0.02);
     Net net = cn_init_net();
-    cn_alloc_dense_layer(&net, input_dim, 1, Sigmoid);
+    cn_alloc_dense_layer(&net, Sigmoid, input_dim, 1);
     cn_randomize_net(net, -1, 1);
     size_t num_epochs = 10000;
     float loss;
@@ -213,7 +214,7 @@ int main(int argc, char *argv[]) {
     for (i = 0; i < num_epochs; ++i) {
         for (size_t batch_num = 0; batch_num < test_size / batch_size;
              ++batch_num) {
-            cn_get_batch(&batch_in, &batch_tar, input, target, batch_num,
+            cn_get_batch_mlp(&batch_in, &batch_tar, input, target, batch_num,
                          batch_size);
             cn_learn_mlp(&net, batch_in, batch_tar);
         }

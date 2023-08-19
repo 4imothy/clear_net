@@ -32,9 +32,9 @@ int main(void) {
     Net net = cn_init_net();
     cn_with_momentum(0.9);
     cn_set_neg_scale(1);
-    cn_alloc_dense_layer(&net, num_inputs, 3, Tanh);
-    cn_alloc_dense_layer(&net, 3, 8, LeakyReLU);
-    cn_alloc_dense_layer(&net, 8, num_outputs, Sigmoid);
+    cn_alloc_dense_layer(&net, Tanh, num_inputs, 3);
+    cn_alloc_secondary_dense_layer(&net, LeakyReLU, 8);
+    cn_alloc_secondary_dense_layer(&net, Sigmoid, num_outputs);
     cn_randomize_net(net, -1, 1);
     cn_print_net(net, "net");
     float loss;
