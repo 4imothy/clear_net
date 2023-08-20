@@ -10,14 +10,8 @@
 
 /***
     TODO do a test for the computation graph ensuring that both results are the same
-    TODO do it without momentum then implement that
-    TODO need to test matrix output, can do easily by just changing output to matrix
-    type I think
-    TODO always just pass a reference to the layer I guess
-    TODO in the update params make a update matrix/vector to reduce duplicated code
-    TODO make convolutional->conv in function names
     TODO instead of copying the params on each _forward just return and read output ids
-    TODO need to do saving and loading convolutional net
+    TODO do a segmentation example with matrix output
 ***/
 
 /* Beginning */
@@ -112,24 +106,27 @@ typedef struct Matrix Matrix;
 typedef struct DMatrix DMatrix;
 Matrix cn_alloc_matrix(size_t nrows, size_t ncols);
 void cn_dealloc_matrix(Matrix *mat);
+void _cn_alloc_matrix_grad_stores(Matrix *mat);
 DMatrix cn_alloc_dmatrix(size_t nrows, size_t ncols);
 void cn_dealloc_dmatrix(DMatrix *mat);
 Matrix cn_form_matrix(size_t nrows, size_t ncols, size_t stride,
                       float *elements);
-void _cn_randomize_matrix(Matrix mat, float lower, float upper);
-void cn_shuffle_matrix_rows(Matrix mat);
+void _cn_randomize_matrix(Matrix *mat, float lower, float upper);
 void _cn_copy_matrix_params(GradientStore *gs, Matrix mat);
+void _cn_apply_matrix_grads(GradientStore *gs, Matrix *mat);
 void cn_print_matrix(Matrix mat, char *name);
 
 typedef struct Vector Vector;
 typedef struct DVector DVector;
 Vector cn_alloc_vector(size_t nelem);
 void cn_dealloc_vector(Vector *vec);
+void _cn_alloc_vector_grad_stores(Vector *vec);
 DVector _cn_alloc_dvector(size_t nelem);
 void _cn_dealloc_dvector(DVector *vec);
 Vector cn_form_vector(size_t nelem, float *elements);
-void _cn_randomize_vector(Vector vec, float lower, float upper);
+void _cn_randomize_vector(Vector *vec, float lower, float upper);
 void _cn_copy_vector_params(GradientStore *gs, Vector vec);
+void _cn_apply_vector_grads(GradientStore *gs, Vector *vec);
 void _cn_print_vector(Vector vec, char *name);
 void cn_print_vector_inline(Vector vec);
 
@@ -170,42 +167,55 @@ void cn_alloc_dense_layer(Net *net, Activation act, size_t dim_input, size_t dim
 void cn_alloc_secondary_dense_layer(Net *net, Activation act, size_t dim_output);
 void _cn_dealloc_dense_layer(DenseLayer *layer);
 void _cn_randomize_dense_layer(DenseLayer *layer, float lower, float upper);
-void _cn_copy_dense_params(GradientStore *gs, DenseLayer dense);
+void _cn_copy_dense_params(GradientStore *gs, DenseLayer *layer);
 Vector cn_forward_dense(DenseLayer *layer, Vector prev_output);
 Vector _cn_forward_dense(DenseLayer *layer, GradientStore *gs,
                          Vector prev_output);
-void _cn_dense_apply_grads(GradientStore *gs, DenseLayer layer, float coef);
-void _cn_save_dense_layer_to_file(FILE *fp, DenseLayer dense);
-void _cn_alloc_dense_from_file(FILE *fp, Net *net, size_t layer_id);
+void _cn_apply_dense_grads(GradientStore *gs, DenseLayer *layer);
+void _cn_save_dense_layer_to_file(FILE *fp, DenseLayer *layer);
+void _cn_alloc_dense_layer_from_file(FILE *fp, Net *net);
 void _cn_print_dense(DenseLayer dense, size_t index);
 
 /* Declare: Convolutional Layer */
-void cn_alloc_convolutional_layer(Net *net, Padding padding, Activation act,
+void cn_alloc_conv_layer(Net *net, Padding padding, Activation act,
                                   size_t nimput, size_t noutput, size_t input_nrows,
                                   size_t input_ncols, size_t kernel_nrows,
                                   size_t kernel_ncols);
-void cn_alloc_secondary_convolutional_layer(Net *net, Padding padding, Activation act, size_t noutput, size_t kernel_nrows, size_t kernel_ncols);
+void cn_alloc_secondary_conv_layer(Net *net, Padding padding, Activation act, size_t noutput, size_t kernel_nrows, size_t kernel_ncols);
 void _cn_set_padding(Padding padding, size_t knrows, size_t kncols, size_t *row_padding, size_t *col_padding);
-void _cn_dealloc_convolutional_layer(ConvolutionalLayer *layer);
-void _cn_randomize_convolutional_layer(ConvolutionalLayer *layer, float lower,
+void _cn_dealloc_conv_layer(ConvolutionalLayer *layer);
+void _cn_randomize_conv_layer(ConvolutionalLayer *layer, float lower,
                                        float upper);
-void _cn_copy_convolutional_params(GradientStore *gs, ConvolutionalLayer layer);
-Matrix* cn_forward_convolutional(ConvolutionalLayer *layer, Matrix *input);
+void _cn_copy_conv_params(GradientStore *gs, ConvolutionalLayer *layer);
+Matrix* cn_forward_conv(ConvolutionalLayer *layer, Matrix *input);
 float cn_correlate(Matrix kern, Matrix input, long top_left_row,
                    long top_left_col);
 size_t _cn_correlate(GradientStore *gs, Matrix kern, Matrix input, long top_left_row,
                    long top_left_col);
-Matrix* _cn_forward_convolutional(ConvolutionalLayer *layer, GradientStore *gs, Matrix *input);
-void _cn_conv_apply_grads(GradientStore *gs, ConvolutionalLayer layer, float coef);
+Matrix* _cn_forward_conv(ConvolutionalLayer *layer, GradientStore *gs, Matrix *input);
+void _cn_apply_conv_grads(GradientStore *gs, ConvolutionalLayer *layer);
+void _cn_save_conv_layer_to_file(FILE *fp, ConvolutionalLayer *layer);
+void _cn_alloc_conv_layer_from_file(FILE *fp, Net *net);
+void _cn_print_conv_layer(ConvolutionalLayer *layer, size_t index);
 
 /* Declare: Pooling Layer */
-void cn_alloc_global_pooling_layer(Net *net, PoolingStrategy strat);
 void cn_alloc_pooling_layer(Net *net, PoolingStrategy strat,
                             size_t kernel_nrows, size_t kernel_ncols);
-Vector cn_global_pool_layer(GlobalPoolingLayer *pooler, Matrix *input);
-void _cn_print_global_pooling_layer(GlobalPoolingLayer gpooler, size_t layer_id);
 Matrix* cn_pool_layer(PoolingLayer *pooler, Matrix *input);
 Matrix* _cn_pool_layer(GradientStore *gs, PoolingLayer *pooler, Matrix *input);
+void _cn_save_pooling_layer_to_file(FILE *fp, PoolingLayer *layer);
+void _cn_alloc_pooling_layer_from_file(FILE *fp, Net *net);
+void _cn_print_pooling_layer(PoolingLayer layer, size_t layer_id);
+void _cn_dealloc_pooling_layer(PoolingLayer *layer);
+
+/* Declare: Global Pooling Layer */
+void cn_alloc_global_pooling_layer(Net *net, PoolingStrategy strat);
+Vector cn_global_pool_layer(GlobalPoolingLayer *pooler, Matrix *input);
+Vector _cn_global_pool_layer(GradientStore *gs, GlobalPoolingLayer *pooler, Matrix *input);
+void _cn_save_global_pooling_layer_to_file(FILE *fp, GlobalPoolingLayer *layer);
+void _cn_alloc_global_pooling_layer_from_file(FILE *fp, Net *net);
+void _cn_print_global_pooling_layer(GlobalPoolingLayer gpooler, size_t layer_id);
+void _cn_dealloc_global_pooling_layer(GlobalPoolingLayer *layer);
 
 /* Declare: Layer */
 Layer _cn_init_layer(LayerType type);
@@ -213,11 +223,12 @@ Layer _cn_init_layer(LayerType type);
 /* Declare: Net */
 Net cn_init_net(void);
 void cn_dealloc_net(Net *net);
+void _cn_add_net_layer(Net *net, Layer layer, size_t nparams);
 void cn_randomize_net(Net net, float lower, float upper);
-void cn_shuffle_mlp_input(Matrix input, Matrix target);
+void cn_shuffle_mlp_input(Matrix *input, Matrix *target);
 void cn_get_batch_mlp(Matrix *batch_in, Matrix *batch_tar, Matrix all_input,
                   Matrix all_target, size_t batch_num, size_t batch_size);
-void cn_shuffle_conv_input(Matrix **input, LaData *targets, size_t len);
+void cn_shuffle_conv_input(Matrix ***input, LaData **targets, size_t len);
 void cn_get_batch_conv(Matrix **batch_in, LaData *batch_tar, Matrix **all_input,
                        LaData *all_target, size_t batch_num, size_t batch_size);
 void cn_save_net_to_file(Net net, char *file_name);
@@ -235,7 +246,7 @@ void cn_print_mlp_results(Net net, Matrix input, Matrix target);
 void cn_print_target_output_pairs_mlp(Net net, Matrix input, Matrix target);
 
 /* Declare: Convolutional Net */
-float cn_learn_convolutional(Net *net, Matrix **inputs, LaData *targets, size_t nimput);
+float cn_learn_conv(Net *net, Matrix **inputs, LaData *targets, size_t nimput);
 float _cn_find_grad_conv(Net *net, GradientStore *gs, Matrix *inputs, LaData target);
 LaData cn_predict_conv(Net *net, Matrix *input);
 LaData _cn_predict_conv(Net *net, GradientStore *gs, Matrix *input);
@@ -264,7 +275,7 @@ float CN_MOMENTUM_BETA;
 
 void cn_default_hparams(void) {
     CN_NEG_SCALE = 0.1;
-    CN_RATE = 0.5;
+    CN_RATE = 0.01;
     CN_NLAYERS = 0;
     CN_NPARAMS = 0;
     CN_WITH_MOMENTUM = 0;
@@ -317,7 +328,6 @@ struct VarNode {
     BackWardFunction *backward;
     size_t prev_left;
     size_t prev_right;
-    size_t visited;
 };
 
 struct GradientStore {
@@ -548,6 +558,11 @@ void cn_dealloc_matrix(Matrix *mat) {
     mat->gs_id = 0;
 }
 
+void _cn_alloc_matrix_grad_stores(Matrix *mat) {
+    mat->grad_stores = CLEAR_NET_ALLOC(mat->nrows * mat->ncols * sizeof(*mat->grad_stores));
+    _cn_fill_floats(mat->grad_stores, mat->nrows * mat->ncols, 0);
+}
+
 DMatrix cn_alloc_dmatrix(size_t nrows, size_t ncols) {
     DMatrix mat;
     mat.nrows = nrows;
@@ -575,23 +590,10 @@ Matrix cn_form_matrix(size_t nrows, size_t ncols, size_t stride,
                     .elements = elements};
 }
 
-void _cn_randomize_matrix(Matrix mat, float lower, float upper) {
-    for (size_t j = 0; j < mat.nrows; ++j) {
-        for (size_t k = 0; k < mat.ncols; ++k) {
-            MAT_AT(mat, j, k) = RAND_RANGE(lower, upper);
-        }
-    }
-}
-
-void cn_shuffle_matrix_rows(Matrix mat) {
-    for (size_t i = 0; i < mat.nrows; ++i) {
-        size_t j = i + rand() % (mat.nrows - i);
-        if (i != j) {
-            for (size_t k = 0; k < mat.ncols; ++k) {
-                float t = MAT_AT(mat, i, k);
-                MAT_AT(mat, i, k) = MAT_AT(mat, j, k);
-                MAT_AT(mat, j, k) = t;
-            }
+void _cn_randomize_matrix(Matrix *mat, float lower, float upper) {
+    for (size_t j = 0; j < mat->nrows; ++j) {
+        for (size_t k = 0; k < mat->ncols; ++k) {
+            MAT_AT(*mat, j, k) = RAND_RANGE(lower, upper);
         }
     }
 }
@@ -600,6 +602,23 @@ void _cn_copy_matrix_params(GradientStore *gs, Matrix mat) {
     for (size_t i = 0; i < mat.nrows; ++i) {
         for (size_t j = 0; j < mat.ncols; ++j) {
             cn_init_leaf_var(gs, MAT_AT(mat, i, j));
+        }
+    }
+}
+
+void _cn_apply_matrix_grads(GradientStore *gs, Matrix *mat) {
+    for (size_t i = 0; i < mat->nrows; ++i) {
+        for (size_t j = 0; j < mat->ncols; ++j) {
+            float change = CN_RATE * GET_NODE(MAT_ID(*mat, i, j)).grad;
+            if (CN_WITH_MOMENTUM) {
+                size_t id = (i * mat->stride) + j;
+                mat->grad_stores[id] =
+                    CN_MOMENTUM_BETA *
+                    mat->grad_stores[id] +
+                    ((1 - CN_MOMENTUM_BETA) * change);
+                change = mat->grad_stores[id];
+            }
+            MAT_AT(*mat, i, j) -= change;
         }
     }
 }
@@ -647,6 +666,11 @@ void cn_dealloc_vector(Vector *vec) {
     vec->elements = NULL;
 }
 
+void _cn_alloc_vector_grad_stores(Vector *vec) {
+    vec->grad_stores = CLEAR_NET_ALLOC(vec->nelem * sizeof(*vec->grad_stores));
+    _cn_fill_floats(vec->grad_stores, vec->nelem, 0);
+}
+
 DVector _cn_alloc_dvector(size_t nelem) {
     DVector vec;
     vec.nelem = nelem;
@@ -669,15 +693,30 @@ Vector cn_form_vector(size_t nelem, float *elements) {
     };
 }
 
-void _cn_randomize_vector(Vector vec, float lower, float upper) {
-    for (size_t i = 0; i < vec.nelem; ++i) {
-        VEC_AT(vec, i) = RAND_RANGE(lower, upper);
+void _cn_randomize_vector(Vector *vec, float lower, float upper) {
+    for (size_t i = 0; i < vec->nelem; ++i) {
+        VEC_AT(*vec, i) = RAND_RANGE(lower, upper);
     }
 }
 
 void _cn_copy_vector_params(GradientStore *gs, Vector vec) {
     for (size_t i = 0; i < vec.nelem; ++i) {
         cn_init_leaf_var(gs, VEC_AT(vec, i));
+    }
+}
+
+void _cn_apply_vector_grads(GradientStore *gs, Vector *vec) {
+    for (size_t i = 0; i < vec->nelem; ++i) {
+        float change =
+            CN_RATE * GET_NODE(VEC_ID(*vec, i)).grad;
+        if (CN_WITH_MOMENTUM) {
+            vec->grad_stores[i] =
+                CN_MOMENTUM_BETA *
+                vec->grad_stores[i] +
+                ((1 - CN_MOMENTUM_BETA) * change);
+            change = vec->grad_stores[i];
+        }
+        VEC_AT(*vec, i) -= change;
     }
 }
 
@@ -785,15 +824,13 @@ void cn_alloc_dense_layer(Net *net, Activation act, size_t dim_input, size_t dim
         }
 
     }
-    net->layers = CLEAR_NET_REALLOC(net->layers, (CN_NLAYERS + 1) * sizeof(*net->layers));
     DenseLayer dense_layer;
     dense_layer.act = act;
 
     size_t offset = CN_NPARAMS + 1;
     Matrix weights = cn_alloc_matrix(dim_input, dim_output);
     if (CN_WITH_MOMENTUM) {
-        weights.grad_stores = CLEAR_NET_ALLOC(weights.nrows * weights.ncols * sizeof(*weights.grad_stores));
-        _cn_fill_floats(weights.grad_stores, weights.nrows * weights.ncols, 0);
+        _cn_alloc_matrix_grad_stores(&weights);
     }
     weights.gs_id = offset;
     dense_layer.weights = weights;
@@ -802,8 +839,7 @@ void cn_alloc_dense_layer(Net *net, Activation act, size_t dim_input, size_t dim
     Vector biases = cn_alloc_vector(dim_output);
     biases.gs_id = offset;
     if (CN_WITH_MOMENTUM) {
-        biases.grad_stores = CLEAR_NET_ALLOC(biases.nelem * sizeof(*biases.grad_stores));
-        _cn_fill_floats(biases.grad_stores, biases.nelem, 0);
+        _cn_alloc_vector_grad_stores(&biases);
     }
     dense_layer.biases = biases;
     offset += dense_layer.biases.nelem;
@@ -816,9 +852,8 @@ void cn_alloc_dense_layer(Net *net, Activation act, size_t dim_input, size_t dim
     CN_NPARAMS = offset - 1;
     Layer layer = _cn_init_layer(Dense);
     layer.data.dense = dense_layer;
-    net->layers[CN_NLAYERS] = layer;
-    CN_NLAYERS++;
-    cn_realloc_gradient_store(&net->computation_graph, CN_NPARAMS);
+
+    _cn_add_net_layer(net, layer, CN_NPARAMS);
     net->output_type = Vec;
 }
 
@@ -828,10 +863,9 @@ void cn_alloc_secondary_dense_layer(Net *net, Activation act, size_t dim_output)
     CLEAR_NET_ASSERT(player.type == Dense || player.type == GlobalPooling);
     if (player.type == Dense) {
         cn_alloc_dense_layer(net, act, player.data.dense.biases.nelem, dim_output);
-        return;
+    } else {
+        cn_alloc_dense_layer(net, act, player.data.global_pooling.output.nelem, dim_output);
     }
-
-    cn_alloc_dense_layer(net, act, player.data.global_pooling.output.nelem, dim_output);
 }
 
 void _cn_set_padding(Padding padding, size_t knrows, size_t kncols, size_t *row_padding, size_t *col_padding) {
@@ -863,13 +897,13 @@ void _cn_dealloc_dense_layer(DenseLayer *layer) {
 }
 
 void _cn_randomize_dense_layer(DenseLayer *layer, float lower, float upper) {
-    _cn_randomize_matrix(layer->weights, lower, upper);
-    _cn_randomize_vector(layer->biases, lower, upper);
+    _cn_randomize_matrix(&layer->weights, lower, upper);
+    _cn_randomize_vector(&layer->biases, lower, upper);
 }
 
-void _cn_copy_dense_params(GradientStore *gs, DenseLayer dense) {
-    _cn_copy_matrix_params(gs, dense.weights);
-    _cn_copy_vector_params(gs, dense.biases);
+void _cn_copy_dense_params(GradientStore *gs, DenseLayer *layer) {
+    _cn_copy_matrix_params(gs, layer->weights);
+    _cn_copy_vector_params(gs, layer->biases);
 }
 
 Vector cn_forward_dense(DenseLayer* layer, Vector prev_output) {
@@ -909,40 +943,15 @@ Vector _cn_forward_dense(DenseLayer *layer, GradientStore *gs,
     return layer->output;
 }
 
-void _cn_dense_apply_grads(GradientStore *gs, DenseLayer layer, float coef) {
-    for (size_t i = 0; i < layer.weights.nrows; ++i) {
-        for (size_t j = 0; j < layer.weights.ncols; ++j) {
-            float change =
-                coef * GET_NODE(MAT_ID(layer.weights, i, j)).grad;
-            if (CN_WITH_MOMENTUM) {
-                size_t id = (i * layer.weights.stride) + j;
-                layer.weights.grad_stores[id] =
-                    CN_MOMENTUM_BETA *
-                    layer.weights.grad_stores[id] +
-                    ((1 - CN_MOMENTUM_BETA) * change);
-                change = layer.weights.grad_stores[id];
-            }
-            MAT_AT(layer.weights, i, j) -= change;
-        }
-    }
-    for (size_t i = 0; i < layer.biases.nelem; ++i) {
-        float change =
-            coef * GET_NODE(VEC_ID(layer.biases, i)).grad;
-        if (CN_WITH_MOMENTUM) {
-            layer.biases.grad_stores[i] =
-                CN_MOMENTUM_BETA *
-                layer.biases.grad_stores[i] +
-                ((1 - CN_MOMENTUM_BETA) * change);
-            change = layer.biases.grad_stores[i];
-        }
-        VEC_AT(layer.biases, i) -= change;
-    }
+void _cn_apply_dense_grads(GradientStore *gs, DenseLayer *layer) {
+    _cn_apply_matrix_grads(gs, &layer->weights);
+    _cn_apply_vector_grads(gs, &layer->biases);
 }
 
-void _cn_save_dense_layer_to_file(FILE *fp, DenseLayer dense) {
-    fwrite(&dense.act, sizeof(dense.act), 1, fp);
-    Matrix weights = dense.weights;
-    Vector biases = dense.biases;
+void _cn_save_dense_layer_to_file(FILE *fp, DenseLayer *layer) {
+    fwrite(&layer->act, sizeof(layer->act), 1, fp);
+    Matrix weights = layer->weights;
+    Vector biases = layer->biases;
     fwrite(&weights.nrows, sizeof(weights.nrows), 1, fp);
     fwrite(&weights.ncols, sizeof(weights.ncols), 1, fp);
     fwrite(weights.elements, sizeof(*weights.elements),
@@ -950,21 +959,20 @@ void _cn_save_dense_layer_to_file(FILE *fp, DenseLayer dense) {
     fwrite(biases.elements, sizeof(*biases.elements), biases.nelem, fp);
 }
 
-void _cn_alloc_dense_from_file(FILE *fp, Net *net, size_t layer_id) {
-    Activation act;
-    size_t input_dim;
-    size_t output_dim;
-    Matrix weights;
-    Vector biases;
+void _cn_alloc_dense_layer_from_file(FILE *fp, Net *net) {
 
+    Activation act;
     fread(&act, sizeof(act), 1, fp);
+    size_t input_dim;
     fread(&input_dim, sizeof(input_dim), 1, fp);
+
+        size_t output_dim;
     fread(&output_dim, sizeof(output_dim), 1, fp);
     cn_alloc_dense_layer(net, act, input_dim, output_dim);
-    weights = net->layers[layer_id].data.dense.weights;
+    Matrix weights = net->layers[CN_NLAYERS - 1].data.dense.weights;
     fread(weights.elements, sizeof(*weights.elements),
           weights.nrows * weights.ncols, fp);
-    biases = net->layers[layer_id].data.dense.biases;
+    Vector biases = net->layers[CN_NLAYERS - 1].data.dense.biases;
     fread(biases.elements, sizeof(*biases.elements), biases.nelem, fp);
 }
 
@@ -975,7 +983,7 @@ void _cn_print_dense(DenseLayer dense, size_t index) {
 }
 
 /* Implement: Convolutional Layer */
-void cn_alloc_convolutional_layer(Net *net, Padding padding, Activation act,
+void cn_alloc_conv_layer(Net *net, Padding padding, Activation act,
                                   size_t nimput, size_t noutput, size_t input_nrows,
                                   size_t input_ncols, size_t kernel_nrows,
                                   size_t kernel_ncols) {
@@ -1024,10 +1032,16 @@ void cn_alloc_convolutional_layer(Net *net, Padding padding, Activation act,
         filter.kernels = CLEAR_NET_ALLOC(conv_layer.nimput * sizeof(*filter.kernels));
         for (size_t j = 0; j < conv_layer.nimput; ++j) {
             filter.kernels[j] = cn_alloc_matrix(conv_layer.k_nrows, conv_layer.k_ncols);
+            if (CN_WITH_MOMENTUM) {
+                _cn_alloc_matrix_grad_stores(&filter.kernels[j]);
+            }
             filter.kernels[j].gs_id = offset;
             offset += conv_layer.k_nrows * conv_layer.k_ncols;
         }
         filter.biases = cn_alloc_matrix(conv_layer.output_nrows, conv_layer.output_ncols);
+        if (CN_WITH_MOMENTUM) {
+            _cn_alloc_matrix_grad_stores(&filter.biases);
+        }
         filter.biases.gs_id = offset;
         offset += conv_layer.output_nrows * conv_layer.output_ncols;
         conv_layer.filters[i] = filter;
@@ -1035,18 +1049,16 @@ void cn_alloc_convolutional_layer(Net *net, Padding padding, Activation act,
         conv_layer.output_ids[i] = cn_alloc_dmatrix(conv_layer.output_nrows, conv_layer.output_ncols);
         _cn_fill_floats(conv_layer.outputs[i].elements, conv_layer.output_nrows * conv_layer.output_ncols, 0);
     }
-
-    net->layers = CLEAR_NET_REALLOC(net->layers, (CN_NLAYERS + 1) * sizeof(*net->layers));
+    CN_NPARAMS = offset - 1;
     Layer layer = _cn_init_layer(Convolutional);
     layer.data.conv = conv_layer;
-    net->layers[CN_NLAYERS] = layer;
-    CN_NLAYERS++;
-    CN_NPARAMS = offset - 1;
-    cn_realloc_gradient_store(&net->computation_graph, CN_NPARAMS);
+
+    _cn_add_net_layer(net, layer, CN_NPARAMS);
+
     net->output_type = Mat;
 }
 
-void cn_alloc_secondary_convolutional_layer(Net *net, Padding padding, Activation act, size_t noutput, size_t kernel_nrows, size_t kernel_ncols) {
+void cn_alloc_secondary_conv_layer(Net *net, Padding padding, Activation act, size_t noutput, size_t kernel_nrows, size_t kernel_ncols) {
     CLEAR_NET_ASSERT(CN_NLAYERS > 0);
     Layer player = net->layers[CN_NLAYERS - 1];
     CLEAR_NET_ASSERT(player.type == Convolutional || player.type == Pooling);
@@ -1062,10 +1074,10 @@ void cn_alloc_secondary_convolutional_layer(Net *net, Padding padding, Activatio
         input_ncols = player.data.pooling.output_ncols;
         nimput = player.data.pooling.noutput;
     }
-    cn_alloc_convolutional_layer(net, padding, act, nimput, noutput, input_nrows, input_ncols, kernel_nrows, kernel_ncols);
+    cn_alloc_conv_layer(net, padding, act, nimput, noutput, input_nrows, input_ncols, kernel_nrows, kernel_ncols);
 }
 
-void _cn_dealloc_convolutional_layer(ConvolutionalLayer *layer) {
+void _cn_dealloc_conv_layer(ConvolutionalLayer *layer) {
     for (size_t i = 0; i < layer->nfilters; ++i) {
         Filter *cfilter = &layer->filters[i];
         for (size_t j = 0; j < layer->nimput; ++j) {
@@ -1090,22 +1102,22 @@ void _cn_dealloc_convolutional_layer(ConvolutionalLayer *layer) {
     layer->k_ncols = 0;
 }
 
-void _cn_randomize_convolutional_layer(ConvolutionalLayer *layer, float lower,
+void _cn_randomize_conv_layer(ConvolutionalLayer *layer, float lower,
                                        float upper) {
     for (size_t i = 0; i < layer->nfilters; ++i) {
         for (size_t j = 0; j < layer->nimput; ++j) {
-            _cn_randomize_matrix(layer->filters[i].kernels[j], lower, upper);
+            _cn_randomize_matrix(&layer->filters[i].kernels[j], lower, upper);
         }
-        _cn_randomize_matrix(layer->filters[i].biases, lower, upper);
+        _cn_randomize_matrix(&layer->filters[i].biases, lower, upper);
     }
 }
 
-void _cn_copy_convolutional_params(GradientStore *gs, ConvolutionalLayer layer) {
-    for (size_t i = 0; i < layer.nfilters; ++i) {
-        for (size_t j = 0; j < layer.nimput; ++j) {
-            _cn_copy_matrix_params(gs, layer.filters[i].kernels[j]);
+void _cn_copy_conv_params(GradientStore *gs, ConvolutionalLayer *layer) {
+    for (size_t i = 0; i < layer->nfilters; ++i) {
+        for (size_t j = 0; j < layer->nimput; ++j) {
+            _cn_copy_matrix_params(gs, layer->filters[i].kernels[j]);
         }
-        _cn_copy_matrix_params(gs, layer.filters[i].biases);
+        _cn_copy_matrix_params(gs, layer->filters[i].biases);
     }
 }
 
@@ -1127,7 +1139,7 @@ float cn_correlate(Matrix kern, Matrix input, long top_left_row,
     return res;
 }
 
-Matrix* cn_forward_convolutional(ConvolutionalLayer *layer, Matrix *input) {
+Matrix* cn_forward_conv(ConvolutionalLayer *layer, Matrix *input) {
     for (size_t i = 0; i < layer->nfilters; ++i) {
         for (long j = 0; j < (long)layer->output_nrows; ++j) {
             for (long k = 0; k < (long)layer->output_ncols; ++k) {
@@ -1186,7 +1198,7 @@ size_t _cn_correlate(GradientStore *gs, Matrix kern, Matrix input, long top_left
     return res;
 }
 
-Matrix* _cn_forward_convolutional(ConvolutionalLayer *layer, GradientStore *gs, Matrix *input) {
+Matrix* _cn_forward_conv(ConvolutionalLayer *layer, GradientStore *gs, Matrix *input) {
     for (size_t i = 0; i < layer->nfilters; ++i) {
         for (size_t j = 0; j < layer->output_nrows; ++j) {
             for (size_t k = 0; k < layer->output_ncols; ++k) {
@@ -1236,36 +1248,72 @@ Matrix* _cn_forward_convolutional(ConvolutionalLayer *layer, GradientStore *gs, 
     return layer->outputs;
 }
 
-void _cn_conv_apply_grads(GradientStore *gs, ConvolutionalLayer layer, float coef) {
-    for (size_t i = 0; i < layer.nfilters; ++i) {
-        // TODO can put this to a function as well
-        // matrix apply grads
-        for (size_t j = 0; j < layer.nimput; ++j) {
-            for (size_t k = 0; k < layer.k_nrows; ++k) {
-                for (size_t l = 0; l < layer.k_ncols; ++l) {
-                    float change = coef * GET_NODE(MAT_ID(layer.filters[i].kernels[j], k, l)).grad;
-                    MAT_AT(layer.filters[i].kernels[j], k, l) -= change;
-                }
-            }
+void _cn_apply_conv_grads(GradientStore *gs, ConvolutionalLayer *layer) {
+    for (size_t i = 0; i < layer->nfilters; ++i) {
+        for (size_t j = 0; j < layer->nimput; ++j) {
+            _cn_apply_matrix_grads(gs, &layer->filters[i].kernels[j]);
         }
-        for (size_t j = 0; j < layer.output_nrows; ++j) {
-            for (size_t k = 0; k < layer.output_ncols; ++k) {
-                float change = coef * GET_NODE(MAT_ID(layer.filters[i].biases, j, k)).grad;
-                MAT_AT(layer.filters[i].biases, j, k) -= change;
-            }
-        }
+        _cn_apply_matrix_grads(gs, &layer->filters[i].biases);
     }
 }
 
-void _cn_print_convolutional_layer(ConvolutionalLayer layer, size_t index) {
-    printf("Layer #%zu: Convolutional\n", index);
-    for (size_t i = 0; i < layer.nfilters; ++i) {
-        printf("Filter #%zu\n", i);
-        for (size_t j = 0; j < layer.nimput; ++j) {
-            printf("kernel #%zu", j);
-            cn_print_matrix(layer.filters[i].kernels[j], "");
+void _cn_save_conv_layer_to_file(FILE *fp, ConvolutionalLayer *layer) {
+    fwrite(&layer->nimput, sizeof(layer->nimput), 1, fp);
+    fwrite(&layer->input_nrows, sizeof(layer->input_nrows), 1, fp);
+    fwrite(&layer->input_ncols,sizeof(layer->input_ncols), 1, fp);
+    fwrite(&layer->k_nrows,sizeof(layer->k_nrows), 1, fp);
+    fwrite(&layer->k_ncols,sizeof(layer->k_ncols), 1, fp);
+    fwrite(&layer->nfilters, sizeof(layer->nfilters), 1, fp);
+    fwrite(&layer->act, sizeof(layer->act), 1, fp);
+    fwrite(&layer->padding, sizeof(layer->padding), 1, fp);
+    for (size_t i = 0; i < layer->nfilters; ++i) {
+        for (size_t j = 0; j < layer->nimput; ++j) {
+            fwrite(layer->filters[i].kernels[j].elements, sizeof(*layer->filters[i].kernels[j].elements), layer->k_nrows * layer->k_ncols, fp);
         }
-        cn_print_matrix(layer.filters[i].biases, "  filter bias");
+        fwrite(layer->filters[i].biases.elements, sizeof(*layer->filters[i].biases.elements), layer->output_nrows * layer->output_ncols, fp);
+    }
+
+}
+
+void _cn_alloc_conv_layer_from_file(FILE *fp, Net *net) {
+    size_t nimput;
+    fread(&nimput, sizeof(nimput), 1, fp);
+    size_t input_nrows;
+    fread(&input_nrows, sizeof(input_nrows), 1, fp);
+    size_t input_ncols;
+    fread(&input_ncols, sizeof(input_ncols), 1, fp);
+    size_t k_nrows;
+    fread(&k_nrows, sizeof(k_nrows), 1, fp);
+    size_t k_ncols;
+    fread(&k_ncols, sizeof(k_ncols), 1, fp);
+    size_t nfilters;
+    fread(&nfilters, sizeof(nfilters), 1, fp);
+    Activation act;
+    fread(&act, sizeof(act), 1, fp);
+    Padding padding;
+    fread(&padding, sizeof(padding), 1, fp);
+
+    cn_alloc_conv_layer(net, padding, act, nimput, nfilters, input_nrows, input_ncols, k_nrows, k_ncols);
+    ConvolutionalLayer *layer = &net->layers[CN_NLAYERS - 1].data.conv;
+    for (size_t i = 0; i < nfilters; ++i) {
+        for (size_t j = 0; j < nimput; ++j) {
+            Matrix kern = layer->filters[i].kernels[j];
+            fread(kern.elements, sizeof(*kern.elements), k_nrows * k_ncols, fp);
+        }
+        Matrix bias = layer->filters[i].biases;
+        fread(bias.elements, sizeof(*bias.elements), layer->output_nrows * layer->output_ncols, fp);
+    }
+}
+
+void _cn_print_conv_layer(ConvolutionalLayer *layer, size_t index) {
+    printf("Layer #%zu: Convolutional\n", index);
+    for (size_t i = 0; i < layer->nfilters; ++i) {
+        printf("Filter #%zu\n", i);
+        for (size_t j = 0; j < layer->nimput; ++j) {
+            printf("kernel #%zu", j);
+            cn_print_matrix(layer->filters[i].kernels[j], "");
+        }
+        cn_print_matrix(layer->filters[i].biases, "  filter bias");
     }
 }
 
@@ -1288,12 +1336,10 @@ void cn_alloc_pooling_layer(Net *net, PoolingStrategy strat,
     }
     pooler.noutput = nimput;
 
-    // TODO put this in its own add layer function
     Layer layer = _cn_init_layer(Pooling);
     layer.data.pooling = pooler;
-    net->layers = CLEAR_NET_REALLOC(net->layers, (CN_NLAYERS + 1) * sizeof(*net->layers));
-    net->layers[CN_NLAYERS] = layer;
-    CN_NLAYERS++;
+
+    _cn_add_net_layer(net, layer, CN_NPARAMS);
     net->output_type = Mat;
 }
 
@@ -1404,21 +1450,50 @@ Matrix* _cn_pool_layer(GradientStore *gs, PoolingLayer *pooler, Matrix *input) {
 }
 
 
+void _cn_save_pooling_layer_to_file(FILE *fp, PoolingLayer *layer) {
+    fwrite(&layer->strat, sizeof(layer->strat), 1, fp);
+    fwrite(&layer->k_nrows, sizeof(layer->k_nrows), 1, fp);
+    fwrite(&layer->k_ncols, sizeof(layer->k_ncols), 1, fp);
+}
+
+void _cn_alloc_pooling_layer_from_file(FILE *fp, Net *net) {
+    PoolingStrategy strat;
+    fread(&strat, sizeof(strat), 1, fp);
+    size_t k_nrows;
+    fread(&k_nrows, sizeof(k_nrows), 1, fp);
+    size_t k_ncols;
+    fread(&k_ncols, sizeof(k_ncols), 1, fp);
+    cn_alloc_pooling_layer(net, strat, k_nrows, k_ncols);
+}
+
+// TODO test the printing
+void _cn_print_pooling_layer(PoolingLayer layer, size_t layer_id) {
+    printf("Layer #%zu: ", layer_id);
+    switch(layer.strat) {
+    case(Max):
+        printf("Max ");
+        break;
+    case(Average):
+        printf("Average ");
+        break;
+    }
+    printf("Pooling Layer\n");
+}
+
 void cn_alloc_global_pooling_layer(Net *net, PoolingStrategy strat) {
     CLEAR_NET_ASSERT(CN_NLAYERS > 0);
-    CLEAR_NET_ASSERT(net->layers[CN_NLAYERS - 1].type == Convolutional);
+    CLEAR_NET_ASSERT(net->layers[CN_NLAYERS - 1].type == Convolutional || net->layers[CN_NLAYERS - 1].type == Pooling);
 
     GlobalPoolingLayer gpooler = (GlobalPoolingLayer) {
         .strat = strat,
         .output = cn_alloc_vector(net->layers[CN_NLAYERS - 1].data.conv.nfilters),
         .output_ids = _cn_alloc_dvector(net->layers[CN_NLAYERS - 1].data.conv.nfilters),
     };
-     Layer layer = _cn_init_layer(GlobalPooling);
-     layer.data.global_pooling = gpooler;
-     net->layers = CLEAR_NET_REALLOC(net->layers, (CN_NLAYERS + 1) * sizeof(*net->layers));
-     net->layers[CN_NLAYERS] = layer;
-     CN_NLAYERS++;
-     net->output_type = Vec;
+    Layer layer = _cn_init_layer(GlobalPooling);
+    layer.data.global_pooling = gpooler;
+
+    _cn_add_net_layer(net, layer, CN_NPARAMS);
+    net->output_type = Vec;
 }
 
 void _cn_dealloc_global_pooling_layer(GlobalPoolingLayer *layer) {
@@ -1502,8 +1577,17 @@ Vector _cn_global_pool_layer(GradientStore *gs, GlobalPoolingLayer *pooler, Matr
     return pooler->output;
 }
 
+void _cn_save_global_pooling_layer_to_file(FILE *fp, GlobalPoolingLayer *layer) {
+    fwrite(&layer->strat, sizeof(layer->strat), 1, fp);
+}
+void _cn_alloc_global_pooling_layer_from_file(FILE *fp, Net *net){
+    PoolingStrategy strat;
+    fread(&strat, sizeof(strat), 1, fp);
+    cn_alloc_global_pooling_layer(net, strat);
+}
+
 void _cn_print_global_pooling_layer(GlobalPoolingLayer gpooler, size_t layer_id) {
-    printf("Layer #%zu ", layer_id);
+    printf("Layer #%zu: ", layer_id);
     switch(gpooler.strat) {
     case(Max):
         printf("Max ");
@@ -1538,7 +1622,7 @@ void cn_dealloc_net(Net *net) {
             _cn_dealloc_dense_layer(&layer.data.dense);
             break;
         case (Convolutional):
-            _cn_dealloc_convolutional_layer(&layer.data.conv);
+            _cn_dealloc_conv_layer(&layer.data.conv);
             break;
         case (Pooling):
             break;
@@ -1551,32 +1635,41 @@ void cn_dealloc_net(Net *net) {
     cn_default_hparams();
 }
 
+void _cn_add_net_layer(Net *net, Layer layer, size_t nparams) {
+    net->layers = CLEAR_NET_REALLOC(net->layers, (CN_NLAYERS + 1) * sizeof(*net->layers));
+    net->layers[CN_NLAYERS] = layer;
+    CN_NLAYERS++;
+    if (nparams != net->computation_graph.max_length) {
+        cn_realloc_gradient_store(&net->computation_graph, CN_NPARAMS);
+    }
+}
+
 void cn_randomize_net(Net net, float lower, float upper) {
     for (size_t i = 0; i < CN_NLAYERS; ++i) {
         Layer layer = net.layers[i];
         if (layer.type == Dense) {
             _cn_randomize_dense_layer(&layer.data.dense, lower, upper);
         } else if (layer.type == Convolutional) {
-            _cn_randomize_convolutional_layer(&layer.data.conv, lower, upper);
+            _cn_randomize_conv_layer(&layer.data.conv, lower, upper);
         }
     }
 }
 
-void cn_shuffle_mlp_input(Matrix input, Matrix target) {
-    CLEAR_NET_ASSERT(input.nrows == target.nrows);
+void cn_shuffle_mlp_input(Matrix *input, Matrix *target) {
+    CLEAR_NET_ASSERT(input->nrows == target->nrows);
     float t;
-    for (size_t i = 0; i < input.nrows; ++i) {
-        size_t j = i + rand() % (input.nrows - i);
+    for (size_t i = 0; i < input->nrows; ++i) {
+        size_t j = i + rand() % (input->nrows - i);
         if (i != j) {
-            for (size_t k = 0; k < input.ncols; ++k) {
-                t = MAT_AT(input, i, k);
-                MAT_AT(input, i, k) = MAT_AT(input, j, k);
-                MAT_AT(input, j, k) = t;
+            for (size_t k = 0; k < input->ncols; ++k) {
+                t = MAT_AT(*input, i, k);
+                MAT_AT(*input, i, k) = MAT_AT(*input, j, k);
+                MAT_AT(*input, j, k) = t;
             }
-            for (size_t k = 0; k < target.ncols; ++k) {
-                t = MAT_AT(target, i, k);
-                MAT_AT(target, i, k) = MAT_AT(target, j, k);
-                MAT_AT(target, j, k) = t;
+            for (size_t k = 0; k < target->ncols; ++k) {
+                t = MAT_AT(*target, i, k);
+                MAT_AT(*target, i, k) = MAT_AT(*target, j, k);
+                MAT_AT(*target, j, k) = t;
             }
         }
     }
@@ -1590,15 +1683,15 @@ void cn_get_batch_mlp(Matrix *batch_in, Matrix *batch_tar, Matrix all_input,
                                 &MAT_AT(all_target, batch_num * batch_size, 0));
 }
 
-void cn_shuffle_conv_input(Matrix **input, LaData *targets, size_t len) {
+void cn_shuffle_conv_input(Matrix ***input, LaData **targets, size_t len) {
     for (size_t i = 0; i < len; i++) {
         size_t j = i + rand() % (len - i);
-        Matrix *imp = input[i];
-        input[i] = input[j];
-        input[j] = imp;
-        LaData tmp = targets[i];
-        targets[i] = targets[j];
-        targets[j] = tmp;
+        Matrix *imp = (*input)[i];
+        (*input)[i] = (*input)[j];
+        (*input)[j] = imp;
+        LaData tmp = (*targets)[i];
+        (*targets)[i] = (*targets)[j];
+        (*targets)[j] = tmp;
     }
 }
 
@@ -1622,13 +1715,16 @@ void cn_save_net_to_file(Net net, char *file_name) {
         fwrite(&net.layers[i].type, sizeof(net.layers[i].type), 1, fp);
         switch(net.layers[i].type) {
         case(Dense):
-            _cn_save_dense_layer_to_file(fp, net.layers[i].data.dense);
+            _cn_save_dense_layer_to_file(fp, &net.layers[i].data.dense);
             break;
         case (Convolutional):
+            _cn_save_conv_layer_to_file(fp, &net.layers[i].data.conv);
             break;
         case (Pooling):
+            _cn_save_pooling_layer_to_file(fp, &net.layers[i].data.pooling);
             break;
         case (GlobalPooling):
+            _cn_save_global_pooling_layer_to_file(fp, &net.layers[i].data.global_pooling);
             break;
         }
     }
@@ -1650,16 +1746,20 @@ Net cn_alloc_net_from_file(char *file_name) {
         fread(&ctype, sizeof(ctype), 1, fp);
         switch (ctype) {
         case (Dense):
-            _cn_alloc_dense_from_file(fp, &net, i);
+            _cn_alloc_dense_layer_from_file(fp, &net);
             break;
         case (Convolutional):
+            _cn_alloc_conv_layer_from_file(fp, &net);
             break;
         case (Pooling):
+            _cn_alloc_pooling_layer_from_file(fp, &net);
             break;
         case (GlobalPooling):
+            _cn_alloc_global_pooling_layer_from_file(fp, &net);
             break;
         }
     }
+    CLEAR_NET_ASSERT(nlayers == CN_NLAYERS);
     fclose(fp);
     return net;
 }
@@ -1673,7 +1773,7 @@ void cn_print_net(Net net, char *name) {
             _cn_print_dense(layer.data.dense, i);
             break;
         case (Convolutional):
-            _cn_print_convolutional_layer(layer.data.conv, i);
+            _cn_print_conv_layer(&layer.data.conv, i);
             break;
         case (Pooling):
             break;
@@ -1693,7 +1793,7 @@ float cn_learn_mlp(Net *net, Matrix input, Matrix target) {
     GradientStore *gs = &net->computation_graph;
 
     for (size_t i = 0; i < CN_NLAYERS; ++i) {
-        _cn_copy_dense_params(gs, net->layers[i].data.dense);
+        _cn_copy_dense_params(gs, &net->layers[i].data.dense);
     }
 
     float total_loss = 0;
@@ -1705,10 +1805,9 @@ float cn_learn_mlp(Net *net, Matrix input, Matrix target) {
         total_loss += _cn_find_grad_mlp(net, gs, input_vec, target_vec);
         gs->length = CN_NPARAMS + 1;
     }
-    float coef = CN_RATE;
 
     for (size_t i = 0; i < CN_NLAYERS; ++i) {
-        _cn_dense_apply_grads(gs, net->layers[i].data.dense, coef);
+        _cn_apply_dense_grads(gs, &net->layers[i].data.dense);
     }
 
     return total_loss / train_size;
@@ -1816,7 +1915,7 @@ void cn_print_target_output_pairs_mlp(Net net, Matrix input, Matrix target) {
 }
 
 /* Implement: Convolutional Net */
-float cn_learn_convolutional(Net *net, Matrix **inputs, LaData *targets, size_t nimput) {
+float cn_learn_conv(Net *net, Matrix **inputs, LaData *targets, size_t nimput) {
     CLEAR_NET_ASSERT((*targets).type == net->output_type);
     float total_loss = 0;
     net->computation_graph.length = 1;
@@ -1825,9 +1924,9 @@ float cn_learn_convolutional(Net *net, Matrix **inputs, LaData *targets, size_t 
     for (size_t i = 0; i < CN_NLAYERS; ++i) {
         Layer clayer = net->layers[i];
         if (clayer.type == Dense) {
-            _cn_copy_dense_params(gs, clayer.data.dense);
+            _cn_copy_dense_params(gs, &clayer.data.dense);
         } else if (clayer.type == Convolutional) {
-            _cn_copy_convolutional_params(gs, clayer.data.conv);
+            _cn_copy_conv_params(gs, &clayer.data.conv);
         }
     }
 
@@ -1836,12 +1935,11 @@ float cn_learn_convolutional(Net *net, Matrix **inputs, LaData *targets, size_t 
         gs->length = CN_NPARAMS + 1;
     }
 
-    float coef = CN_RATE;
     for (size_t i = 0; i < CN_NLAYERS; ++i) {
         if (net->layers[i].type == Dense) {
-            _cn_dense_apply_grads(gs, net->layers[i].data.dense, coef);
+            _cn_apply_dense_grads(gs, &net->layers[i].data.dense);
         } else if (net->layers[i].type == Convolutional) {
-            _cn_conv_apply_grads(gs, net->layers[i].data.conv, coef);
+            _cn_apply_conv_grads(gs, &net->layers[i].data.conv);
         }
     }
 
@@ -1890,7 +1988,7 @@ LaData cn_predict_conv(Net *net, Matrix *minput) {
             vinput = cn_forward_dense(&clayer.data.dense, vinput);
             break;
         case(Convolutional):
-            minput = cn_forward_convolutional(&clayer.data.conv, minput);
+            minput = cn_forward_conv(&clayer.data.conv, minput);
             break;
         case (Pooling):
             minput = cn_pool_layer(&clayer.data.pooling, minput);
@@ -1925,7 +2023,7 @@ LaData _cn_predict_conv(Net *net, GradientStore *gs, Matrix *minput) {
             vinput = _cn_forward_dense(&layer.data.dense, gs, vinput);
             break;
         case(Convolutional):
-            minput = _cn_forward_convolutional(&layer.data.conv, gs, minput);
+            minput = _cn_forward_conv(&layer.data.conv, gs, minput);
             break;
         case(Pooling):
             minput = _cn_pool_layer(gs, &layer.data.pooling, minput);

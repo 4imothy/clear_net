@@ -75,12 +75,13 @@ int main(void) {
         return 1;
     }
     // randomize for stochastic gradient descent
-    cn_shuffle_matrix_rows(train);
     Matrix train_input = cn_form_matrix(num_train_files, num_pixels,
                                         train.ncols, &MAT_AT(train, 0, 0));
     Matrix train_output =
         cn_form_matrix(num_train_files, dim_output, train.ncols,
                        &MAT_AT(train, 0, num_pixels));
+
+    cn_shuffle_mlp_input(&train_input, &train_output);
 
     char *test_path = "./datasets/mnist/test";
     Matrix test = cn_alloc_matrix(num_test_files, num_pixels + dim_output);
@@ -126,17 +127,17 @@ int main(void) {
         }
     }
 
-    printf("Final Error on training set: %f\n",
-           cn_loss_mlp(net, train_input, train_output));
-    char *file = "model";
-    cn_save_net_to_file(net, file);
-    cn_dealloc_net(&net);
-    net = cn_alloc_net_from_file(file);
-    printf("On training\n");
-    cn_print_target_output_pairs_mlp(net, train_input, train_output);
-    printf("On testing\n");
-    cn_print_target_output_pairs_mlp(net, test_input, test_output);
-    cn_dealloc_net(&net);
-    cn_dealloc_matrix(&train);
-    cn_dealloc_matrix(&test);
+    /* printf("Final Error on training set: %f\n", */
+    /*        cn_loss_mlp(net, train_input, train_output)); */
+    /* char *file = "model"; */
+    /* cn_save_net_to_file(net, file); */
+    /* cn_dealloc_net(&net); */
+    /* net = cn_alloc_net_from_file(file); */
+    /* printf("On training\n"); */
+    /* cn_print_target_output_pairs_mlp(net, train_input, train_output); */
+    /* printf("On testing\n"); */
+    /* cn_print_target_output_pairs_mlp(net, test_input, test_output); */
+    /* cn_dealloc_net(&net); */
+    /* cn_dealloc_matrix(&train); */
+    /* cn_dealloc_matrix(&test); */
 }

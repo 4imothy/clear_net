@@ -111,20 +111,22 @@ int main(void) {
         la_test_targets[i].data.vec = test_targets[i];
     }
 
-    cn_shuffle_conv_input(input_list, targets, num_train_files);
+    cn_shuffle_conv_input(&input_list, &targets, num_train_files);
 
     cn_default_hparams();
+    // cn_with_momentum(0.9);
     Net net = cn_init_net();
-    cn_alloc_convolutional_layer(&net, Valid, Sigmoid, nchannels, 3, img_height, img_width, 9 , 9);
-    cn_alloc_secondary_convolutional_layer(&net, Valid, Sigmoid, 5, 5, 5);
+    cn_alloc_conv_layer(&net, Valid, Sigmoid, nchannels, 3, img_height, img_width, 9 , 9);
+    cn_alloc_secondary_conv_layer(&net, Valid, Sigmoid, 5, 5, 5);
     cn_alloc_pooling_layer(&net, Average, 4, 4);
-    cn_alloc_secondary_convolutional_layer(&net, Valid, Sigmoid, 10, 3, 3);
+    cn_alloc_secondary_conv_layer(&net, Valid, Sigmoid, 10, 3, 3);
     cn_alloc_global_pooling_layer(&net, Max);
     cn_randomize_net(net, -1, 1);
 
     size_t nepochs = 2000;
     size_t batch_size = 32;
     CLEAR_NET_ASSERT(num_train_files % batch_size == 0);
+
     cn_set_rate(0.01);
     printf("Initial Cost: %f\n", cn_loss_conv(&net, input_list, targets, num_train_files));
     printf("Beginning Training\n");
@@ -135,13 +137,13 @@ int main(void) {
     for (size_t i = 0; i < nepochs; ++i) {
         for (size_t batch_num = 0; batch_num < (num_train_files / batch_size); ++batch_num) {
             cn_get_batch_conv(batch_in, batch_tar, input_list, targets, batch_num, batch_size);
-            printf("loss at batch: %zu is %f\n", batch_num, cn_learn_convolutional(&net, batch_in, batch_tar, batch_size));
+            printf("loss at batch: %zu is %f\n", batch_num, cn_learn_conv(&net, batch_in, batch_tar, batch_size));
         }
         loss = cn_loss_conv(&net, input_list, targets, num_train_files);
+        printf("Loss at epoch %zu: %f\n", i, loss);
         if (loss < 0.25) {
             break;
         }
-        printf("Loss at epoch %zu: %f\n", i, loss);
     }
 
     for (size_t i = 0; i < num_test_files; ++i) {
@@ -152,9 +154,12 @@ int main(void) {
         cn_print_vector_inline(cn_predict_conv(&net, test_list[i]).data.vec);
         printf("\n");
     }
+    char *file = "model";
     printf("Loss on validation: %f\n", cn_loss_conv(&net, test_list, la_test_targets, num_test_files));
-
-    // TODO do the saving and loading of net
+    cn_save_net_to_file(net, file);
+    cn_dealloc_net(&net);
+    net = cn_alloc_net_from_file(file);
+    printf("Loss on validation after loading save: %f\n", cn_loss_conv(&net, test_list, la_test_targets, num_test_files));
 
     return 0;
 }
