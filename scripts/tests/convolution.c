@@ -38,13 +38,13 @@ void fill_matrix(Matrix *mat, const float *elements, size_t elem_len) {
 }
 
 void do_test_with_default_elements(Net *net, Padding padding, Activation act, const size_t input_rows, const size_t input_cols, size_t krows, size_t kcols) {
-    cn_alloc_convolutional_layer(net, padding, act, 1, 1, input_rows, input_cols, krows, kcols);
+    cn_alloc_conv_layer(net, padding, act, 1, 1, input_rows, input_cols, krows, kcols);
     fill_matrix(&net->layers[0].data.conv.filters[0].kernels[0], poss_kernel_elements,
                     poss_kernel_elem_len);
     float input[input_rows * input_cols];
     Matrix minput = cn_form_matrix(input_rows, input_cols, input_cols, input);
     fill_matrix(&minput, poss_elements, poss_elements_len);
-    cn_forward_convolutional(&net->layers[0].data.conv, &minput);
+    cn_forward_conv(&net->layers[0].data.conv, &minput);
     print_results(net->layers[0].data.conv.outputs[0]);
 }
 
@@ -58,44 +58,44 @@ int main(int argc, char *argv[]) {
     srand(0);
     if (strcmp(argv[1], "same_zeros") == 0) {
         const size_t dim = 15;
-        cn_alloc_convolutional_layer(&net, Same, default_act, 1, 1, dim, dim, 3, 3);
+        cn_alloc_conv_layer(&net, Same, default_act, 1, 1, dim, dim, 3, 3);
         float elem[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
         net.layers[0].data.conv.filters[0].kernels[0].elements = elem;
         float input[dim * dim] = {0};
         Matrix minput = cn_form_matrix(dim, dim, dim, input);
         fill_matrix(&minput, poss_elements, poss_elements_len);
-        cn_forward_convolutional(&net.layers[0].data.conv, &minput);
+        cn_forward_conv(&net.layers[0].data.conv, &minput);
         print_results(net.layers[0].data.conv.outputs[0]);
     }
 
     else if (strcmp(argv[1], "same_identity") == 0) {
         const size_t dim = 10;
-        cn_alloc_convolutional_layer(&net, Same, default_act, 1, 1, dim, dim, 3, 3);
+        cn_alloc_conv_layer(&net, Same, default_act, 1, 1, dim, dim, 3, 3);
         float elem[] = {0, 0, 0, 0, 1, 0, 0, 0, 0};
         net.layers[0].data.conv.filters[0].kernels[0].elements = elem;
         float input[dim * dim] = {0};
         Matrix minput = cn_form_matrix(dim, dim, dim, input);
         fill_matrix(&minput, poss_elements, poss_elements_len);
-        cn_forward_convolutional(&net.layers[0].data.conv, &minput);
+        cn_forward_conv(&net.layers[0].data.conv, &minput);
         print_results(net.layers[0].data.conv.outputs[0]);
     }
 
     else if (strcmp(argv[1], "same_guassian_blur_3") == 0) {
         const size_t dim = 20;
-        cn_alloc_convolutional_layer(&net, Same, default_act, 1, 1, dim, dim, 3, 3);
+        cn_alloc_conv_layer(&net, Same, default_act, 1, 1, dim, dim, 3, 3);
         float elem[] = {0.0625, 0.1250, 0.0625, 0.1250, 0.25,
                         0.1250, 0.0625, 0.1250, 0.0625};
         net.layers[0].data.conv.filters[0].kernels[0].elements = elem;
         float input[dim * dim] = {0};
         Matrix minput = cn_form_matrix(dim, dim, dim, input);
         fill_matrix(&minput, poss_elements, poss_elements_len);
-        cn_forward_convolutional(&net.layers[0].data.conv, &minput);
+        cn_forward_conv(&net.layers[0].data.conv, &minput);
         print_results(net.layers[0].data.conv.outputs[0]);
     }
 
     else if (strcmp(argv[1], "same_guassian_blur_5") == 0) {
         const size_t dim = 20;
-        cn_alloc_convolutional_layer(&net, Same, default_act, 1, 1, dim, dim, 5, 5);
+        cn_alloc_conv_layer(&net, Same, default_act, 1, 1, dim, dim, 5, 5);
         float elem[] = {0.0037, 0.0147, 0.0256, 0.0147, 0.0037, 0.0147, 0.0586,
                         0.0952, 0.0586, 0.0147, 0.0256, 0.0952, 0.1502, 0.0952,
                         0.0256, 0.0147, 0.0586, 0.0952, 0.0586, 0.0147, 0.0037,
@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
         float input[dim * dim] = {0};
         Matrix minput = cn_form_matrix(dim, dim, dim, input);
         fill_matrix(&minput, poss_elements, poss_elements_len);
-        cn_forward_convolutional(&net.layers[0].data.conv, &minput);
+        cn_forward_conv(&net.layers[0].data.conv, &minput);
         print_results(net.layers[0].data.conv.outputs[0]);
     }
 
