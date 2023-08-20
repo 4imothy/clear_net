@@ -12,6 +12,8 @@ mnist
 autodiff
 convolution
 mnist_conv
+mnist_mlp
+mnist_mix
 # model save files
 model
 # ignore file of youtube demo
