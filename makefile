@@ -22,7 +22,7 @@ PY_FILES := $(shell find . -name '*.py' -not -path "./env/*")
 BENCH_LEARN_FILE := $(BENCHMARK_DIR)/bench_learn.py
 BENCH_MAT_MUL_FILE := $(BENCHMARK_DIR)/bench_mat_mul.c
 
-examples := mnist_mlp mnist_conv xor full_adder iris lin_reg
+examples := mnist_mlp mnist_conv mnist_mix xor full_adder iris lin_reg
 downloaders := get_mnist
 clear_net: $(LIB_FILE)
 
@@ -40,6 +40,7 @@ $(tests): clear_net $(TEST_FILES)
 test_%: %
 	$(PY) $(TEST_DIR)/$<.py
 
+test: $(addprefix test_, $(tests))
 
 $(downloaders): $(DOWNLOAD_SCRIPTS)
 	$(PY) $(DOWNLOAD_DATA_DIR)/$@.py
