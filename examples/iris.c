@@ -7,7 +7,7 @@
 // sepal length (cm), sepal width (cm), petal length (cm), petal width (cm),
 // target
 // clang-format off
-float test_values[] = {
+float train_values[] = {
     5.1, 3.5, 1.4, 0.2, 0,
     4.9, 3.0, 1.4, 0.2, 0,
     4.7, 3.2, 1.3, 0.2, 0,
@@ -168,7 +168,6 @@ int main(int argc, char *argv[]) {
     bool print = true;
 
     // Loop through command-line arguments
-    // TODO check this
     if (argc > 1 && strcmp(argv[1], "-b") == 0) {
         print = false;
     }
@@ -178,12 +177,12 @@ int main(int argc, char *argv[]) {
     size_t input_dim = 4;
     size_t output_dim = data_cols - input_dim;
     size_t val_size = 15;
-    size_t test_size = 150 - val_size;
-    Matrix test = cn_form_matrix(test_size, data_cols, data_cols, test_values);
+    size_t train_size = 150 - val_size;
+    Matrix train = cn_form_matrix(train_size, data_cols, data_cols, train_values);
     Matrix input =
-        cn_form_matrix(test_size, input_dim, test.stride, &MAT_AT(test, 0, 0));
-    Matrix target = cn_form_matrix(test_size, output_dim, test.stride,
-                                   &MAT_AT(test, 0, input_dim));
+        cn_form_matrix(train_size, input_dim, train.stride, &MAT_AT(train, 0, 0));
+    Matrix target = cn_form_matrix(train_size, output_dim, train.stride,
+                                   &MAT_AT(train, 0, input_dim));
     for (size_t i = 0; i < target.nrows; ++i) {
         MAT_AT(target, i, 0) /= 2;
     }
@@ -207,12 +206,12 @@ int main(int argc, char *argv[]) {
     float error_break = 0.01;
     size_t i;
     size_t batch_size = 45;
-    cn_shuffle_matrix_rows(test);
+    cn_shuffle_mlp_input(input, target);
     Matrix batch_in;
     Matrix batch_tar;
-    CLEAR_NET_ASSERT(test_size % batch_size == 0);
+    CLEAR_NET_ASSERT(train_size % batch_size == 0);
     for (i = 0; i < num_epochs; ++i) {
-        for (size_t batch_num = 0; batch_num < test_size / batch_size;
+        for (size_t batch_num = 0; batch_num < train_size / batch_size;
              ++batch_num) {
             cn_get_batch_mlp(&batch_in, &batch_tar, input, target, batch_num,
                          batch_size);

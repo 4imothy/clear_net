@@ -79,29 +79,6 @@ int main(void) {
        return 1;
     }
 
-    /* char *test_path = "./datasets/mnist/test"; */
-    /* Matrix *test = CLEAR_NET_ALLOC(num_test_files * sizeof(Matrix)); */
-    /* Vector *test_targets = CLEAR_NET_ALLOC(num_test_files * sizeof(Vector)); */
-    /* for (size_t i = 0; i < num_train_files; ++i) { */
-    /*     test[i] = cn_alloc_matrix(img_width, img_height); */
-    /*     test_targets[i] = cn_alloc_vector(dim_output); */
-    /* } */
-
-    /* res = get_data_from_dir(test, test_targets, test_path, num_test_files); */
-    /* if (res != 0) { */
-    /*     return 1; */
-    /* } */
-
-    // TODO make this a full convolutional net, and then fix the input randomization
-    cn_default_hparams();
-    Net net = cn_init_net();
-    cn_alloc_convolutional_layer(&net, Valid, Sigmoid, nchannels, 3, img_height, img_width, 8, 8);
-    cn_alloc_secondary_convolutional_layer(&net, Valid, LeakyReLU, 10, 3, 3);
-    cn_alloc_global_pooling_layer(&net, Average);
-    cn_alloc_secondary_dense_layer(&net, Tanh, 15);
-    cn_alloc_secondary_dense_layer(&net, Sigmoid, 10);
-    cn_randomize_net(net, -1, 1);
-
     Matrix **input_list = CLEAR_NET_ALLOC(num_train_files * sizeof(Matrix*));
     for (size_t i = 0; i < num_train_files; ++i) {
         input_list[i] = &train[i];
@@ -113,35 +90,71 @@ int main(void) {
         targets[i].data.vec = train_targets[i];
     }
 
-    // TODO this needs to randomize the inputs also
-    // TODO do this first
-    // cn_shuffle_conv_input(input_list, num_train_files);
 
-    // Make sure these are the same
-    // LaData vec = cn_predict_conv(&net, train);
-    // _cn_print_vector(vec.data.vec, "vec out");
-    // cn_learn_convolutional(&net, &train, targets, 1);
+    char *test_path = "./datasets/mnist/test";
+    Matrix *test = CLEAR_NET_ALLOC(num_test_files * sizeof(Matrix));
+    Vector *test_targets = CLEAR_NET_ALLOC(num_test_files * sizeof(Vector));
+    for (size_t i = 0; i < num_test_files; ++i) {
+        test[i] = cn_alloc_matrix(img_width, img_height);
+        test_targets[i] = cn_alloc_vector(dim_output);
+    }
+    res = get_data_from_dir(test, test_targets, test_path, num_test_files);
+    if (res != 0) {
+        return 1;
+    }
+
+    Matrix **test_list = CLEAR_NET_ALLOC(num_test_files * sizeof(Matrix*));
+    LaData *la_test_targets = CLEAR_NET_ALLOC(num_test_files * sizeof(LaData));
+    for (size_t i = 0; i < num_test_files; ++i) {
+        test_list[i] = &test[i];
+        la_test_targets[i].type = Vec;
+        la_test_targets[i].data.vec = test_targets[i];
+    }
+
+    cn_shuffle_conv_input(input_list, targets, num_train_files);
+
+    cn_default_hparams();
+    Net net = cn_init_net();
+    cn_alloc_convolutional_layer(&net, Valid, Sigmoid, nchannels, 3, img_height, img_width, 9 , 9);
+    cn_alloc_secondary_convolutional_layer(&net, Valid, Sigmoid, 5, 5, 5);
+    cn_alloc_pooling_layer(&net, Average, 4, 4);
+    cn_alloc_secondary_convolutional_layer(&net, Valid, Sigmoid, 10, 3, 3);
+    cn_alloc_global_pooling_layer(&net, Max);
+    cn_randomize_net(net, -1, 1);
 
     size_t nepochs = 2000;
-    size_t batch_size = 100;
+    size_t batch_size = 32;
     CLEAR_NET_ASSERT(num_train_files % batch_size == 0);
-    cn_set_rate(0.05);
-    // printf("Initial Cost: %f\n", cn_loss_conv(&net, input_list, targets, num_train_files));
+    cn_set_rate(0.01);
+    printf("Initial Cost: %f\n", cn_loss_conv(&net, input_list, targets, num_train_files));
     printf("Beginning Training\n");
 
-    /* Matrix **batch_in = CLEAR_NET_ALLOC(batch_size * sizeof(Matrix*)); */
-    /* LaData *batch_tar = CLEAR_NET_ALLOC(batch_size * sizeof(LaData)); */
-    /* for (size_t i = 0; i < nepochs; ++i) { */
-    /*     for (size_t batch_num = 0; batch_num < (num_train_files / batch_size); ++batch_num) { */
-    /*         cn_get_batch_conv(batch_in, batch_tar, input_list, targets, batch_num, batch_size); */
-    /*         printf("loss at batch: %zu is %f\n", batch_num, cn_learn_convolutional(&net, batch_in, batch_tar, batch_size)); */
-    /*     } */
-    /*     printf("Loss at epoch %zu: %f\n", i, cn_loss_conv(&net, input_list, targets, num_train_files)); */
-    /* } */
-
+    Matrix **batch_in = CLEAR_NET_ALLOC(batch_size * sizeof(Matrix*));
+    LaData *batch_tar = CLEAR_NET_ALLOC(batch_size * sizeof(LaData));
+    float loss;
     for (size_t i = 0; i < nepochs; ++i) {
-        printf("Loss at epoch %zu is %f\n", i, cn_learn_convolutional(&net, input_list, targets, 10));
+        for (size_t batch_num = 0; batch_num < (num_train_files / batch_size); ++batch_num) {
+            cn_get_batch_conv(batch_in, batch_tar, input_list, targets, batch_num, batch_size);
+            printf("loss at batch: %zu is %f\n", batch_num, cn_learn_convolutional(&net, batch_in, batch_tar, batch_size));
+        }
+        loss = cn_loss_conv(&net, input_list, targets, num_train_files);
+        if (loss < 0.25) {
+            break;
+        }
+        printf("Loss at epoch %zu: %f\n", i, loss);
     }
+
+    for (size_t i = 0; i < num_test_files; ++i) {
+        printf("tar: ");
+        cn_print_vector_inline(la_test_targets[i].data.vec);
+        printf("\n");
+        printf("net: ");
+        cn_print_vector_inline(cn_predict_conv(&net, test_list[i]).data.vec);
+        printf("\n");
+    }
+    printf("Loss on validation: %f\n", cn_loss_conv(&net, test_list, la_test_targets, num_test_files));
+
+    // TODO do the saving and loading of net
 
     return 0;
 }
