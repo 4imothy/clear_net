@@ -4,7 +4,9 @@ import os
 import torch
 
 cwd = os.getcwd()
-my_impl = "./autodiff"
+script_path = os.path.abspath(__file__)
+script_name = os.path.splitext(os.path.basename(script_path))[0]
+my_impl = "./" + script_name
 
 torch_res = []
 
@@ -83,7 +85,7 @@ def print_diff(mres, tres, name):
 
 def print_pass(code):
     """Print the test that was passed."""
-    print(f"Passed test: {code}")
+    print(f"Pass: {code}")
 
 
 def do_test_one():

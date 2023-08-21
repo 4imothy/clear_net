@@ -150,6 +150,7 @@ int main(void) {
         printf("tar: ");
         cn_print_vector_inline(la_test_targets[i].data.vec);
         printf("\n");
+        printf("-------------------------\n");
         printf("net: ");
         cn_print_vector_inline(cn_predict_conv(&net, test_list[i]).data.vec);
         printf("\n");

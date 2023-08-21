@@ -6,7 +6,9 @@ import scipy as sp
 
 
 cwd = os.getcwd()
-my_impl = "./convolution"
+script_path = os.path.abspath(__file__)
+script_name = os.path.splitext(os.path.basename(script_path))[0]
+my_impl = "./" + script_name
 poss_values = [0.10290608318034533, 0.8051580508692876,
                0.39055048005351034, 0.7739175926400883,
                0.24730207704015073, 0.7987075645399935,
