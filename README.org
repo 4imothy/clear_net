@@ -7,7 +7,7 @@ Check out some of the examples in the [[./examples][examples]] directory.
 *Some Features*
 - Creation and training of vanilla and convolutional models
 - Autodifferentiation engine
-- Stochastic gradient descent
+- Stochastic gradient descent and other optimization methods
 - Saving and loading a model to a file
 
 ** List of Functions
