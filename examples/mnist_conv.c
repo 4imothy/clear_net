@@ -84,7 +84,7 @@ int main(void) {
         input_list[i] = &train[i];
     }
 
-    LaData *targets = CLEAR_NET_ALLOC(num_train_files * sizeof(LaData));
+    LAData *targets = CLEAR_NET_ALLOC(num_train_files * sizeof(LAData));
     for (size_t i = 0; i < num_train_files; ++i) {
         targets[i].type = Vec;
         targets[i].data.vec = train_targets[i];
@@ -104,7 +104,7 @@ int main(void) {
     }
 
     Matrix **test_list = CLEAR_NET_ALLOC(num_test_files * sizeof(Matrix*));
-    LaData *la_test_targets = CLEAR_NET_ALLOC(num_test_files * sizeof(LaData));
+    LAData *la_test_targets = CLEAR_NET_ALLOC(num_test_files * sizeof(LAData));
     for (size_t i = 0; i < num_test_files; ++i) {
         test_list[i] = &test[i];
         la_test_targets[i].type = Vec;
@@ -132,7 +132,7 @@ int main(void) {
     printf("Beginning Training\n");
 
     Matrix **batch_in = CLEAR_NET_ALLOC(batch_size * sizeof(Matrix*));
-    LaData *batch_tar = CLEAR_NET_ALLOC(batch_size * sizeof(LaData));
+    LAData *batch_tar = CLEAR_NET_ALLOC(batch_size * sizeof(LAData));
     float loss;
     for (size_t i = 0; i < nepochs; ++i) {
         for (size_t batch_num = 0; batch_num < (num_train_files / batch_size); ++batch_num) {

@@ -9,6 +9,7 @@
 ***/
 
 /***
+    TODO create a public function for printing results of convolutional net
     TODO do a test for the computation graph ensuring that both results are the same
     TODO instead of copying the params on each _forward just return and read output ids
     TODO do a segmentation example with matrix output
@@ -76,7 +77,7 @@ typedef void BackWardFunction(GradientStore *nl, VarNode *var);
 GradientStore cn_alloc_gradient_store(size_t length);
 void cn_realloc_gradient_store(GradientStore *gs, size_t new_len);
 void cn_dealloc_gradient_store(GradientStore *nl);
-VarNode cn_create_var(float num, size_t prev_left, size_t prev_right, BackWardFunction *backward);
+VarNode _cn_create_var(float num, size_t prev_left, size_t prev_right, BackWardFunction *backward);
 size_t _cn_init_var(GradientStore *nl, float num, size_t prev_left,
                     size_t prev_right, BackWardFunction *backward);
 size_t cn_init_leaf_var(GradientStore *nl, float num);
@@ -107,8 +108,8 @@ typedef struct DMatrix DMatrix;
 Matrix cn_alloc_matrix(size_t nrows, size_t ncols);
 void cn_dealloc_matrix(Matrix *mat);
 void _cn_alloc_matrix_grad_stores(Matrix *mat);
-DMatrix cn_alloc_dmatrix(size_t nrows, size_t ncols);
-void cn_dealloc_dmatrix(DMatrix *mat);
+DMatrix _cn_alloc_dmatrix(size_t nrows, size_t ncols);
+void _cn_dealloc_dmatrix(DMatrix *mat);
 Matrix cn_form_matrix(size_t nrows, size_t ncols, size_t stride,
                       float *elements);
 void _cn_randomize_matrix(Matrix *mat, float lower, float upper);
@@ -135,7 +136,7 @@ typedef enum {
     Mat,
 } OutputType;
 typedef union VecMat VecMat;
-typedef struct LaData LaData;
+typedef struct LAData LAData;
 
 /* Declare: Net Structs */
 typedef struct DenseLayer DenseLayer;
@@ -225,32 +226,32 @@ Net cn_init_net(void);
 void cn_dealloc_net(Net *net);
 void _cn_add_net_layer(Net *net, Layer layer, size_t nparams);
 void cn_randomize_net(Net net, float lower, float upper);
-void cn_shuffle_mlp_input(Matrix *input, Matrix *target);
-void cn_get_batch_mlp(Matrix *batch_in, Matrix *batch_tar, Matrix all_input,
+void cn_shuffle_vani_input(Matrix *input, Matrix *target);
+void cn_get_batch_vani(Matrix *batch_in, Matrix *batch_tar, Matrix all_input,
                   Matrix all_target, size_t batch_num, size_t batch_size);
-void cn_shuffle_conv_input(Matrix ***input, LaData **targets, size_t len);
-void cn_get_batch_conv(Matrix **batch_in, LaData *batch_tar, Matrix **all_input,
-                       LaData *all_target, size_t batch_num, size_t batch_size);
+void cn_shuffle_conv_input(Matrix ***input, LAData **targets, size_t len);
+void cn_get_batch_conv(Matrix **batch_in, LAData *batch_tar, Matrix **all_input,
+                       LAData *all_target, size_t batch_num, size_t batch_size);
 void cn_save_net_to_file(Net net, char *file_name);
 Net cn_alloc_net_from_file(char *file_name);
 void cn_print_net(Net net, char *name);
 
-/* Declare: MLP */
-float cn_learn_mlp(Net *net, Matrix input, Matrix target);
-float _cn_find_grad_mlp(Net *net, GradientStore *gs, Vector input,
+/* Declare: Vani */
+float cn_learn_vani(Net *net, Matrix input, Matrix target);
+float _cn_find_grad_vani(Net *net, GradientStore *gs, Vector input,
                         Vector target);
-Vector cn_predict_mlp(Net net, Vector input);
-Vector _cn_predict_mlp(Net *net, GradientStore *gs, Vector input);
-float cn_loss_mlp(Net net, Matrix input, Matrix target);
-void cn_print_mlp_results(Net net, Matrix input, Matrix target);
-void cn_print_target_output_pairs_mlp(Net net, Matrix input, Matrix target);
+Vector cn_predict_vani(Net net, Vector input);
+Vector _cn_predict_vani(Net *net, GradientStore *gs, Vector input);
+float cn_loss_vani(Net net, Matrix input, Matrix target);
+void cn_print_vani_results(Net net, Matrix input, Matrix target);
+void cn_print_target_output_pairs_vani(Net net, Matrix input, Matrix target);
 
 /* Declare: Convolutional Net */
-float cn_learn_conv(Net *net, Matrix **inputs, LaData *targets, size_t nimput);
-float _cn_find_grad_conv(Net *net, GradientStore *gs, Matrix *inputs, LaData target);
-LaData cn_predict_conv(Net *net, Matrix *input);
-LaData _cn_predict_conv(Net *net, GradientStore *gs, Matrix *input);
-float cn_loss_conv(Net *net, Matrix **input, LaData *targets, size_t nimput);
+float cn_learn_conv(Net *net, Matrix **inputs, LAData *targets, size_t nimput);
+float _cn_find_grad_conv(Net *net, GradientStore *gs, Matrix *inputs, LAData target);
+LAData cn_predict_conv(Net *net, Matrix *input);
+LAData _cn_predict_conv(Net *net, GradientStore *gs, Matrix *input);
+float cn_loss_conv(Net *net, Matrix **input, LAData *targets, size_t nimput);
 
 #endif // CLEAR_NET
 
@@ -266,18 +267,18 @@ void _cn_fill_floats(float *ptr, size_t len, float val) {
 #define RAND_RANGE(upper, lower) (((float)rand() / RAND_MAX) * ((upper) - (lower)) + (lower))
 
 /* Implement: Hyper parameters */
-float CN_NEG_SCALE;
 float CN_RATE;
 size_t CN_NLAYERS;
 size_t CN_NPARAMS;
+float CN_NEG_SCALE;
 size_t CN_WITH_MOMENTUM;
 float CN_MOMENTUM_BETA;
 
 void cn_default_hparams(void) {
-    CN_NEG_SCALE = 0.1;
     CN_RATE = 0.01;
     CN_NLAYERS = 0;
     CN_NPARAMS = 0;
+    CN_NEG_SCALE = 0.1;
     CN_WITH_MOMENTUM = 0;
     CN_MOMENTUM_BETA = 0;
 }
@@ -353,7 +354,7 @@ void cn_dealloc_gradient_store(GradientStore *gs) {
     CLEAR_NET_DEALLOC(gs->vars);
 }
 
-VarNode cn_create_var(float num, size_t prev_left, size_t prev_right,
+VarNode _cn_create_var(float num, size_t prev_left, size_t prev_right,
                    BackWardFunction *backward) {
     return (VarNode){
         .num = num,
@@ -372,7 +373,7 @@ size_t _cn_init_var(GradientStore *gs, float num, size_t prev_left,
             CLEAR_NET_REALLOC(gs->vars, gs->max_length * sizeof(VarNode));
         CLEAR_NET_ASSERT(gs->vars);
     }
-    VarNode out = cn_create_var(num, prev_left, prev_right, backward);
+    VarNode out = _cn_create_var(num, prev_left, prev_right, backward);
     gs->vars[gs->length] = out;
     gs->length++;
     return gs->length - 1;
@@ -429,7 +430,7 @@ size_t cn_raise(GradientStore *gs, size_t to_cn_raise, size_t pow) {
     return out;
 }
 
-void cn_relu_backward(GradientStore *gs, VarNode *var) {
+void _cn_relu_backward(GradientStore *gs, VarNode *var) {
     if (var->num > 0) {
         GET_NODE(var->prev_left).grad += var->grad;
     }
@@ -437,7 +438,7 @@ void cn_relu_backward(GradientStore *gs, VarNode *var) {
 
 size_t cn_reluv(GradientStore *gs, size_t x) {
     float val = cn_relu(GET_NODE(x).num);
-    size_t out = _cn_init_var(gs, val, x, 0, cn_relu_backward);
+    size_t out = _cn_init_var(gs, val, x, 0, _cn_relu_backward);
     return out;
 }
 
@@ -563,7 +564,7 @@ void _cn_alloc_matrix_grad_stores(Matrix *mat) {
     _cn_fill_floats(mat->grad_stores, mat->nrows * mat->ncols, 0);
 }
 
-DMatrix cn_alloc_dmatrix(size_t nrows, size_t ncols) {
+DMatrix _cn_alloc_dmatrix(size_t nrows, size_t ncols) {
     DMatrix mat;
     mat.nrows = nrows;
     mat.ncols = ncols;
@@ -573,7 +574,7 @@ DMatrix cn_alloc_dmatrix(size_t nrows, size_t ncols) {
     return mat;
 }
 
-void cn_dealloc_dmatrix(DMatrix *mat) {
+void _cn_dealloc_dmatrix(DMatrix *mat) {
     CLEAR_NET_DEALLOC(mat->elements);
     mat->elements = NULL;
     mat->nrows = 0;
@@ -741,7 +742,7 @@ union VecMat {
     Matrix mat;
 };
 
-struct LaData {
+struct LAData {
     VecMat data;
     OutputType type;
 };
@@ -1046,7 +1047,7 @@ void cn_alloc_conv_layer(Net *net, Padding padding, Activation act,
         offset += conv_layer.output_nrows * conv_layer.output_ncols;
         conv_layer.filters[i] = filter;
         conv_layer.outputs[i] = cn_alloc_matrix(conv_layer.output_nrows, conv_layer.output_ncols);
-        conv_layer.output_ids[i] = cn_alloc_dmatrix(conv_layer.output_nrows, conv_layer.output_ncols);
+        conv_layer.output_ids[i] = _cn_alloc_dmatrix(conv_layer.output_nrows, conv_layer.output_ncols);
         _cn_fill_floats(conv_layer.outputs[i].elements, conv_layer.output_nrows * conv_layer.output_ncols, 0);
     }
     CN_NPARAMS = offset - 1;
@@ -1332,7 +1333,7 @@ void cn_alloc_pooling_layer(Net *net, PoolingStrategy strat,
     pooler.output_ids = CLEAR_NET_ALLOC(nimput * sizeof(DMatrix));
     for (size_t i = 0; i < nimput; ++i) {
         pooler.outputs[i] = cn_alloc_matrix(pooler.output_nrows, pooler.output_ncols);
-        pooler.output_ids[i] = cn_alloc_dmatrix(pooler.output_nrows, pooler.output_ncols);
+        pooler.output_ids[i] = _cn_alloc_dmatrix(pooler.output_nrows, pooler.output_ncols);
     }
     pooler.noutput = nimput;
 
@@ -1351,7 +1352,7 @@ void _cn_dealloc_pooling_layer(PoolingLayer *layer) {
     layer->output_ncols = 0;
     for (size_t i = 0; i < layer->noutput; ++i) {
         cn_dealloc_matrix(&layer->outputs[i]);
-        cn_dealloc_dmatrix(&layer->output_ids[i]);
+        _cn_dealloc_dmatrix(&layer->output_ids[i]);
     }
     CLEAR_NET_DEALLOC(layer->outputs);
     CLEAR_NET_DEALLOC(layer->output_ids);
@@ -1655,7 +1656,7 @@ void cn_randomize_net(Net net, float lower, float upper) {
     }
 }
 
-void cn_shuffle_mlp_input(Matrix *input, Matrix *target) {
+void cn_shuffle_vani_input(Matrix *input, Matrix *target) {
     CLEAR_NET_ASSERT(input->nrows == target->nrows);
     float t;
     for (size_t i = 0; i < input->nrows; ++i) {
@@ -1675,7 +1676,7 @@ void cn_shuffle_mlp_input(Matrix *input, Matrix *target) {
     }
 }
 
-void cn_get_batch_mlp(Matrix *batch_in, Matrix *batch_tar, Matrix all_input,
+void cn_get_batch_vani(Matrix *batch_in, Matrix *batch_tar, Matrix all_input,
                   Matrix all_target, size_t batch_num, size_t batch_size) {
     *batch_in = cn_form_matrix(batch_size, all_input.ncols, all_input.stride,
                                &MAT_AT(all_input, batch_num * batch_size, 0));
@@ -1683,20 +1684,20 @@ void cn_get_batch_mlp(Matrix *batch_in, Matrix *batch_tar, Matrix all_input,
                                 &MAT_AT(all_target, batch_num * batch_size, 0));
 }
 
-void cn_shuffle_conv_input(Matrix ***input, LaData **targets, size_t len) {
+void cn_shuffle_conv_input(Matrix ***input, LAData **targets, size_t len) {
     for (size_t i = 0; i < len; i++) {
         size_t j = i + rand() % (len - i);
         Matrix *imp = (*input)[i];
         (*input)[i] = (*input)[j];
         (*input)[j] = imp;
-        LaData tmp = (*targets)[i];
+        LAData tmp = (*targets)[i];
         (*targets)[i] = (*targets)[j];
         (*targets)[j] = tmp;
     }
 }
 
-void cn_get_batch_conv(Matrix **batch_in, LaData *batch_tar, Matrix **all_input,
-                       LaData *all_target, size_t batch_num, size_t batch_size) {
+void cn_get_batch_conv(Matrix **batch_in, LAData *batch_tar, Matrix **all_input,
+                       LAData *all_target, size_t batch_num, size_t batch_size) {
     size_t shift = batch_num * batch_size;
     for (size_t i = 0; i < batch_size; ++i) {
         batch_in[i] = all_input[i + shift];
@@ -1785,8 +1786,8 @@ void cn_print_net(Net net, char *name) {
     printf("]\n");
 }
 
-/* Implement: MLP */
-float cn_learn_mlp(Net *net, Matrix input, Matrix target) {
+/* Implement: VANI */
+float cn_learn_vani(Net *net, Matrix input, Matrix target) {
     CLEAR_NET_ASSERT(input.nrows == target.nrows);
     size_t train_size = input.nrows;
     net->computation_graph.length = 1;
@@ -1802,7 +1803,7 @@ float cn_learn_mlp(Net *net, Matrix input, Matrix target) {
     for (size_t i = 0; i < train_size; ++i) {
         input_vec = cn_form_vector(input.ncols, &MAT_AT(input, i, 0));
         target_vec = cn_form_vector(target.ncols, &MAT_AT(target, i, 0));
-        total_loss += _cn_find_grad_mlp(net, gs, input_vec, target_vec);
+        total_loss += _cn_find_grad_vani(net, gs, input_vec, target_vec);
         gs->length = CN_NPARAMS + 1;
     }
 
@@ -1813,10 +1814,10 @@ float cn_learn_mlp(Net *net, Matrix input, Matrix target) {
     return total_loss / train_size;
 }
 
-float _cn_find_grad_mlp(Net *net, GradientStore *gs, Vector input, Vector target) {
+float _cn_find_grad_vani(Net *net, GradientStore *gs, Vector input, Vector target) {
     input.gs_id = gs->length;
     _cn_copy_vector_params(gs, input);
-    Vector prediction = _cn_predict_mlp(net, gs, input);
+    Vector prediction = _cn_predict_vani(net, gs, input);
 
     target.gs_id = gs->length;
     _cn_copy_vector_params(gs, target);
@@ -1834,7 +1835,7 @@ float _cn_find_grad_mlp(Net *net, GradientStore *gs, Vector input, Vector target
     return GET_NODE(loss).num;
 }
 
-Vector cn_predict_mlp(Net net, Vector input) {
+Vector cn_predict_vani(Net net, Vector input) {
     Vector out = input;
 
     for (size_t i = 0; i < CN_NLAYERS; ++i) {
@@ -1844,7 +1845,7 @@ Vector cn_predict_mlp(Net net, Vector input) {
     return out;
 }
 
-Vector _cn_predict_mlp(Net *net, GradientStore *gs, Vector input) {
+Vector _cn_predict_vani(Net *net, GradientStore *gs, Vector input) {
     CLEAR_NET_ASSERT(input.nelem == net->layers[0].data.dense.weights.nrows);
     Vector guess = input;
     for (size_t i = 0; i < CN_NLAYERS; ++i) {
@@ -1853,14 +1854,14 @@ Vector _cn_predict_mlp(Net *net, GradientStore *gs, Vector input) {
     return guess;
 }
 
-float cn_loss_mlp(Net net, Matrix input, Matrix target) {
+float cn_loss_vani(Net net, Matrix input, Matrix target) {
     CLEAR_NET_ASSERT(input.nrows == target.nrows);
     size_t size = input.nrows;
     float loss = 0;
     for (size_t i = 0; i < size; ++i) {
         Vector in = cn_form_vector(input.ncols, &MAT_AT(input, i, 0));
         Vector tar = cn_form_vector(target.ncols, &MAT_AT(target, i, 0));
-        Vector out = cn_predict_mlp(net, in);
+        Vector out = cn_predict_vani(net, in);
         for (size_t j = 0; j < out.nelem; ++j) {
             loss += powf(VEC_AT(out, j) - VEC_AT(tar, j), 2);
         }
@@ -1868,7 +1869,7 @@ float cn_loss_mlp(Net net, Matrix input, Matrix target) {
     return loss / size;
 }
 
-void cn_print_mlp_results(Net net, Matrix input, Matrix target) {
+void cn_print_vani_results(Net net, Matrix input, Matrix target) {
     CLEAR_NET_ASSERT(input.nrows == target.nrows);
     size_t size = input.nrows;
     printf("Input | Net Output | Target\n");
@@ -1876,7 +1877,7 @@ void cn_print_mlp_results(Net net, Matrix input, Matrix target) {
     for (size_t i = 0; i < size; ++i) {
         Vector in = cn_form_vector(input.ncols, &MAT_AT(input, i, 0));
         Vector tar = cn_form_vector(target.ncols, &MAT_AT(target, i, 0));
-        Vector out = cn_predict_mlp(net, in);
+        Vector out = cn_predict_vani(net, in);
         for (size_t j = 0; j < out.nelem; ++j) {
             loss += powf(VEC_AT(out, j) - VEC_AT(tar, j), 2);
         }
@@ -1891,7 +1892,7 @@ void cn_print_mlp_results(Net net, Matrix input, Matrix target) {
     printf("Average Loss: %f\n", loss / size);
 }
 
-void cn_print_target_output_pairs_mlp(Net net, Matrix input, Matrix target) {
+void cn_print_target_output_pairs_vani(Net net, Matrix input, Matrix target) {
     CLEAR_NET_ASSERT(input.nrows == target.nrows);
     Vector in;
     Vector tar;
@@ -1899,7 +1900,7 @@ void cn_print_target_output_pairs_mlp(Net net, Matrix input, Matrix target) {
     for (size_t i = 0; i < input.nrows; ++i) {
         in = cn_form_vector(input.ncols, &MAT_AT(input, i, 0));
         tar = cn_form_vector(target.ncols, &MAT_AT(target, i, 0));
-        out = cn_predict_mlp(net, in);
+        out = cn_predict_vani(net, in);
         printf("------------\n");
         printf("target: ");
         for (size_t j = 0; j < tar.nelem; ++j) {
@@ -1915,7 +1916,7 @@ void cn_print_target_output_pairs_mlp(Net net, Matrix input, Matrix target) {
 }
 
 /* Implement: Convolutional Net */
-float cn_learn_conv(Net *net, Matrix **inputs, LaData *targets, size_t nimput) {
+float cn_learn_conv(Net *net, Matrix **inputs, LAData *targets, size_t nimput) {
     CLEAR_NET_ASSERT((*targets).type == net->output_type);
     float total_loss = 0;
     net->computation_graph.length = 1;
@@ -1946,12 +1947,12 @@ float cn_learn_conv(Net *net, Matrix **inputs, LaData *targets, size_t nimput) {
     return total_loss / nimput;
 }
 
-float _cn_find_grad_conv(Net *net, GradientStore *gs, Matrix *input, LaData target) {
+float _cn_find_grad_conv(Net *net, GradientStore *gs, Matrix *input, LAData target) {
     for (size_t i = 0; i < net->layers[0].data.conv.nimput; ++i) {
         input[i].gs_id = gs->length;
         _cn_copy_matrix_params(gs, input[i]);
     }
-    LaData prediction = _cn_predict_conv(net, gs, input);
+    LAData prediction = _cn_predict_conv(net, gs, input);
 
     switch(prediction.type) {
     case(Vec): {
@@ -1978,7 +1979,7 @@ float _cn_find_grad_conv(Net *net, GradientStore *gs, Matrix *input, LaData targ
     }
 }
 
-LaData cn_predict_conv(Net *net, Matrix *minput) {
+LAData cn_predict_conv(Net *net, Matrix *minput) {
     CLEAR_NET_ASSERT(net->layers[0].type == Convolutional);
     Vector vinput;
     for (size_t i = 0; i < CN_NLAYERS; ++i){
@@ -1999,7 +2000,7 @@ LaData cn_predict_conv(Net *net, Matrix *minput) {
         }
     }
 
-    LaData res;
+    LAData res;
     res.type = net->output_type;
     switch (res.type){
     case(Vec):
@@ -2013,7 +2014,7 @@ LaData cn_predict_conv(Net *net, Matrix *minput) {
     return res;
 }
 
-LaData _cn_predict_conv(Net *net, GradientStore *gs, Matrix *minput) {
+LAData _cn_predict_conv(Net *net, GradientStore *gs, Matrix *minput) {
     CLEAR_NET_ASSERT(net->layers[0].type == Convolutional);
     Vector vinput;
     for (size_t i = 0; i < CN_NLAYERS; ++i) {
@@ -2034,7 +2035,7 @@ LaData _cn_predict_conv(Net *net, GradientStore *gs, Matrix *minput) {
         }
     }
 
-    LaData res;
+    LAData res;
     res.type = net->output_type;
     switch (res.type){
     case(Vec):
@@ -2048,10 +2049,10 @@ LaData _cn_predict_conv(Net *net, GradientStore *gs, Matrix *minput) {
     return res;
 }
 
-float cn_loss_conv(Net *net, Matrix **input, LaData *targets, size_t nimput) {
+float cn_loss_conv(Net *net, Matrix **input, LAData *targets, size_t nimput) {
     float loss = 0;
     for (size_t i = 0; i < nimput; ++i) {
-        LaData prediction = cn_predict_conv(net, input[i]);
+        LAData prediction = cn_predict_conv(net, input[i]);
         switch (prediction.type) {
         case (Vec): {
             for (size_t j = 0; j < prediction.data.vec.nelem; ++j) {

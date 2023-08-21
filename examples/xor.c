@@ -24,18 +24,18 @@ int main(void) {
     float loss;
     size_t num_epochs = 10000;
     for (size_t i = 0; i < num_epochs; ++i) {
-        loss = cn_learn_mlp(&net, input, target);
+        loss = cn_learn_vani(&net, input, target);
         if (i % 100 == 0) {
             printf("Average loss: %f\n", loss);
         }
     }
     printf("Final loss: %g\n", loss);
-    cn_print_mlp_results(net, input, target);
+    cn_print_vani_results(net, input, target);
     char *file = "model";
     cn_save_net_to_file(net, file);
     cn_dealloc_net(&net);
     net = cn_alloc_net_from_file(file);
-    cn_print_mlp_results(net, input, target);
+    cn_print_vani_results(net, input, target);
     cn_dealloc_net(&net);
     cn_dealloc_matrix(&data);
 }

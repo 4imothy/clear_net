@@ -81,7 +81,7 @@ int main(void) {
     float error_break = 0.01f;
     float loss;
     for (size_t i = 0; i < num_epochs; ++i) {
-        loss = cn_learn_mlp(&net, input, output);
+        loss = cn_learn_vani(&net, input, output);
         if (i % (num_epochs / 20) == 0) {
             printf("Cost at %zu: %f\n", i, loss);
         }
@@ -90,14 +90,14 @@ int main(void) {
             break;
         }
     }
-    printf("Final output: %f\n", cn_loss_mlp(net, input, output));
-    cn_print_mlp_results(net, input, output);
+    printf("Final output: %f\n", cn_loss_vani(net, input, output));
+    cn_print_vani_results(net, input, output);
     char *file_name = "model";
     cn_save_net_to_file(net, file_name);
     cn_dealloc_net(&net);
     net = cn_alloc_net_from_file(file_name);
     printf("After Loading From File\n");
-    cn_print_mlp_results(net, val_in, val_out);
+    cn_print_vani_results(net, val_in, val_out);
     cn_dealloc_net(&net);
     return 0;
 }

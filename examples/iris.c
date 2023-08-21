@@ -207,18 +207,18 @@ int main(int argc, char *argv[]) {
     float error_break = 0.01;
     size_t i;
     size_t batch_size = 45;
-    cn_shuffle_mlp_input(input, target);
+    cn_shuffle_vani_input(&input, &target);
     Matrix batch_in;
     Matrix batch_tar;
     CLEAR_NET_ASSERT(train_size % batch_size == 0);
     for (i = 0; i < num_epochs; ++i) {
         for (size_t batch_num = 0; batch_num < train_size / batch_size;
              ++batch_num) {
-            cn_get_batch_mlp(&batch_in, &batch_tar, input, target, batch_num,
+            cn_get_batch_vani(&batch_in, &batch_tar, input, target, batch_num,
                          batch_size);
-            cn_learn_mlp(&net, batch_in, batch_tar);
+            cn_learn_vani(&net, batch_in, batch_tar);
         }
-        loss = cn_loss_mlp(net, input, target);
+        loss = cn_loss_vani(net, input, target);
         if (loss < error_break) {
             break;
         }
@@ -228,15 +228,15 @@ int main(int argc, char *argv[]) {
     }
     if (print) {
         printf("Final loss at %zu : %g\n", i, loss);
-        cn_print_mlp_results(net, input, target);
+        cn_print_vani_results(net, input, target);
         char *file = "model";
         cn_save_net_to_file(net, file);
         cn_dealloc_net(&net);
         printf("After loading from file\n");
         net = cn_alloc_net_from_file(file);
-        cn_print_mlp_results(net, input, target);
+        cn_print_vani_results(net, input, target);
         printf("On validation set\n");
-        cn_print_mlp_results(net, val_input, val_target);
+        cn_print_vani_results(net, val_input, val_target);
         cn_dealloc_net(&net);
     }
     return 0;
