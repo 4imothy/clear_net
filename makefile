@@ -32,7 +32,7 @@ $(examples): clear_net $(EXAMPLE_FILES)
 run_%: %
 	./$<
 
-tests := autodiff convolution
+tests := autodiff convolution gs_forward
 
 $(tests): clear_net $(TEST_FILES)
 	$(CC) $(CFLAGS) -o $@ $(TEST_DIR)/$@.c
@@ -58,4 +58,4 @@ format: $(C_FILES) $(H_FILES) $(PY_FILES)
 
 clean:
 	rm -f $(examples) $(tests) bench_mul
-	rm -f model lin_reg_model adder_model
+	rm -f model
