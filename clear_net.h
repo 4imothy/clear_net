@@ -12,6 +12,8 @@
     TODO create a public function for printing results of convolutional net
     TODO do a test for the computation graph ensuring that both results are the same
     TODO instead of copying the params on each _forward just return and read output ids
+    TODO more loss functions
+    TODO more optimization functions
     TODO do a segmentation example with matrix output
 ***/
 
