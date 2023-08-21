@@ -35,7 +35,7 @@ int main(void) {
     cn_alloc_dense_layer(&net, Tanh, num_inputs, 3);
     cn_alloc_secondary_dense_layer(&net, LeakyReLU, 8);
     cn_alloc_secondary_dense_layer(&net, Sigmoid, num_outputs);
-    cn_randomize_net(net, -1, 1);
+    cn_randomize_net(&net, -1, 1);
     cn_print_net(net, "net");
     float loss;
     for (size_t i = 0; i < num_epochs; ++i) {

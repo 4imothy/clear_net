@@ -121,7 +121,7 @@ int main(void) {
     cn_alloc_pooling_layer(&net, Average, 4, 4);
     cn_alloc_secondary_conv_layer(&net, Valid, Sigmoid, 10, 3, 3);
     cn_alloc_global_pooling_layer(&net, Max);
-    cn_randomize_net(net, -1, 1);
+    cn_randomize_net(&net, -1, 1);
 
     size_t nepochs = 2000;
     size_t batch_size = 32;

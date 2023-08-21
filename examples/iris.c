@@ -201,7 +201,7 @@ int main(int argc, char *argv[]) {
     cn_with_momentum(0.9);
     Net net = cn_init_net();
     cn_alloc_dense_layer(&net, Sigmoid, input_dim, 1);
-    cn_randomize_net(net, -1, 1);
+    cn_randomize_net(&net, -1, 1);
     size_t num_epochs = 10000;
     float loss;
     float error_break = 0.01;
@@ -218,7 +218,7 @@ int main(int argc, char *argv[]) {
                          batch_size);
             cn_learn_vani(&net, batch_in, batch_tar);
         }
-        loss = cn_loss_vani(net, input, target);
+        loss = cn_loss_vani(&net, input, target);
         if (loss < error_break) {
             break;
         }

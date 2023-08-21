@@ -4,10 +4,11 @@
 int main(void) {
     srand(0);
     cn_default_hparams();
+    cn_set_rate(0.5);
     Net net = cn_init_net();
     cn_alloc_dense_layer(&net, Sigmoid, 2, 2);
     cn_alloc_secondary_dense_layer(&net, Sigmoid, 1);
-    cn_randomize_net(net, -1, 1);
+    cn_randomize_net(&net, -1, 1);
     Matrix data = cn_alloc_matrix(4, 3);
     for (size_t i = 0; i < 2; ++i) {
         for (size_t j = 0; j < 2; ++j) {

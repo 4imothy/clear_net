@@ -10,7 +10,6 @@
 
 /***
     TODO create a public function for printing results of convolutional net
-    TODO do a test for the computation graph ensuring that both results are the same
     TODO instead of copying the params on each _forward just return and read output ids
     TODO more loss functions
     TODO more optimization functions
@@ -227,7 +226,8 @@ Layer _cn_init_layer(LayerType type);
 Net cn_init_net(void);
 void cn_dealloc_net(Net *net);
 void _cn_add_net_layer(Net *net, Layer layer, size_t nparams);
-void cn_randomize_net(Net net, float lower, float upper);
+void _cn_copy_net_params(Net *net, GradientStore *gs);
+void cn_randomize_net(Net *net, float lower, float upper);
 void cn_shuffle_vani_input(Matrix *input, Matrix *target);
 void cn_get_batch_vani(Matrix *batch_in, Matrix *batch_tar, Matrix all_input,
                   Matrix all_target, size_t batch_num, size_t batch_size);
@@ -242,9 +242,9 @@ void cn_print_net(Net net, char *name);
 float cn_learn_vani(Net *net, Matrix input, Matrix target);
 float _cn_find_grad_vani(Net *net, GradientStore *gs, Vector input,
                         Vector target);
-Vector cn_predict_vani(Net net, Vector input);
+Vector cn_predict_vani(Net *net, Vector input);
 Vector _cn_predict_vani(Net *net, GradientStore *gs, Vector input);
-float cn_loss_vani(Net net, Matrix input, Matrix target);
+float cn_loss_vani(Net *net, Matrix input, Matrix target);
 void cn_print_vani_results(Net net, Matrix input, Matrix target);
 void cn_print_target_output_pairs_vani(Net net, Matrix input, Matrix target);
 
@@ -1469,7 +1469,6 @@ void _cn_alloc_pooling_layer_from_file(FILE *fp, Net *net) {
     cn_alloc_pooling_layer(net, strat, k_nrows, k_ncols);
 }
 
-// TODO test the printing
 void _cn_print_pooling_layer(PoolingLayer layer, size_t layer_id) {
     printf("Layer #%zu: ", layer_id);
     switch(layer.strat) {
@@ -1647,9 +1646,20 @@ void _cn_add_net_layer(Net *net, Layer layer, size_t nparams) {
     }
 }
 
-void cn_randomize_net(Net net, float lower, float upper) {
+void _cn_copy_net_params(Net *net, GradientStore *gs) {
     for (size_t i = 0; i < CN_NLAYERS; ++i) {
-        Layer layer = net.layers[i];
+        Layer clayer = net->layers[i];
+        if (clayer.type == Dense) {
+            _cn_copy_dense_params(gs, &clayer.data.dense);
+        } else if (clayer.type == Convolutional) {
+            _cn_copy_conv_params(gs, &clayer.data.conv);
+        }
+    }
+}
+
+void cn_randomize_net(Net *net, float lower, float upper) {
+    for (size_t i = 0; i < CN_NLAYERS; ++i) {
+        Layer layer = net->layers[i];
         if (layer.type == Dense) {
             _cn_randomize_dense_layer(&layer.data.dense, lower, upper);
         } else if (layer.type == Convolutional) {
@@ -1795,9 +1805,7 @@ float cn_learn_vani(Net *net, Matrix input, Matrix target) {
     net->computation_graph.length = 1;
     GradientStore *gs = &net->computation_graph;
 
-    for (size_t i = 0; i < CN_NLAYERS; ++i) {
-        _cn_copy_dense_params(gs, &net->layers[i].data.dense);
-    }
+    _cn_copy_net_params(net, gs);
 
     float total_loss = 0;
     Vector input_vec;
@@ -1837,11 +1845,11 @@ float _cn_find_grad_vani(Net *net, GradientStore *gs, Vector input, Vector targe
     return GET_NODE(loss).num;
 }
 
-Vector cn_predict_vani(Net net, Vector input) {
+Vector cn_predict_vani(Net *net, Vector input) {
     Vector out = input;
 
     for (size_t i = 0; i < CN_NLAYERS; ++i) {
-        out = cn_forward_dense(&net.layers[i].data.dense, out);
+        out = cn_forward_dense(&net->layers[i].data.dense, out);
     }
 
     return out;
@@ -1856,7 +1864,7 @@ Vector _cn_predict_vani(Net *net, GradientStore *gs, Vector input) {
     return guess;
 }
 
-float cn_loss_vani(Net net, Matrix input, Matrix target) {
+float cn_loss_vani(Net *net, Matrix input, Matrix target) {
     CLEAR_NET_ASSERT(input.nrows == target.nrows);
     size_t size = input.nrows;
     float loss = 0;
@@ -1879,7 +1887,7 @@ void cn_print_vani_results(Net net, Matrix input, Matrix target) {
     for (size_t i = 0; i < size; ++i) {
         Vector in = cn_form_vector(input.ncols, &MAT_AT(input, i, 0));
         Vector tar = cn_form_vector(target.ncols, &MAT_AT(target, i, 0));
-        Vector out = cn_predict_vani(net, in);
+        Vector out = cn_predict_vani(&net, in);
         for (size_t j = 0; j < out.nelem; ++j) {
             loss += powf(VEC_AT(out, j) - VEC_AT(tar, j), 2);
         }
@@ -1902,7 +1910,7 @@ void cn_print_target_output_pairs_vani(Net net, Matrix input, Matrix target) {
     for (size_t i = 0; i < input.nrows; ++i) {
         in = cn_form_vector(input.ncols, &MAT_AT(input, i, 0));
         tar = cn_form_vector(target.ncols, &MAT_AT(target, i, 0));
-        out = cn_predict_vani(net, in);
+        out = cn_predict_vani(&net, in);
         printf("------------\n");
         printf("target: ");
         for (size_t j = 0; j < tar.nelem; ++j) {
@@ -1924,14 +1932,7 @@ float cn_learn_conv(Net *net, Matrix **inputs, LAData *targets, size_t nimput) {
     net->computation_graph.length = 1;
     GradientStore *gs = &net->computation_graph;
 
-    for (size_t i = 0; i < CN_NLAYERS; ++i) {
-        Layer clayer = net->layers[i];
-        if (clayer.type == Dense) {
-            _cn_copy_dense_params(gs, &clayer.data.dense);
-        } else if (clayer.type == Convolutional) {
-            _cn_copy_conv_params(gs, &clayer.data.conv);
-        }
-    }
+    _cn_copy_net_params(net, gs);
 
     for (size_t i = 0; i < nimput; ++i) {
         total_loss += _cn_find_grad_conv(net, gs, inputs[i], targets[i]);
