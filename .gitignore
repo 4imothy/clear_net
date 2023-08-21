@@ -12,7 +12,7 @@ mnist
 autodiff
 convolution
 mnist_conv
-mnist_mlp
+mnist_vanilla
 mnist_mix
 # model save files
 model
