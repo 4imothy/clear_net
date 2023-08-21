@@ -4,6 +4,12 @@
 A single file /C/ library for the creation and training of vanilla and convolutional neural nets whose only dependency is /C/ itself.
 Check out some of the examples in the [[./examples][examples]] directory.
 
+*Some Features*
+- Creation and training of vanilla and convolutional models
+- Autodifferentiation engine
+- Stochastic gradient descent
+- Saving and loading a model to a file
+
 ** List of Functions
 All of these functions are used in files in the [[./examples][examples]] directory.
 - *[[./examples/xor.c][xor]]:* Vanilla net creation and training on xor
