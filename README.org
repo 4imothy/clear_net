@@ -7,11 +7,17 @@ Check out some of the examples in the [[./examples][examples]] directory.
 ** List of Functions
 All of these functions are used in files in the [[./examples][examples]] directory.
 *[[./examples/xor.c][xor]]:* Vanilla net creation and training on xor
+
 *[[./examples/lin_reg.c][lin reg]]:* Vanilla net creation and training on simple linear regression example
+
 *[[./examples/iris.c][iris]]:* Vanilla net creation and training with stochastic gradient descent on the iris dataset
+
 *[[./examples/full_adder.c][full adder]]:* Vanilla net creation and training with momentum on full adder operation
+
 *[[./examples/mnist_vanilla.c][mnist vanilla]]:* Vanilla net creation and training with momentum and stochastic gradient descent on mnist dataset
+
 *[[./examples/mnist_mix.c][mnist mix]]:* Convolutional net with some dense layers creation and training with momentum and stochastic gradient descent on mnist dataset
+
 *[[./examples/mnist_conv.c][mnist convolutional]]:* Fully convolutional net creation and training stochastic gradient descent on mnist dataset
 
 *** Hyper Parameters
