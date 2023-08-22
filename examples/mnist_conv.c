@@ -115,11 +115,11 @@ int main(void) {
 
     cn_default_hparams();
     // cn_with_momentum(0.9);
-    Net net = cn_init_net();
-    cn_alloc_conv_layer(&net, Valid, Sigmoid, nchannels, 3, img_height, img_width, 9 , 9);
-    cn_alloc_secondary_conv_layer(&net, Valid, Sigmoid, 5, 5, 5);
+    Net net = cn_alloc_conv_net(img_height, img_width, nchannels);
+    cn_alloc_conv_layer(&net, Valid, Sigmoid, 3, 9 , 9);
+    cn_alloc_conv_layer(&net, Valid, Sigmoid, 5, 5, 5);
     cn_alloc_pooling_layer(&net, Average, 4, 4);
-    cn_alloc_secondary_conv_layer(&net, Valid, Sigmoid, 10, 3, 3);
+    cn_alloc_conv_layer(&net, Valid, Sigmoid, 10, 3, 3);
     cn_alloc_global_pooling_layer(&net, Max);
     cn_randomize_net(&net, -1, 1);
 
@@ -133,11 +133,12 @@ int main(void) {
 
     Matrix **batch_in = CLEAR_NET_ALLOC(batch_size * sizeof(Matrix*));
     LAData *batch_tar = CLEAR_NET_ALLOC(batch_size * sizeof(LAData));
+    size_t nbatches = num_train_files / batch_size;
     float loss;
     for (size_t i = 0; i < nepochs; ++i) {
-        for (size_t batch_num = 0; batch_num < (num_train_files / batch_size); ++batch_num) {
+        for (size_t batch_num = 0; batch_num < nbatches; ++batch_num) {
             cn_get_batch_conv(batch_in, batch_tar, input_list, targets, batch_num, batch_size);
-            printf("loss at batch: %zu is %f\n", batch_num, cn_learn_conv(&net, batch_in, batch_tar, batch_size));
+            printf("Loss at batch: %zu is %f\n", batch_num, cn_learn_conv(&net, batch_in, batch_tar, batch_size));
         }
         loss = cn_loss_conv(&net, input_list, targets, num_train_files);
         printf("Loss at epoch %zu: %f\n", i, loss);
@@ -146,15 +147,8 @@ int main(void) {
         }
     }
 
-    for (size_t i = 0; i < num_test_files; ++i) {
-        printf("tar: ");
-        cn_print_vector_inline(la_test_targets[i].data.vec);
-        printf("\n");
-        printf("-------------------------\n");
-        printf("net: ");
-        cn_print_vector_inline(cn_predict_conv(&net, test_list[i]).data.vec);
-        printf("\n");
-    }
+    cn_print_conv_results(net, test_list, la_test_targets, num_test_files);
+
     char *file = "model";
     printf("Loss on validation: %f\n", cn_loss_conv(&net, test_list, la_test_targets, num_test_files));
     cn_save_net_to_file(net, file);

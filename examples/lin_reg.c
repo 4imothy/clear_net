@@ -74,8 +74,8 @@ int main(void) {
 
     cn_default_hparams();
     cn_set_rate(0.01);
-    Net net = cn_init_net();
-    cn_alloc_dense_layer(&net, Tanh, 8, 1);
+    Net net = cn_alloc_vani_net(8);
+    cn_alloc_dense_layer(&net, Tanh, 1);
     cn_randomize_net(&net, -1, 1);
     size_t num_epochs = 200000;
     float error_break = 0.01f;

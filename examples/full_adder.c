@@ -29,12 +29,12 @@ int main(void) {
         cn_form_matrix(num_combinations, num_outputs, stride, &data[num_inputs]);
     size_t num_epochs = 20000;
     cn_default_hparams();
-    Net net = cn_init_net();
+    Net net = cn_alloc_vani_net(3);
     cn_with_momentum(0.9);
     cn_set_neg_scale(1);
-    cn_alloc_dense_layer(&net, Tanh, num_inputs, 3);
-    cn_alloc_secondary_dense_layer(&net, LeakyReLU, 8);
-    cn_alloc_secondary_dense_layer(&net, Sigmoid, num_outputs);
+    cn_alloc_dense_layer(&net, Tanh, 3);
+    cn_alloc_dense_layer(&net, LeakyReLU, 8);
+    cn_alloc_dense_layer(&net, Sigmoid, num_outputs);
     cn_randomize_net(&net, -1, 1);
     cn_print_net(net, "net");
     float loss;

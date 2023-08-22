@@ -199,8 +199,8 @@ int main(int argc, char *argv[]) {
     cn_default_hparams();
     cn_set_rate(0.02);
     cn_with_momentum(0.9);
-    Net net = cn_init_net();
-    cn_alloc_dense_layer(&net, Sigmoid, input_dim, 1);
+    Net net = cn_alloc_vani_net(input_dim);
+    cn_alloc_dense_layer(&net, Sigmoid, 1);
     cn_randomize_net(&net, -1, 1);
     size_t num_epochs = 10000;
     float loss;

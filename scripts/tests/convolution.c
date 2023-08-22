@@ -37,28 +37,29 @@ void fill_matrix(Matrix *mat, const float *elements, size_t elem_len) {
     }
 }
 
-void do_test_with_default_elements(Net *net, Padding padding, Activation act, const size_t input_rows, const size_t input_cols, size_t krows, size_t kcols) {
-    cn_alloc_conv_layer(net, padding, act, 1, 1, input_rows, input_cols, krows, kcols);
-    fill_matrix(&net->layers[0].data.conv.filters[0].kernels[0], poss_kernel_elements,
+void do_test_with_default_elements(Padding padding, Activation act, const size_t input_rows, const size_t input_cols, size_t krows, size_t kcols) {
+    Net net = cn_alloc_conv_net(input_rows, input_cols, 1);
+    cn_alloc_conv_layer(&net, padding, act, 1, krows, kcols);
+    fill_matrix(&net.layers[0].data.conv.filters[0].kernels[0], poss_kernel_elements,
                     poss_kernel_elem_len);
     float input[input_rows * input_cols];
     Matrix minput = cn_form_matrix(input_rows, input_cols, input_cols, input);
     fill_matrix(&minput, poss_elements, poss_elements_len);
-    cn_forward_conv(&net->layers[0].data.conv, &minput);
-    print_results(net->layers[0].data.conv.outputs[0]);
+    cn_forward_conv(&net.layers[0].data.conv, &minput);
+    print_results(net.layers[0].data.conv.outputs[0]);
 }
 
 int main(int argc, char *argv[]) {
     CLEAR_NET_ASSERT(argc == 2);
     // Make it so the activation does nothing
     cn_default_hparams();
-    Net net = cn_init_net();
     Activation default_act = LeakyReLU;
     cn_set_neg_scale(1);
     srand(0);
     if (strcmp(argv[1], "same_zeros") == 0) {
         const size_t dim = 15;
-        cn_alloc_conv_layer(&net, Same, default_act, 1, 1, dim, dim, 3, 3);
+        Net net = cn_alloc_conv_net(dim, dim, 1);
+        cn_alloc_conv_layer(&net, Same, default_act, 1, 3, 3);
         float elem[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
         net.layers[0].data.conv.filters[0].kernels[0].elements = elem;
         float input[dim * dim] = {0};
@@ -70,7 +71,8 @@ int main(int argc, char *argv[]) {
 
     else if (strcmp(argv[1], "same_identity") == 0) {
         const size_t dim = 10;
-        cn_alloc_conv_layer(&net, Same, default_act, 1, 1, dim, dim, 3, 3);
+        Net net = cn_alloc_conv_net(dim, dim, 1);
+        cn_alloc_conv_layer(&net, Same, default_act, 1, 3, 3);
         float elem[] = {0, 0, 0, 0, 1, 0, 0, 0, 0};
         net.layers[0].data.conv.filters[0].kernels[0].elements = elem;
         float input[dim * dim] = {0};
@@ -82,7 +84,8 @@ int main(int argc, char *argv[]) {
 
     else if (strcmp(argv[1], "same_guassian_blur_3") == 0) {
         const size_t dim = 20;
-        cn_alloc_conv_layer(&net, Same, default_act, 1, 1, dim, dim, 3, 3);
+        Net net = cn_alloc_conv_net(dim, dim, 1);
+        cn_alloc_conv_layer(&net, Same, default_act, 1, 3, 3);
         float elem[] = {0.0625, 0.1250, 0.0625, 0.1250, 0.25,
                         0.1250, 0.0625, 0.1250, 0.0625};
         net.layers[0].data.conv.filters[0].kernels[0].elements = elem;
@@ -95,7 +98,8 @@ int main(int argc, char *argv[]) {
 
     else if (strcmp(argv[1], "same_guassian_blur_5") == 0) {
         const size_t dim = 20;
-        cn_alloc_conv_layer(&net, Same, default_act, 1, 1, dim, dim, 5, 5);
+        Net net = cn_alloc_conv_net(dim, dim, 1);
+        cn_alloc_conv_layer(&net, Same, default_act, 1, 5, 5);
         float elem[] = {0.0037, 0.0147, 0.0256, 0.0147, 0.0037, 0.0147, 0.0586,
                         0.0952, 0.0586, 0.0147, 0.0256, 0.0952, 0.1502, 0.0952,
                         0.0256, 0.0147, 0.0586, 0.0952, 0.0586, 0.0147, 0.0037,
@@ -109,34 +113,34 @@ int main(int argc, char *argv[]) {
     }
 
     else if (strcmp(argv[1], "same_even_kernel") == 0) {
-        do_test_with_default_elements(&net, Same, default_act, 20, 20, 4, 4);
+        do_test_with_default_elements(Same, default_act, 20, 20, 4, 4);
     }
 
     else if (strcmp(argv[1], "same_rect") == 0) {
-        do_test_with_default_elements(&net, Same, default_act, 30, 30, 5, 3);
+        do_test_with_default_elements(Same, default_act, 30, 30, 5, 3);
     }
 
     else if (strcmp(argv[1], "full_7x7") == 0) {
-        do_test_with_default_elements(&net, Full, default_act, 30, 30, 7, 7);
+        do_test_with_default_elements(Full, default_act, 30, 30, 7, 7);
     }
 
     else if (strcmp(argv[1], "full_even") == 0) {
-        do_test_with_default_elements(&net, Full, default_act, 15, 15, 4, 4);
+        do_test_with_default_elements(Full, default_act, 15, 15, 4, 4);
     }
 
     else if (strcmp(argv[1], "full_rect") == 0) {
-        do_test_with_default_elements(&net, Full, default_act, 30, 30, 4, 7);
+        do_test_with_default_elements(Full, default_act, 30, 30, 4, 7);
     }
 
     else if (strcmp(argv[1], "valid_7x7") == 0) {
-        do_test_with_default_elements(&net, Valid, default_act, 11, 11, 7, 7);
+        do_test_with_default_elements(Valid, default_act, 11, 11, 7, 7);
     }
 
     else if (strcmp(argv[1], "valid_rect") == 0) {
-        do_test_with_default_elements(&net, Valid, default_act, 23, 23, 1, 6);
+        do_test_with_default_elements(Valid, default_act, 23, 23, 1, 6);
     }
 
     else if (strcmp(argv[1], "valid_rect_input") == 0) {
-        do_test_with_default_elements(&net, Valid, default_act, 10, 20, 4, 4);
+        do_test_with_default_elements(Valid, default_act, 10, 20, 4, 4);
     }
 }

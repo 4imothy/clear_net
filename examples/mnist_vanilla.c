@@ -97,10 +97,10 @@ int main(void) {
     cn_default_hparams();
     cn_set_rate(0.005);
     cn_with_momentum(0.9);
-    Net net = cn_init_net();
-    cn_alloc_dense_layer(&net, Sigmoid, num_pixels, 16);
-    cn_alloc_secondary_dense_layer(&net, Sigmoid, 16);
-    cn_alloc_secondary_dense_layer(&net, Sigmoid, dim_output);
+    Net net = cn_alloc_vani_net(num_pixels);
+    cn_alloc_dense_layer(&net, Sigmoid, 16);
+    cn_alloc_dense_layer(&net, Sigmoid, 16);
+    cn_alloc_dense_layer(&net, Sigmoid, dim_output);
     cn_randomize_net(&net, -1, 1);
     size_t num_epochs = 20000;
     float error;
