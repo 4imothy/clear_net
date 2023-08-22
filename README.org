@@ -48,6 +48,8 @@ A vector and matrix type are used internally and as the types of the inputs and 
 | Vanilla       | Vector           | Vector                                                |
 | Convolutional | List of Matrices | LAData (Vector or Matrix depending on the last layer) |
 
+*The functionss dealing with linear algebra*
+
 | Name                                                                             | What it Does                                                 |
 |----------------------------------------------------------------------------------+--------------------------------------------------------------|
 | Matrix cn_alloc_matrix(size_t nrows, size_t ncols)                               | Allocate a matrix with given rows and cols                   |
@@ -93,18 +95,19 @@ A vector and matrix type are used internally and as the types of the inputs and 
 | float cn_activate(float x, Activation act) | Do activation with given function |
 
 *** Net
-| Name                                                                                                                                    | What it Does                                                            |
-|-----------------------------------------------------------------------------------------------------------------------------------------+-------------------------------------------------------------------------|
-| Net cn_init_net(void)                                                                                                                   | Initialize a net                                                        |
-| void cn_dealloc_net(Net *net)                                                                                                           | Deallocate a net                                                        |
-| void cn_randomize_net(Net net, float lower, float upper)                                                                                | Randomize the parameters in a net                                       |
-| void cn_shuffle_van_input(Matrix *input, Matrix *target)                                                                                | Shuffle the input and target matrices of a vanilla neural net           |
-| void cn_get_batch_van(Matrix *batch_in, Matrix *batch_tar, Matrix all_input, Matrix all_target, size_t batch_num, size_t batch_size)    | Get a batch of vanilla inputs and outputs from the given matrices       |
-| void cn_shuffle_conv_input(Matrix ***input, LAData **targets, size_t len)                                                               | Shuffle the input list of lists matrices and the list of LAData targets |
-| void cn_get_batch_conv(Matrix **batch_in, LAData *batch_tar, Matrix **all_input, LAData *all_target, size_t batch_num, size_t batch_size) | Get a batch of convolutional inputs and outputs                         |
-| void cn_save_net_to_file(Net net, char *file_name)                                                                                      | Save given net to file with the given name                              |
-| Net cn_alloc_net_from_file(char *file_name)                                                                                             | Allocate net from file with the given name                              |
-| void cn_print_net(Net net, char *name)                                                                                                  | Print the net with all of its layers and parameters                     |
+| Name                                                                                                                                    | What it Does                                                                                            |
+|-----------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------|
+| Net cn_alloc_vani_net(size_t input_nelem)                                                                                               | Initialize a vanilla net with the given input dimension                                                 |
+| Net cn_alloc_conv_net(size_t input_nrows, size_t input_ncols, size_t nchannels)                                                         | Initialize a convolutional net with the input given dimensions and the number of channels to start with |
+| void cn_dealloc_net(Net *net)                                                                                                           | Deallocate a net                                                                                        |
+| void cn_randomize_net(Net net, float lower, float upper)                                                                                | Randomize the parameters in a net                                                                       |
+| void cn_shuffle_van_input(Matrix *input, Matrix *target)                                                                                | Shuffle the input and target matrices of a vanilla neural net                                           |
+| void cn_get_batch_van(Matrix *batch_in, Matrix *batch_tar, Matrix all_input, Matrix all_target, size_t batch_num, size_t batch_size)    | Get a batch of vanilla inputs and outputs from the given matrices                                       |
+| void cn_shuffle_conv_input(Matrix ***input, LAData **targets, size_t len)                                                               | Shuffle the input list of lists matrices and the list of LAData targets                                 |
+| void cn_get_batch_conv(Matrix **batch_in, LAData *batch_tar, Matrix **all_input, LAData *all_target, size_t batch_num, size_t batch_size) | Get a batch of convolutional inputs and outputs                                                         |
+| void cn_save_net_to_file(Net net, char *file_name)                                                                                      | Save given net to file with the given name                                                              |
+| Net cn_alloc_net_from_file(char *file_name)                                                                                             | Allocate net from file with the given name                                                              |
+| void cn_print_net(Net net, char *name)                                                                                                  | Print the net with all of its layers and parameters                                                     |
 
 **** Vanilla Net
 | Name                                                                         | What it Does                                                               |
@@ -124,17 +127,15 @@ A vector and matrix type are used internally and as the types of the inputs and 
 *** Dense Layer
 | Name                                                                                     | What it Does                                               |
 |------------------------------------------------------------------------------------------+------------------------------------------------------------|
-| void cn_alloc_dense_layer(Net *net, Activation act, size_t dim_input, size_t dim_output) | Allocate a dense layer as the first layer on the given net |
-| void cn_alloc_secondary_dense_layer(Net *net, Activation act, size_t dim_output)         | Allocate a secondary dense layer on the given net          |
+| void cn_alloc_dense_layer(Net *net, Activation act, size_t size_t dim_output)    | Allocate a dense layer as the first layer on the given net |
 | Vector cn_forward_dense(DenseLayer *layer, Vector prev_output)                           | Perform the forward operation on the layer                 |
 
 *** Convolutional Layer
-| Name                                                                                                                                    | What it Does                                                       |
-|-----------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------|
-| void cn_alloc_conv_layer(Net *net, Padding padding, Activation act, size_t nimput, size_t noutput, size_t input_nrows, size_t input_ncols, size_t kernel_nrows, size_t kernel_ncols) | Allocate a convolutional layer as the first layer of the given net |
-| void cn_alloc_secondary_conv_layer(Net *net, Padding padding, Activation act, size_t noutput, size_t kernel_nrows, size_t kernel_ncols) | Allocatate a secondary convolutional layer                         |
-| Matrix* cn_forward_conv(ConvolutionalLayer *layer, Matrix *input)                                                                       | Perform the forward operation on the layer                         |
-| float cn_correlate(Matrix kern, Matrix input, long top_left_row, long top_left_col)                                                     | Correlate the given matrix starting at the given indices with the given kernel |
+| Name                                                                                                                          | What it Does                                                                   |
+|-------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------|
+| void cn_alloc_conv_layer(Net *net, Padding padding, Activation act, size_t noutput, size_t kernel_nrows, size_t kernel_ncols) | Allocate a convolutional layer as the first layer of the given net             |
+| Matrix* cn_forward_conv(ConvolutionalLayer *layer, Matrix *input)                                                             | Perform the forward operation on the layer                                     |
+| float cn_correlate(Matrix kern, Matrix input, long top_left_row, long top_left_col)                                           | Correlate the given matrix starting at the given indices with the given kernel |
 
 *** Pooling Layers
 **** Normal
