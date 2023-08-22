@@ -20,39 +20,6 @@ All of these functions are used in files in the [[./examples][examples]] directo
 - *[[./examples/mnist_mix.c][mnist mix]]:* Convolutional net with some dense layers creation and training with momentum and stochastic gradient descent on mnist dataset
 - *[[./examples/mnist_conv.c][mnist convolutional]]:* Fully convolutional net creation and training stochastic gradient descent on mnist dataset
 
-*** Hyper Parameters
-*Default Hyperparameters:*
-- Learning Rate: 0.01
-- Number of layers: 0
-- Number of parameters: 0
-- Negative scale applied to negative values in activation functions: 0.1
-- Does model use momentum when training: No
-  - Model momentum beta: 0
-
-| Name                                       | What it Does                                                         |
-|--------------------------------------------+----------------------------------------------------------------------|
-| void cn_default_hparams(void)              | Set the default parameters descried above                            |
-| void cn_with_momentum(float momentum_beta) | Net will now use momentum when training with the provided beta value |
-| void cn_set_neg_scale(float neg_scale)     | Set the scale to apply to negative values in activation functions    |
-| void cn_set_rate(float rate)               | Set the learning rate to the provided value                          |
-
-*** Activation Funtions
-*Possible Functions (these are all enum values)*
-- Sigmoid
-- ReLU
-- Tanh
-- LeakyReLU
-- ELU
-
-| Name                                       | What it Does                      |
-|--------------------------------------------+-----------------------------------|
-| float cn_sigmoid(float x)                  | Do Sigmoid to given value         |
-| float cn_relu(float x)                     | Do ReLU to given value            |
-| float cn_hyper_tan(float x)                | Do Tahn to given value            |
-| float cn_leaky_relu(float x)               | Do Leaky ReLU to given value      |
-| float cn_elu(float x)                      | Do ELU to given value             |
-| float cn_activate(float x, Activation act) | Do activation with given function |
-
 *** Autodifferentiation Engine
 The differentiation engine runs on a gradient store which stores the computation graph which is used to find the gradients of each value. Since must store all the computations you have to pass it as a reference to every function. Each mathematical function returns a digit which is a relative pointer to the elements location in the gradent store, these are the indices passed to the mathematical operations. Call backward on a element to find the gradient of every element relative to that one. The gradient can be accessed with the GET_NODE macro and grabbing the grad element with .grad `GET_NODE(1).grad`.
 
@@ -91,6 +58,39 @@ A vector and matrix type are used internally and as the types of the inputs and 
 | void cn_dealloc_vector(Vector *vec)                                              | Deallocate a vector                                          |
 | Vector cn_form_vector(size_t nelem, float *elements)                             | Form a vector around given elements                          |
 | void cn_print_vector_inline(Vector vec)                                          | Print vector elements inline                                 |
+
+*** Hyper Parameters
+*Default Hyperparameters:*
+- Learning Rate: 0.01
+- Number of layers: 0
+- Number of parameters: 0
+- Negative scale applied to negative values in activation functions: 0.1
+- Does model use momentum when training: No
+  - Model momentum beta: 0
+
+| Name                                       | What it Does                                                         |
+|--------------------------------------------+----------------------------------------------------------------------|
+| void cn_default_hparams(void)              | Set the default parameters descried above                            |
+| void cn_with_momentum(float momentum_beta) | Net will now use momentum when training with the provided beta value |
+| void cn_set_neg_scale(float neg_scale)     | Set the scale to apply to negative values in activation functions    |
+| void cn_set_rate(float rate)               | Set the learning rate to the provided value                          |
+
+*** Activation Funtions
+*Possible Functions (these are all enum values)*
+- Sigmoid
+- ReLU
+- Tanh
+- LeakyReLU
+- ELU
+
+| Name                                       | What it Does                      |
+|--------------------------------------------+-----------------------------------|
+| float cn_sigmoid(float x)                  | Do Sigmoid to given value         |
+| float cn_relu(float x)                     | Do ReLU to given value            |
+| float cn_hyper_tan(float x)                | Do Tahn to given value            |
+| float cn_leaky_relu(float x)               | Do Leaky ReLU to given value      |
+| float cn_elu(float x)                      | Do ELU to given value             |
+| float cn_activate(float x, Activation act) | Do activation with given function |
 
 *** Net
 | Name                                                                                                                                    | What it Does                                                            |
