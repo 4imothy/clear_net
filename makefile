@@ -48,14 +48,10 @@ $(downloaders): $(DOWNLOAD_SCRIPTS)
 bench_learn: iris $(BENCH_LEARN_FILE)
 	$(PY) $(BENCH_LEARN_FILE)
 
-bench_mul: clear_net $(BENCH_MAT_MUL_FILE)
-	$(CC) $(CFLAGS) -o $@ $(BENCH_MAT_MUL_FILE)
-	./$@
-
 format: $(C_FILES) $(H_FILES) $(PY_FILES)
 	$(C_FORMAT) -style="{BasedOnStyle: llvm, IndentWidth: 4, TabWidth: 4, UseTab: Never}" -i $(C_FILES) $(H_FILES)
 	$(PY_FORMAT) --in-place $(PY_FILES)
 
 clean:
-	rm -f $(examples) $(tests) bench_mul
+	rm -f $(examples) $(tests)
 	rm -f model
