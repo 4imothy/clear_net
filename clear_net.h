@@ -9,9 +9,8 @@
 ***/
 
 /***
-    TODO need to update documentation find a script that exports all functions to org or just give up
     TODO more loss functions
-    TODO more optimization functions
+    TODO more optimization methods
     TODO do a segmentation example with matrix output
 ***/
 
