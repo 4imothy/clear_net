@@ -192,6 +192,7 @@ do_test_with_default_elements("full_even", 15, 15, 4, 4, 'full',
                               "full even kernel")
 do_test_with_default_elements("full_rect", 30, 30, 4, 7, 'full', "full rect")
 do_test_with_default_elements("valid_7x7", 11, 11, 7, 7, 'valid', "valid 7x7")
-do_test_with_default_elements("valid_rect", 23, 23, 1, 6, 'valid', "valid rect")
+do_test_with_default_elements(
+    "valid_rect", 23, 23, 1, 6, 'valid', "valid rect")
 do_test_with_default_elements("valid_rect_input", 10, 20, 4, 4, 'valid',
                               "valid rectangular input")

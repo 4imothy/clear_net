@@ -37,11 +37,14 @@ void fill_matrix(Matrix *mat, const float *elements, size_t elem_len) {
     }
 }
 
-void do_test_with_default_elements(Padding padding, Activation act, const size_t input_rows, const size_t input_cols, size_t krows, size_t kcols) {
+void do_test_with_default_elements(Padding padding, Activation act,
+                                   const size_t input_rows,
+                                   const size_t input_cols, size_t krows,
+                                   size_t kcols) {
     Net net = cn_alloc_conv_net(input_rows, input_cols, 1);
     cn_alloc_conv_layer(&net, padding, act, 1, krows, kcols);
-    fill_matrix(&net.layers[0].data.conv.filters[0].kernels[0], poss_kernel_elements,
-                    poss_kernel_elem_len);
+    fill_matrix(&net.layers[0].data.conv.filters[0].kernels[0],
+                poss_kernel_elements, poss_kernel_elem_len);
     float input[input_rows * input_cols];
     Matrix minput = cn_form_matrix(input_rows, input_cols, input_cols, input);
     fill_matrix(&minput, poss_elements, poss_elements_len);

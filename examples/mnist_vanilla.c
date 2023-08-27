@@ -115,8 +115,8 @@ int main(void) {
     for (size_t i = 0; i < num_epochs; ++i) {
         for (size_t batch_num = 0; batch_num < (num_train_files / batch_size);
              ++batch_num) {
-            cn_get_batch_vani(&batch_input, &batch_output, train_input, train_output,
-                         batch_num, batch_size);
+            cn_get_batch_vani(&batch_input, &batch_output, train_input,
+                              train_output, batch_num, batch_size);
             cn_learn_vani(&net, batch_input, batch_output);
         }
         error = cn_loss_vani(&net, train_input, train_output);

@@ -178,9 +178,10 @@ int main(int argc, char *argv[]) {
     size_t output_dim = data_cols - input_dim;
     size_t val_size = 15;
     size_t train_size = 150 - val_size;
-    Matrix train = cn_form_matrix(train_size, data_cols, data_cols, train_values);
-    Matrix input =
-        cn_form_matrix(train_size, input_dim, train.stride, &MAT_AT(train, 0, 0));
+    Matrix train =
+        cn_form_matrix(train_size, data_cols, data_cols, train_values);
+    Matrix input = cn_form_matrix(train_size, input_dim, train.stride,
+                                  &MAT_AT(train, 0, 0));
     Matrix target = cn_form_matrix(train_size, output_dim, train.stride,
                                    &MAT_AT(train, 0, input_dim));
     for (size_t i = 0; i < target.nrows; ++i) {
@@ -215,7 +216,7 @@ int main(int argc, char *argv[]) {
         for (size_t batch_num = 0; batch_num < train_size / batch_size;
              ++batch_num) {
             cn_get_batch_vani(&batch_in, &batch_tar, input, target, batch_num,
-                         batch_size);
+                              batch_size);
             cn_learn_vani(&net, batch_in, batch_tar);
         }
         loss = cn_loss_vani(&net, input, target);
