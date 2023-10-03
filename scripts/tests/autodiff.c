@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+CLEAR_NET_DEFINE_HYPERPARAMETERS
+
 #define PRINT_VAL(x)                                                           \
     printf("%s %f %f\n", #x, GET_NODE((x)).num, GET_NODE((x)).grad)
 

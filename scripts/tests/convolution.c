@@ -2,6 +2,8 @@
 #include "../../clear_net.h"
 #include <string.h>
 
+CLEAR_NET_DEFINE_HYPERPARAMETERS
+
 void print_results(Matrix mat) {
     printf("%zu %zu", mat.nrows, mat.ncols);
     for (size_t i = 0; i < mat.nrows; ++i) {

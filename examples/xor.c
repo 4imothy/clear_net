@@ -1,6 +1,8 @@
 #define CLEAR_NET_IMPLEMENTATION
 #include "../clear_net.h"
 
+CLEAR_NET_DEFINE_HYPERPARAMETERS
+
 int main(void) {
     srand(0);
     cn_default_hparams();

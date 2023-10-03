@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+CLEAR_NET_DEFINE_HYPERPARAMETERS
+
 // sepal length (cm), sepal width (cm), petal length (cm), petal width (cm),
 // target
 // clang-format off

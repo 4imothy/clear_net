@@ -3,6 +3,14 @@
 // function to learn
 // y = 2 + 4a - 3b + 5c + 6d - 2e + 7f - 8g + 9h
 
+NetType CN_NET_TYPE;
+float CN_RATE;
+size_t CN_NLAYERS;
+size_t CN_NPARAMS;
+float CN_NEG_SCALE;
+size_t CN_WITH_MOMENTUM;
+float CN_MOMENTUM_BETA;
+
 const size_t num_train = 100;
 const size_t num_var = 8 + 1;
 float train[num_train * num_var] = {0};

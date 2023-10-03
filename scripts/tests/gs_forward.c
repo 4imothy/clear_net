@@ -3,6 +3,8 @@
 #define CLEAR_NET_IMPLEMENTATION
 #include "../../clear_net.h"
 
+CLEAR_NET_DEFINE_HYPERPARAMETERS
+
 int main(int argc, char *argv[]) {
     CLEAR_NET_ASSERT(argc == 2);
     cn_default_hparams();

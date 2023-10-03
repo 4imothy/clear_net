@@ -5,6 +5,8 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
+CLEAR_NET_DEFINE_HYPERPARAMETERS
+
 const size_t img_height = 28;
 const size_t img_width = 28;
 const size_t num_pixels = img_height * img_width;

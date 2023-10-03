@@ -1,6 +1,8 @@
 #define CLEAR_NET_IMPLEMENTATION
 #include "../clear_net.h"
 
+CLEAR_NET_DEFINE_HYPERPARAMETERS
+
 // a full adder with carry in and carry out
 int main(void) {
     srand(0);
