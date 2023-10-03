@@ -26,6 +26,10 @@ examples := mnist_vanilla mnist_conv mnist_mix xor full_adder iris lin_reg mnist
 downloaders := get_mnist
 clear_net: $(LIB_FILE)
 
+.DEFAULT_GOAL := all
+
+all: $(examples)
+
 $(examples): clear_net $(EXAMPLE_FILES)
 	$(CC) $(CFLAGS) -o $@ $(EXAMPLE_DIR)/$@.c
 
@@ -41,6 +45,10 @@ test_%: %
 	$(PY) $(TEST_DIR)/$<.py
 
 test: $(addprefix test_, $(tests))
+
+pip_update:
+	pip --disable-pip-version-check list --outdated --format=json | python -c "import json, sys; print('\n'.join([x['name'] for x in json.load(sys.stdin)]))" | xargs -n1 pip install -U
+	pip freeze > requirements.txt
 
 $(downloaders): $(DOWNLOAD_SCRIPTS)
 	$(PY) $(DOWNLOAD_DATA_DIR)/$@.py
