@@ -5,6 +5,8 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
+CLEAR_NET_DEFINE_HYPERPARAMETERS
+
 const size_t img_height = 28;
 const size_t img_width = 28;
 const size_t num_pixels = img_height * img_width;
@@ -115,16 +117,14 @@ int main(void) {
     cn_shuffle_conv_input(&input_list, &targets, num_train_files);
 
     cn_default_hparams();
-    // cn_with_momentum(0.9);
-    Net net = cn_init_net();
-    cn_alloc_conv_layer(&net, Valid, Sigmoid, nchannels, 3, img_height,
-                        img_width, 9, 9);
-    cn_alloc_secondary_conv_layer(&net, Valid, Sigmoid, 5, 5, 5);
+    Net net = cn_alloc_conv_net(img_height, img_width, nchannels);
+    cn_alloc_conv_layer(&net, Valid, Sigmoid, 3, 9, 9);
+    cn_alloc_conv_layer(&net, Valid, Sigmoid, 5, 5, 5);
     cn_alloc_pooling_layer(&net, Average, 4, 4);
-    cn_alloc_secondary_conv_layer(&net, Valid, Sigmoid, 10, 3, 3);
+    cn_alloc_conv_layer(&net, Valid, Sigmoid, 10, 3, 3);
     cn_alloc_global_pooling_layer(&net, Max);
-    cn_alloc_secondary_dense_layer(&net, Sigmoid, 10);
-    cn_randomize_net(net, -1, 1);
+    cn_alloc_dense_layer(&net, Sigmoid, 10);
+    cn_randomize_net(&net, -1, 1);
 
     size_t nepochs = 2000;
     size_t batch_size = 32;
