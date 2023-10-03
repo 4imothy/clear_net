@@ -11,9 +11,11 @@
 ***/
 
 /***
-    TODO remove the global variables by having a net config struct. Change the second param for the leakys to take the float coef
+    TODO remove the global variables by having a net config struct. Change the
+second param for the leakys to take the float coef
     TODO more loss functions,
     TODO more optimization methods
+    TODO paralell
     TODO do a segmentation example with matrix output
 ***/
 
@@ -45,6 +47,16 @@
 #ifndef CLEAR_NET_INITIAL_GRAPH_LENGTH
 #define CLEAR_NET_INITIAL_GRAPH_LENGTH 10
 #endif // CLEAR_NET_INITIAL_GRAPH_LENGTH
+#ifndef CLEAR_NET_DEFINE_HYPERPARAMETERS
+#define CLEAR_NET_DEFINE_HYPERPARAMETERS                                       \
+    NetType CN_NET_TYPE;                                                       \
+    float CN_RATE;                                                             \
+    size_t CN_NLAYERS;                                                         \
+    size_t CN_NPARAMS;                                                         \
+    float CN_NEG_SCALE;                                                        \
+    size_t CN_WITH_MOMENTUM;                                                   \
+    float CN_MOMENTUM_BETA;
+#endif // CLEAR_NET_DEFINE_HYPERPARAMETERS
 
 /* Declare: Helpers */
 void _cn_fill_floats(float *ptr, size_t len, float val);
@@ -285,13 +297,13 @@ void _cn_fill_floats(float *ptr, size_t len, float val) {
     (((float)rand() / RAND_MAX) * ((upper) - (lower)) + (lower))
 
 /* Implement: Hyper parameters */
-NetType CN_NET_TYPE;
-float CN_RATE;
-size_t CN_NLAYERS;
-size_t CN_NPARAMS;
-float CN_NEG_SCALE;
-size_t CN_WITH_MOMENTUM;
-float CN_MOMENTUM_BETA;
+extern NetType CN_NET_TYPE;
+extern float CN_RATE;
+extern size_t CN_NLAYERS;
+extern size_t CN_NPARAMS;
+extern float CN_NEG_SCALE;
+extern size_t CN_WITH_MOMENTUM;
+extern float CN_MOMENTUM_BETA;
 
 void cn_default_hparams(void) {
     CN_RATE = 0.01;
