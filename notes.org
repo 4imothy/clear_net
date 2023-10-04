@@ -1,6 +1,9 @@
 #+startup: overview
 * Speed Optimizing
 - Parallelize
+- Use cuda/nvcc
+  - https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html
+  - https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
 * Optimization Algorithms
 - [[https://en.wikipedia.org/wiki/Stochastic_gradient_descent][See Extensions and Variants (wikipedia)]]
 - Adaptive Gradient Algorithm (AdaGrad)
