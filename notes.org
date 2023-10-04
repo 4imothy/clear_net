@@ -1,7 +1,8 @@
 #+startup: overview
+
 * Speed Optimizing
 - Parallelize
-- Use cuda/nvcc
+- Use cuda with nvidia cuda compiler
   - https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html
   - https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
 * Optimization Algorithms
