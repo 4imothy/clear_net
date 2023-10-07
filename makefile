@@ -36,7 +36,7 @@ $(examples): clear_net $(EXAMPLE_FILES)
 run_%: %
 	./$<
 
-tests := autodiff convolution gs_forward
+tests := autodiff correlation gs_forward
 
 $(tests): clear_net $(TEST_FILES)
 	$(CC) $(CFLAGS) -o $@ $(TEST_DIR)/$@.c

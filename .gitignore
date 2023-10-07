@@ -2,6 +2,7 @@
 # python env for benching
 env
 # binaries
+correlation
 xor
 adder
 iris
@@ -10,7 +11,6 @@ lin_reg
 bench_mul
 mnist
 autodiff
-convolution
 mnist_conv
 mnist_vanilla
 mnist_mix
