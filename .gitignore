@@ -14,6 +14,7 @@ autodiff
 mnist_conv
 mnist_vanilla
 mnist_mix
+gs_forward
 # model save files
 model
 # ignore file of youtube demo
