@@ -8,12 +8,16 @@ CLEAR_NET_DEFINE_HYPERPARAMETERS
 #define PRINT_VAL(x)                                                           \
     printf("%s %f %f\n", #x, GET_NODE((x)).num, GET_NODE((x)).grad)
 
+int strequal(char *a, char *b) {
+    return !(strcmp(a,b));
+}
+
 int main(int argc, char *argv[]) {
     cn_default_hparams();
     CLEAR_NET_ASSERT(argc == 2);
     GradientStore gradient_store = cn_alloc_gradient_store(0);
     GradientStore *gs = &gradient_store;
-    if (!strcmp(argv[1], "1")) {
+    if (strequal(argv[1], "1")) {
         size_t a = cn_init_leaf_var(gs, -2.0);
         size_t b = cn_init_leaf_var(gs, 3.0);
         size_t c = cn_multiply(gs, a, b);
@@ -29,7 +33,7 @@ int main(int argc, char *argv[]) {
         PRINT_VAL(e);
         PRINT_VAL(f);
         PRINT_VAL(g);
-    } else if (!strcmp(argv[1], "2")) {
+    } else if (strequal(argv[1], "2")) {
         size_t one = cn_init_leaf_var(gs, 1.0);
         size_t none = cn_init_leaf_var(gs, -1.0);
         size_t two = cn_init_leaf_var(gs, 2.0);
@@ -56,7 +60,7 @@ int main(int argc, char *argv[]) {
         PRINT_VAL(d);
         PRINT_VAL(e);
         PRINT_VAL(f);
-    } else if (!strcmp(argv[1], "pow")) {
+    } else if (strequal(argv[1], "pow")) {
         size_t a = cn_init_leaf_var(gs, 5);
         size_t b = cn_init_leaf_var(gs, 10);
         size_t c = cn_raise(gs, a, b);
@@ -65,7 +69,7 @@ int main(int argc, char *argv[]) {
         PRINT_VAL(a);
         PRINT_VAL(b);
         PRINT_VAL(c);
-    } else if (!strcmp(argv[1], "on_itself")) {
+    } else if (strequal(argv[1], "on_itself")) {
         size_t a = cn_init_leaf_var(gs, 3.0);
         size_t b = cn_init_leaf_var(gs, 7.0);
         size_t c = cn_add(gs, a, b);
@@ -82,7 +86,7 @@ int main(int argc, char *argv[]) {
         PRINT_VAL(b);
         PRINT_VAL(c);
         PRINT_VAL(d);
-    } else if (!strcmp(argv[1], "tanh")) {
+    } else if (strequal(argv[1], "tanh")) {
         size_t x1 = cn_init_leaf_var(gs, 2.0);
         size_t x2 = cn_init_leaf_var(gs, -0.0);
         size_t w1 = cn_init_leaf_var(gs, -3.0);
@@ -98,7 +102,7 @@ int main(int argc, char *argv[]) {
         PRINT_VAL(w1);
         PRINT_VAL(x2);
         PRINT_VAL(w2);
-    } else if (!strcmp(argv[1], "relu")) {
+    } else if (strequal(argv[1], "relu")) {
         size_t a = cn_init_leaf_var(gs, 10.0);
         size_t b = cn_init_leaf_var(gs, 5.0);
         size_t c = cn_multiply(gs, a, b);
@@ -108,7 +112,7 @@ int main(int argc, char *argv[]) {
         PRINT_VAL(b);
         PRINT_VAL(c);
         PRINT_VAL(d);
-    } else if (!strcmp(argv[1], "sigmoid")) {
+    } else if (strequal(argv[1], "sigmoid")) {
         size_t a = cn_init_leaf_var(gs, 0.3);
         size_t b = cn_init_leaf_var(gs, 0.5);
         size_t c = cn_init_leaf_var(gs, -1);
@@ -122,7 +126,7 @@ int main(int argc, char *argv[]) {
         PRINT_VAL(d);
         PRINT_VAL(e);
         PRINT_VAL(f);
-    } else if (!strcmp(argv[1], "leaky_relu")) {
+    } else if (strequal(argv[1], "leaky_relu")) {
         size_t a = cn_init_leaf_var(gs, 72);
         size_t b = cn_init_leaf_var(gs, 38);
         size_t c = cn_init_leaf_var(gs, -10);
@@ -136,7 +140,7 @@ int main(int argc, char *argv[]) {
         PRINT_VAL(d);
         PRINT_VAL(e);
         PRINT_VAL(f);
-    } else if (!strcmp(argv[1], "elu")) {
+    } else if (strequal(argv[1], "elu")) {
         size_t a = cn_init_leaf_var(gs, 5);
         size_t b = cn_init_leaf_var(gs, -6);
         size_t c = cn_eluv(gs, b);

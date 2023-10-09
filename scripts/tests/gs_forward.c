@@ -5,11 +5,15 @@
 
 CLEAR_NET_DEFINE_HYPERPARAMETERS
 
+int strequal(char *a, char *b) {
+    return !(strcmp(a,b));
+}
+
 int main(int argc, char *argv[]) {
     CLEAR_NET_ASSERT(argc == 2);
     cn_default_hparams();
     float eps = 0.000001;
-    if (!strcmp(argv[1], "dense")) {
+    if (strequal(argv[1], "dense")) {
         size_t din = 5;
         size_t dout = 3;
         Net net = cn_alloc_vani_net(din);
@@ -35,7 +39,7 @@ int main(int argc, char *argv[]) {
                              eps);
         }
         printf("Pass: Dense Forward\n");
-    } else if (!strcmp(argv[1], "conv")) {
+    } else if (strequal(argv[1], "conv")) {
         size_t in_width = 20;
         size_t in_height = 20;
         Net net = cn_alloc_conv_net(in_height, in_width, 1);
@@ -71,7 +75,7 @@ int main(int argc, char *argv[]) {
             }
         }
         printf("Pass: convolutional\n");
-    } else if (!strcmp(argv[1], "with_pooling")) {
+    } else if (strequal(argv[1], "with_pooling")) {
         size_t in_width = 28;
         size_t in_height = 28;
         Net net = cn_alloc_conv_net(in_height, in_width, 1);
