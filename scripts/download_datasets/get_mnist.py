@@ -30,7 +30,6 @@ for key, url in urls_to_download.items():
     with open(file_path, "wb") as file:
         shutil.copyfileobj(response.raw, file)
 
-    # Unzip the file
     unzipped_file_path = os.path.join(download_dir, key)
     with gzip.open(file_path, "rb") as gz_file:
         with open(unzipped_file_path, "wb") as unzipped_file:
@@ -55,6 +54,8 @@ for key, url in urls_to_download.items():
             num_images = int.from_bytes(image_file.read(4), byteorder="big")
             num_rows = int.from_bytes(image_file.read(4), byteorder="big")
             num_cols = int.from_bytes(image_file.read(4), byteorder="big")
+            assert num_rows == 28
+            assert num_cols == 28
 
             label_file.read(8)  # Skip the label file header
 
@@ -66,7 +67,8 @@ for key, url in urls_to_download.items():
                 label = int.from_bytes(label_file.read(1), byteorder="big")
 
                 image_filename = f"{label}_{i}.jpg"
-                image.save(os.path.join(out_dir, image_filename))
+                image.save(os.path.join(out_dir, image_filename),
+                           format="JPEG")
 
         # Remove the original image and label files
         os.remove(unzipped_file_path)
