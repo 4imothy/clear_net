@@ -1,13 +1,4 @@
-#include <stdio.h>
-#include <string.h>
-#define CLEAR_NET_IMPLEMENTATION
-#include "../../clear_net.h"
-
-CLEAR_NET_DEFINE_HYPERPARAMETERS
-
-int strequal(char *a, char *b) {
-    return !(strcmp(a,b));
-}
+#include "./tests.h"
 
 int main(int argc, char *argv[]) {
     CLEAR_NET_ASSERT(argc == 2);

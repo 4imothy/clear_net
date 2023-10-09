@@ -1,16 +1,7 @@
-#define CLEAR_NET_IMPLEMENTATION
-#include "../../clear_net.h"
-#include <stdio.h>
-#include <string.h>
-
-CLEAR_NET_DEFINE_HYPERPARAMETERS
+#include "./tests.h"
 
 #define PRINT_VAL(x)                                                           \
     printf("%s %f %f\n", #x, GET_NODE((x)).num, GET_NODE((x)).grad)
-
-int strequal(char *a, char *b) {
-    return !(strcmp(a,b));
-}
 
 int main(int argc, char *argv[]) {
     cn_default_hparams();

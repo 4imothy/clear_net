@@ -1,8 +1,4 @@
-#define CLEAR_NET_IMPLEMENTATION
-#include "../../clear_net.h"
-#include <string.h>
-
-CLEAR_NET_DEFINE_HYPERPARAMETERS
+#include "./tests.h"
 
 void print_results(Matrix mat) {
     printf("%zu %zu", mat.nrows, mat.ncols);
@@ -11,10 +7,6 @@ void print_results(Matrix mat) {
             printf(" %f ", MAT_AT(mat, i, j));
         }
     }
-}
-
-int strequal(char *a, char *b) {
-    return !(strcmp(a,b));
 }
 
 const float poss_elements[] = {
