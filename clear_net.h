@@ -11,11 +11,10 @@
 ***/
 
 /***
-    TODO remove the global variables by having a net config struct. Change the
-second param for the leakys to take the float coef
+    TODO paralell
+    TODO can do typedef float param or something, easy change if ever changing the type
     TODO more loss functions,
     TODO more optimization methods
-    TODO paralell
     TODO do a segmentation example with matrix output
 ***/
 
