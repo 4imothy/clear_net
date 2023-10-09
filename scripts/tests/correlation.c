@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
     Activation default_act = LeakyReLU;
     cn_set_neg_scale(1);
     srand(0);
-    if (strcmp(argv[1], "same_zeros") == 0) {
+    if (!strcmp(argv[1], "same_zeros")) {
         const size_t dim = 15;
         Net net = cn_alloc_conv_net(dim, dim, 1);
         cn_alloc_conv_layer(&net, Same, default_act, 1, 3, 3);
@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
         print_results(net.layers[0].data.conv.outputs[0]);
     }
 
-    else if (strcmp(argv[1], "same_identity") == 0) {
+    else if (!strcmp(argv[1], "same_identity")) {
         const size_t dim = 10;
         Net net = cn_alloc_conv_net(dim, dim, 1);
         cn_alloc_conv_layer(&net, Same, default_act, 1, 3, 3);
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
         print_results(net.layers[0].data.conv.outputs[0]);
     }
 
-    else if (strcmp(argv[1], "same_guassian_blur_3") == 0) {
+    else if (!strcmp(argv[1], "same_guassian_blur_3")) {
         const size_t dim = 20;
         Net net = cn_alloc_conv_net(dim, dim, 1);
         cn_alloc_conv_layer(&net, Same, default_act, 1, 3, 3);
@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
         print_results(net.layers[0].data.conv.outputs[0]);
     }
 
-    else if (strcmp(argv[1], "same_guassian_blur_5") == 0) {
+    else if (!strcmp(argv[1], "same_guassian_blur_5")) {
         const size_t dim = 20;
         Net net = cn_alloc_conv_net(dim, dim, 1);
         cn_alloc_conv_layer(&net, Same, default_act, 1, 5, 5);
@@ -117,35 +117,35 @@ int main(int argc, char *argv[]) {
         print_results(net.layers[0].data.conv.outputs[0]);
     }
 
-    else if (strcmp(argv[1], "same_even_kernel") == 0) {
+    else if (!strcmp(argv[1], "same_even_kernel")) {
         do_test_with_default_elements(Same, default_act, 20, 20, 4, 4);
     }
 
-    else if (strcmp(argv[1], "same_rect") == 0) {
+    else if (!strcmp(argv[1], "same_rect")) {
         do_test_with_default_elements(Same, default_act, 30, 30, 5, 3);
     }
 
-    else if (strcmp(argv[1], "full_7x7") == 0) {
+    else if (!strcmp(argv[1], "full_7x7")) {
         do_test_with_default_elements(Full, default_act, 30, 30, 7, 7);
     }
 
-    else if (strcmp(argv[1], "full_even") == 0) {
+    else if (!strcmp(argv[1], "full_even")) {
         do_test_with_default_elements(Full, default_act, 15, 15, 4, 4);
     }
 
-    else if (strcmp(argv[1], "full_rect") == 0) {
+    else if (!strcmp(argv[1], "full_rect")) {
         do_test_with_default_elements(Full, default_act, 30, 30, 4, 7);
     }
 
-    else if (strcmp(argv[1], "valid_7x7") == 0) {
+    else if (!strcmp(argv[1], "valid_7x7")) {
         do_test_with_default_elements(Valid, default_act, 11, 11, 7, 7);
     }
 
-    else if (strcmp(argv[1], "valid_rect") == 0) {
+    else if (!strcmp(argv[1], "valid_rect")) {
         do_test_with_default_elements(Valid, default_act, 23, 23, 1, 6);
     }
 
-    else if (strcmp(argv[1], "valid_rect_input") == 0) {
+    else if (!strcmp(argv[1], "valid_rect_input")) {
         do_test_with_default_elements(Valid, default_act, 10, 20, 4, 4);
     }
 }
