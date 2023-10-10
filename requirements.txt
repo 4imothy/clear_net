@@ -17,4 +17,4 @@ sympy==1.12
 threadpoolctl==3.1.0
 torch==2.0.1
 typing_extensions==4.7.1
-urllib3==2.0.3
+urllib3==2.0.6
