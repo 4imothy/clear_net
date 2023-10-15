@@ -8,6 +8,7 @@ adder
 iris
 full_adder
 lin_reg
+mnist_conv_tiny
 bench_mul
 mnist
 autodiff
