@@ -11,6 +11,7 @@
 ***/
 
 /***
+    TODO rename things to be better, less `Vani` and `Conv`
     TODO paralell
     TODO can do typedef float param or something, easy change if ever changing the type
     TODO more loss functions,
@@ -56,6 +57,9 @@
     size_t CN_WITH_MOMENTUM;                                                   \
     float CN_MOMENTUM_BETA;
 #endif // CLEAR_NET_DEFINE_HYPERPARAMETERS
+#ifndef CN_MAX_PARAM
+#define CN_MAX_PARAM FLT_MAX
+#endif // CN_MAX_PARAM
 
 /* Declare: Helpers */
 void _cn_fill_floats(float *ptr, size_t len, float val);
@@ -173,15 +177,15 @@ typedef enum {
 typedef union LayerData LayerData;
 typedef enum {
     Dense,
-    Convolutional,
+    Conv,
     Pooling,
     GlobalPooling,
 } LayerType;
 typedef struct Layer Layer;
 typedef struct Net Net;
 typedef enum {
-    Vani,
-    Conv,
+    Vanilla,
+    Convolutional,
 } NetType;
 
 /* Declare: DenseLayer */
@@ -1108,7 +1112,7 @@ void cn_alloc_conv_layer(Net *net, Padding padding, Activation act,
                         conv_layer.output_nrows * conv_layer.output_ncols, 0);
     }
     CN_NPARAMS = offset - 1;
-    Layer layer = _cn_init_layer(Convolutional);
+    Layer layer = _cn_init_layer(Conv);
     layer.data.conv = conv_layer;
 
     _cn_add_net_layer(net, layer, CN_NPARAMS);
@@ -1359,7 +1363,7 @@ void _cn_print_conv_layer(ConvolutionalLayer *layer, size_t index) {
 /* Implement: Pooling Layer */
 void cn_alloc_pooling_layer(Net *net, PoolingStrategy strat,
                             size_t kernel_nrows, size_t kernel_ncols) {
-    CLEAR_NET_ASSERT(net->layers[CN_NLAYERS - 1].type == Convolutional);
+    CLEAR_NET_ASSERT(net->layers[CN_NLAYERS - 1].type == Conv);
     PoolingLayer pooler;
     pooler.strat = strat;
     pooler.k_nrows = kernel_nrows;
@@ -1406,7 +1410,7 @@ Matrix *cn_pool_layer(PoolingLayer *pooler, Matrix *input) {
     for (size_t i = 0; i < pooler->noutput; ++i) {
         for (size_t j = 0; j < input[i].nrows; j += pooler->k_nrows) {
             for (size_t k = 0; k < input[i].ncols; k += pooler->k_ncols) {
-                float max_store = -1 * FLT_MAX;
+                float max_store = -1 * CN_MAX_PARAM;
                 float avg_store = 0;
                 float cur;
                 for (size_t l = 0; l < pooler->k_nrows; ++l) {
@@ -1446,7 +1450,7 @@ DMatrix *_cn_pool_layer(GradientStore *gs, PoolingLayer *pooler,
     for (size_t i = 0; i < pooler->noutput; ++i) {
         for (size_t j = 0; j < input[i].nrows; j += pooler->k_nrows) {
             for (size_t k = 0; k < input[i].ncols; k += pooler->k_ncols) {
-                float max_store = -1 * FLT_MAX;
+                float max_store = -1 * CN_MAX_PARAM;
                 size_t max_id = 0;
                 float avg_id = cn_init_leaf_var(gs, 0);
                 size_t cur;
@@ -1517,7 +1521,7 @@ void _cn_print_pooling_layer(PoolingLayer layer, size_t layer_id) {
 
 void cn_alloc_global_pooling_layer(Net *net, PoolingStrategy strat) {
     CLEAR_NET_ASSERT(CN_NLAYERS > 0);
-    CLEAR_NET_ASSERT(net->layers[CN_NLAYERS - 1].type == Convolutional ||
+    CLEAR_NET_ASSERT(net->layers[CN_NLAYERS - 1].type == Conv ||
                      net->layers[CN_NLAYERS - 1].type == Pooling);
 
     GlobalPoolingLayer gpooler = (GlobalPoolingLayer){
@@ -1541,7 +1545,7 @@ void _cn_dealloc_global_pooling_layer(GlobalPoolingLayer *layer) {
 
 Vector cn_global_pool_layer(GlobalPoolingLayer *pooler, Matrix *input) {
     for (size_t i = 0; i < pooler->output.nelem; ++i) {
-        float max_store = -1 * FLT_MAX;
+        float max_store = -1 * CN_MAX_PARAM;
         float avg_res = 0;
         float cur;
         size_t nelements = input[i].nrows * input[i].ncols;
@@ -1575,10 +1579,10 @@ Vector cn_global_pool_layer(GlobalPoolingLayer *pooler, Matrix *input) {
 DVector _cn_global_pool_layer(GradientStore *gs, GlobalPoolingLayer *pooler,
                               DMatrix *input) {
     for (size_t i = 0; i < pooler->output.nelem; ++i) {
-        float max_store = -1 * FLT_MAX;
+        float max_store = -1 * CN_MAX_PARAM;
         size_t max_id;
         size_t avg_id = cn_init_leaf_var(gs, 0);
-        float nelements = input[i].nrows * input[i].ncols;
+        size_t nelements = input[i].nrows * input[i].ncols;
         for (size_t j = 0; j < input[i].nrows; ++j) {
             for (size_t k = 0; k < input[i].ncols; ++k) {
                 size_t cur = MAT_AT(input[i], j, k);
@@ -1600,7 +1604,7 @@ DVector _cn_global_pool_layer(GradientStore *gs, GlobalPoolingLayer *pooler,
             VEC_AT(pooler->output_ids, i) = max_id;
             break;
         case (Average): {
-            size_t coef = cn_init_leaf_var(gs, 1 / nelements);
+            size_t coef = cn_init_leaf_var(gs, 1 / (float)nelements);
             VEC_AT(pooler->output_ids, i) = cn_multiply(gs, avg_id, coef);
             break;
         }
@@ -1645,7 +1649,7 @@ Layer _cn_init_layer(LayerType type) {
 Net cn_alloc_conv_net(size_t input_nrows, size_t input_ncols,
                       size_t nchannels) {
     CLEAR_NET_ASSERT(input_nrows != 0 && input_ncols != 0 && nchannels != 0);
-    CN_NET_TYPE = Conv;
+    CN_NET_TYPE = Convolutional;
     DLAData input_ids;
     input_ids.nimput = nchannels;
     if (nchannels == 1) {
@@ -1668,7 +1672,7 @@ Net cn_alloc_conv_net(size_t input_nrows, size_t input_ncols,
 
 Net cn_alloc_vani_net(size_t input_nelem) {
     CLEAR_NET_ASSERT(input_nelem != 0);
-    CN_NET_TYPE = Vani;
+    CN_NET_TYPE = Vanilla;
     DLAData input_ids;
     input_ids.type = Vec;
     input_ids.nimput = 1;
@@ -1717,7 +1721,7 @@ void _cn_copy_net_params(Net *net, GradientStore *gs) {
         Layer clayer = net->layers[i];
         if (clayer.type == Dense) {
             _cn_copy_dense_params(gs, &clayer.data.dense);
-        } else if (clayer.type == Convolutional) {
+        } else if (clayer.type == Conv) {
             _cn_copy_conv_params(gs, &clayer.data.conv);
         }
     }
@@ -1728,7 +1732,7 @@ void cn_randomize_net(Net *net, float lower, float upper) {
         Layer layer = net->layers[i];
         if (layer.type == Dense) {
             _cn_randomize_dense_layer(&layer.data.dense, lower, upper);
-        } else if (layer.type == Convolutional) {
+        } else if (layer.type == Conv) {
             _cn_randomize_conv_layer(&layer.data.conv, lower, upper);
         }
     }
@@ -1790,7 +1794,7 @@ void cn_save_net_to_file(Net net, char *file_name) {
     fwrite(&net.input_ids.nimput, sizeof(net.input_ids.nimput), 1, fp);
 
     switch (CN_NET_TYPE) {
-    case (Vani):
+    case (Vanilla):
         fwrite(&net.input_ids.data.vec.nelem,
                sizeof(net.input_ids.data.vec.nelem), 1, fp);
         break;
@@ -1843,13 +1847,13 @@ Net cn_alloc_net_from_file(char *file_name) {
     fread(&nimput, sizeof(nimput), 1, fp);
     Net net;
     switch (type) {
-    case Vani: {
+    case (Vanilla): {
         size_t nelem;
         fread(&nelem, sizeof(nelem), 1, fp);
         net = cn_alloc_vani_net(nelem);
         break;
     }
-    case Conv: {
+    case (Conv): {
         size_t input_nrows;
         fread(&input_nrows, sizeof(input_nrows), 1, fp);
         size_t input_ncols;
@@ -2070,7 +2074,7 @@ float cn_learn_conv(Net *net, Matrix **inputs, LAData *targets, size_t nimput) {
     for (size_t i = 0; i < CN_NLAYERS; ++i) {
         if (net->layers[i].type == Dense) {
             _cn_apply_dense_grads(gs, &net->layers[i].data.dense);
-        } else if (net->layers[i].type == Convolutional) {
+        } else if (net->layers[i].type == Conv) {
             _cn_apply_conv_grads(gs, &net->layers[i].data.conv);
         }
     }
