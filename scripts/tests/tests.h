@@ -5,6 +5,4 @@
 
 CLEAR_NET_DEFINE_HYPERPARAMETERS
 
-int strequal(char *a, char *b) {
-    return !(strcmp(a,b));
-}
+int strequal(char *a, char *b) { return !(strcmp(a, b)); }
