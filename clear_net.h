@@ -11,9 +11,8 @@
 ***/
 
 /***
-    TODO rename things to be better, less `Vani` and `Conv`
+    TODO way to write the forwarding once for both vanilla floats and storing computation graph
     TODO paralell
-    TODO can do typedef float param or something, easy change if ever changing the type
     TODO more loss functions,
     TODO more optimization methods
     TODO do a segmentation example with matrix output
@@ -35,7 +34,6 @@
 #ifndef CLEAR_NET_REALLOC
 #define CLEAR_NET_REALLOC realloc
 #endif // CLEAR_NET_REALLOC
-// allow custom memory free strategies
 #ifndef CLEAR_NET_DEALLOC
 #define CLEAR_NET_DEALLOC free
 #endif // CLEAR_NET_MALLOC
@@ -48,13 +46,13 @@
 #define CLEAR_NET_INITIAL_GRAPH_LENGTH 10
 #endif // CLEAR_NET_INITIAL_GRAPH_LENGTH
 #ifndef CLEAR_NET_DEFINE_HYPERPARAMETERS
-#define CLEAR_NET_DEFINE_HYPERPARAMETERS                                       \
-    NetType CN_NET_TYPE;                                                       \
-    cn_param CN_RATE;                                                             \
-    size_t CN_NLAYERS;                                                         \
-    size_t CN_NPARAMS;                                                         \
-    cn_param CN_NEG_SCALE;                                                        \
-    size_t CN_WITH_MOMENTUM;                                                   \
+#define CLEAR_NET_DEFINE_HYPERPARAMETERS                                \
+    NetType CN_NET_TYPE;                                                \
+    cn_param CN_RATE;                                                   \
+    size_t CN_NLAYERS;                                                  \
+    size_t CN_NPARAMS;                                                  \
+    cn_param CN_NEG_SCALE;                                              \
+    size_t CN_WITH_MOMENTUM;                                            \
     cn_param CN_MOMENTUM_BETA;
 #endif // CLEAR_NET_DEFINE_HYPERPARAMETERS
 #ifndef CN_MAX_PARAM
