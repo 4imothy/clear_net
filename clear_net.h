@@ -11,6 +11,7 @@
 ***/
 
 /***
+    TODO rewrite computation graph to be stack allocated, have a param struct around a scalar, each time a new variable is created, make a deep copy, each node owns references to its two creators, analyze memory first when doing this
     TODO way to write the forwarding once for both vanilla floats and storing computation graph
     TODO paralell
     TODO more loss functions,
