@@ -11,7 +11,7 @@
 ***/
 
 /***
-    TODO do all computations on the computation graph, no more of just vanilla float implementation
+    TODO do all computations on the computation graph, no more of just vanilla float implementation, need to output the floats so have some function which takes the gs id to floats, each net has a matrix/vector for output float values, after the final layer change the output_ids to just the output matrix/matrices/vector
     TODO come up with some way to use the typedef for scalar and not the float specifics like powf
     TODO instead of funciton pointers do operation type enum
     TODO way to write the forwarding once for both vanilla floats and storing computation graph
@@ -454,8 +454,7 @@ void _cn_raise_backward(GradientStore *gs, VarNode *var) {
         logf(l_num) * powf(l_num, r_num) * var->grad;
 }
 
-// TODO this parameter `to_cn_raise` should be to_raise I think
-size_t cn_raise(GradientStore *gs, size_t to_cn_raise, size_t pow) {
+size_t cn_raise(GradientStore *gs, size_t to_raise, size_t pow) {
     scalar val = powf(GET_NODE(to_cn_raise).num, GET_NODE(pow).num);
     size_t out = _cn_init_var(gs, val, to_cn_raise, pow, _cn_raise_backward);
     return out;
