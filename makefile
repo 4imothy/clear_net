@@ -9,7 +9,7 @@ LIB_DIR := clear_net
 EXAMPLE_DIR := examples
 SCRIPTS_DIR := scripts
 BENCHMARK_DIR := $(SCRIPTS_DIR)/benchmarks
-TEST_DIR := $(SCRIPTS_DIR)/tests
+TEST_DIR := tests
 DOWNLOAD_DATA_DIR := $(SCRIPTS_DIR)/download_datasets
 
 LIB_FILES := $(wildcard $(LIB_DIR)/*.c)

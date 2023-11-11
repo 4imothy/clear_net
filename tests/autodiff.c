@@ -1,6 +1,6 @@
 #include "./tests.h"
-#include "../../clear_net/defines.h"
-#include "../../clear_net/autodiff.h"
+#include "../clear_net/defines.h"
+#include "../clear_net/autodiff.h"
 
 #define PRINT_VAL(x)                                                           \
     printf("%s %f %f\n", #x, cg->vars[(x)].num, cg->vars[(x)].grad)
