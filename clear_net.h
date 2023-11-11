@@ -15,7 +15,7 @@
     TODO come up with some way to use the typedef for scalar and not the float specifics like powf
     TODO instead of funciton pointers do operation type enum
     TODO way to write the forwarding once for both vanilla floats and storing computation graph
-    TODO paralell
+    TODO parallel
     TODO more loss functions,
     TODO more optimization methods
     TODO do a segmentation example with matrix output
@@ -455,8 +455,8 @@ void _cn_raise_backward(GradientStore *gs, VarNode *var) {
 }
 
 size_t cn_raise(GradientStore *gs, size_t to_raise, size_t pow) {
-    scalar val = powf(GET_NODE(to_cn_raise).num, GET_NODE(pow).num);
-    size_t out = _cn_init_var(gs, val, to_cn_raise, pow, _cn_raise_backward);
+    scalar val = powf(GET_NODE(to_raise).num, GET_NODE(pow).num);
+    size_t out = _cn_init_var(gs, val, to_raise, pow, _cn_raise_backward);
     return out;
 }
 
