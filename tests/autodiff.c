@@ -1,6 +1,6 @@
-#include "./tests.h"
-#include "../clear_net/defines.h"
 #include "../clear_net/autodiff.h"
+#include "../clear_net/clear_net.h"
+#include "./tests.h"
 
 #define PRINT_VAL(x)                                                           \
     printf("%s %f %f\n", #x, cg->vars[(x)].num, cg->vars[(x)].grad)
@@ -35,14 +35,9 @@ int main(int argc, char *argv[]) {
         ulong c = add(cg, a, b);
         ulong d = add(cg, mul(cg, a, b), b);
         c = add(cg, c, add(cg, c, one));
-        c = add(cg, c,
-                   add(cg, c, add(cg, one, mul(cg, none, a))));
-        d = add(cg, d,
-                   add(cg, mul(cg, d, two),
-                          relu(cg, add(cg, b, a))));
-        d = add(cg, d,
-                   add(cg, mul(cg, d, three),
-                          relu(cg, sub(cg, b, a))));
+        c = add(cg, c, add(cg, c, add(cg, one, mul(cg, none, a))));
+        d = add(cg, d, add(cg, mul(cg, d, two), relu(cg, add(cg, b, a))));
+        d = add(cg, d, add(cg, mul(cg, d, three), relu(cg, sub(cg, b, a))));
         ulong e = sub(cg, c, d);
         ulong f = relu(cg, e);
         backprop(cg, f);

@@ -1,3 +1,7 @@
+// TODO should namespace these defines
+#ifndef DEFINES
+#define DEFINES
+
 #ifndef CLEAR_NET_ALLOC
 #define CLEAR_NET_ALLOC malloc
 #endif // CLEAR_NET_ALLOC
@@ -14,3 +18,5 @@
 #ifndef LEAKER
 #define LEAKER 0.1
 #endif // LEAKER
+
+#endif // DEFINES

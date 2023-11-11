@@ -1,19 +1,19 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdlib.h>
-#include <float.h>
-#include <math.h>
 #include "autodiff.h"
 #include "defines.h"
+#include <float.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// TODO change powf to have one for floats and doubles in case scalar is changed to be a double
+// TODO change powf to have one for floats and doubles in case scalar is changed
+// to be a double
 
 #define INITIAL_GRAPH_SIZE 50
 #define NODE(id) (cg)->vars[(id)]
 #define POS(cg, x) NODE(x).num > 0
 
 ulong extendSize(ulong size) {
-    return (size == 0 ?  INITIAL_GRAPH_SIZE : size*2);
+    return (size == 0 ? INITIAL_GRAPH_SIZE : size * 2);
 }
 
 CompGraph allocCompGraph(ulong max_size) {
@@ -24,17 +24,15 @@ CompGraph allocCompGraph(ulong max_size) {
     };
 }
 
-void deallocCompGraph(CompGraph *cg) {
-    CLEAR_NET_DEALLOC(cg->vars);
-}
-
+void deallocCompGraph(CompGraph *cg) { CLEAR_NET_DEALLOC(cg->vars); }
 
 void reallocGradientStore(CompGraph *cg, ulong new_size) {
     cg->vars = CLEAR_NET_REALLOC(cg->vars, new_size * sizeof(*cg->vars));
     cg->max_size = new_size;
 }
 
-Scalar createScalar(scalar num, ulong prev_left, ulong prev_right, Operation op) {
+Scalar createScalar(scalar num, ulong prev_left, ulong prev_right,
+                    Operation op) {
     return (Scalar){
         .num = num,
         .grad = 0,
@@ -44,12 +42,11 @@ Scalar createScalar(scalar num, ulong prev_left, ulong prev_right, Operation op)
     };
 }
 
-ulong initScalar(CompGraph *cg, scalar num, ulong prev_left,
-                    ulong prev_right, Operation op) {
+ulong initScalar(CompGraph *cg, scalar num, ulong prev_left, ulong prev_right,
+                 Operation op) {
     if (cg->size >= cg->max_size) {
         cg->max_size = extendSize(cg->max_size);
-        cg->vars =
-            CLEAR_NET_REALLOC(cg->vars, cg->max_size * sizeof(Scalar));
+        cg->vars = CLEAR_NET_REALLOC(cg->vars, cg->max_size * sizeof(Scalar));
         CLEAR_NET_ASSERT(cg->vars);
     }
     Scalar out = createScalar(num, prev_left, prev_right, op);
@@ -60,6 +57,14 @@ ulong initScalar(CompGraph *cg, scalar num, ulong prev_left,
 
 ulong initLeafScalar(CompGraph *cg, scalar num) {
     return initScalar(cg, num, 0, 0, None);
+}
+
+void setVal(CompGraph *cg, ulong x, scalar num) {
+    NODE(x).num = num;
+}
+
+void applyGrad(CompGraph *cg, ulong x, scalar rate) {
+    NODE(x).num -= NODE(x).grad * rate;
 }
 
 ulong add(CompGraph *cg, ulong left, ulong right) {
@@ -104,7 +109,7 @@ ulong raise(CompGraph *cg, ulong to_raise, ulong pow) {
 void raiseBackprop(CompGraph *cg, Scalar *var) {
     scalar l_num = NODE(var->prev_left).num;
     scalar r_num = NODE(var->prev_right).num;
-    NODE(var->prev_left).grad += r_num * powf(l_num, r_num -1) * var->grad;
+    NODE(var->prev_left).grad += r_num * powf(l_num, r_num - 1) * var->grad;
     NODE(var->prev_right).grad += logf(l_num) * powf(l_num, r_num) * var->grad;
 }
 
@@ -127,13 +132,13 @@ ulong leakyRelu(CompGraph *cg, ulong x) {
 }
 
 void leakyReluBackprop(CompGraph *cg, Scalar *var) {
-    scalar change = var->num >0 ? 1 : LEAKER;
+    scalar change = var->num > 0 ? 1 : LEAKER;
     NODE(var->prev_left).grad += change * var->grad;
 }
 
 ulong htan(CompGraph *cg, ulong x) {
     scalar val = tanhf(NODE(x).num);
-    ulong out = initScalar(cg, val, x,0, Htan);
+    ulong out = initScalar(cg, val, x, 0, Htan);
     return out;
 }
 
@@ -168,7 +173,7 @@ void backprop(CompGraph *cg, ulong last) {
     Scalar *cur;
     for (ulong i = cg->size - 1; i > 0; --i) {
         cur = &NODE(i);
-        switch(cur->op) {
+        switch (cur->op) {
         case Add:
             addBackprop(cg, cur);
             break;

@@ -34,6 +34,8 @@ typedef struct {
 CompGraph allocCompGraph(ulong max_length);
 void deallocCompGraph(CompGraph *cg);
 ulong initLeafScalar(CompGraph *cg, scalar num);
+void setVal(CompGraph *cg, ulong x, scalar num);
+void applyGrad(CompGraph *cg, ulong x, scalar rate);
 ulong add(CompGraph *cg, ulong left, ulong right);
 ulong sub(CompGraph *cg, ulong left, ulong right);
 ulong mul(CompGraph *cg, ulong left, ulong right);
