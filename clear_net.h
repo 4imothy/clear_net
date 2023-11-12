@@ -455,8 +455,8 @@ void _cn_raise_backward(GradientStore *gs, VarNode *var) {
 }
 
 size_t cn_raise(GradientStore *gs, size_t to_raise, size_t pow) {
-    scalar val = powf(GET_NODE(to_cn_raise).num, GET_NODE(pow).num);
-    size_t out = _cn_init_var(gs, val, to_cn_raise, pow, _cn_raise_backward);
+    scalar val = powf(GET_NODE(to_raise).num, GET_NODE(pow).num);
+    size_t out = _cn_init_var(gs, val, to_raise, pow, _cn_raise_backward);
     return out;
 }
 
