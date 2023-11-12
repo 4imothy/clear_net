@@ -5,7 +5,7 @@ PY := python3
 C_FORMAT := clang-format
 PY_FORMAT := autopep8
 
-LIB_DIR := clear_net
+LIB_DIR := lib
 EXAMPLE_DIR := examples
 SCRIPTS_DIR := scripts
 BENCHMARK_DIR := $(SCRIPTS_DIR)/benchmarks
