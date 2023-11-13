@@ -3,38 +3,9 @@
 #include <float.h>
 #include "autodiff.h"
 #include "clear_net.h"
+#include "graph_utils.h"
 
-// TODO split layers up into different files, put subtypes into seperate files, put printing stuff in different files
 // TODO to save space can not alloc for any storing index matirx as the number of elements between each element should be the same just store the stride again
-
-#define MAT_ID(mat, r, c) (mat).start_id + ((r) * (mat).ncols) + (c)
-#define VEC_ID(vec, i) (vec).start_id + (i)
-
-// for when elements are together in the computation
-typedef struct {
-    ulong start_id;
-    ulong nrows;
-    ulong ncols;
-    ulong stride;
-} Mat;
-
-typedef struct {
-    ulong start_id;
-    ulong nelem;
-} Vec;
-
-// for when elements are not together in the computation graph
-typedef struct {
-    ulong *elem;
-    ulong ncols;
-    ulong nrows;
-    ulong stride;
-} UMat;
-
-typedef struct {
-    ulong *elem;
-    ulong nelem;
-} UVec;
 
 typedef struct {
     Mat weights;
@@ -108,28 +79,6 @@ typedef struct {
     LayerData data;
 } Layer;
 
-typedef struct {
-    UMat *mats;
-    ulong nelem;
-} UMatList;
-
-typedef union {
-    UVec vec;
-    UMat mat;
-    UMatList mat_list;
-} UVecMatU;
-
-typedef enum {
-    UVector,
-    UMatrix,
-    UMatrixList,
-} UType;
-
-typedef struct {
-    UVecMatU data;
-    UType type;
-} UData;
-
 struct Net {
     ulong nlayers;
     Layer *layers;
@@ -139,164 +88,6 @@ struct Net {
     UData input;
     HParams hp;
 };
-
-scalar randRange(scalar lower, scalar upper) {
-    return ((scalar)rand() / RAND_MAX) * (upper - lower) + lower;
-}
-
-Mat createMat(CompGraph *cg, ulong nrows, ulong ncols, ulong *offset) {
-    Mat mat = (Mat) {
-        .start_id = *offset,
-        .nrows = nrows,
-        .ncols = ncols,
-    };
-    for (ulong i = 0; i < nrows; ++i) {
-        for (ulong j = 0; j < ncols; ++j) {
-            initLeafScalar(cg, 0);
-        }
-    }
-    *offset += nrows * ncols;
-    return mat;
-}
-
-void zeroMat(Mat *mat) {
-    mat->nrows = 0;
-    mat->ncols = 0;
-    mat->start_id = 0;
-}
-
-void printMat(CompGraph *cg, Mat *mat, char *name) {
-    printf("%s = [\n", name);
-    for (size_t i = 0; i < mat->nrows; ++i) {
-        printf("    ");
-        for (size_t j = 0; j < mat->ncols; ++j) {
-            printf("%f ", getVal(cg, MAT_ID(*mat, i, j)));
-        }
-        printf("\n");
-    }
-    printf("]\n");
-}
-
-void randomizeMat(CompGraph *cg, Mat *mat, scalar lower, scalar upper) {
-    for (ulong i = 0; i < mat->nrows; ++i) {
-        for (ulong j = 0; j < mat->ncols; ++j) {
-            setVal(cg, MAT_ID(*mat, i, j), randRange(lower, upper));
-        }
-    }
-}
-
-void applyMatGrads(CompGraph *cg, Mat *mat, scalar rate) {
-    for (ulong i = 0; i < mat->nrows; ++i) {
-        for (ulong j = 0; j < mat->ncols; ++j) {
-            // printf("before: %f\n", getVal(cg, MAT_ID(*mat, i, j)));
-            applyGrad(cg, MAT_ID(*mat, i, j), rate);
-            // printf("after: %f\n", getVal(cg, MAT_ID(*mat, i, j)));
-        }
-    }
-}
-
-Vec createVec(CompGraph *cg, ulong nelem, ulong *offset) {
-    Vec vec =  (Vec) {
-        .nelem = nelem,
-        .start_id = *offset,
-    };
-    for (ulong i = 0; i < nelem; ++i) {
-        initLeafScalar(cg, 0);
-    }
-    *offset += nelem;
-    return vec;
-}
-
-void zeroVec(Vec *vec) {
-    vec->nelem = 0;
-    vec->start_id = 0;
-}
-
-void printVec(CompGraph *cg, Vec *vec, char *name) {
-    printf("%s = [\n", name);
-    printf("    ");
-    for (size_t i = 0; i < vec->nelem; ++i) {
-        printf("%f ", getVal(cg, VEC_ID(*vec, i)));
-    }
-    printf("\n]\n");
-}
-
-void randomizeVec(CompGraph *cg, Vec *vec, scalar lower, scalar upper) {
-    for (ulong i = 0; i < vec->nelem; ++i) {
-        setVal(cg, VEC_ID(*vec, i), randRange(lower, upper));
-    }
-}
-
-void applyVecGrads(CompGraph *cg, Vec *vec, scalar rate) {
-    for (ulong i = 0; i < vec->nelem; ++i) {
-        applyGrad(cg, VEC_ID(*vec, i), rate);
-    }
-}
-
-UMat allocUMat(ulong nrows, ulong ncols) {
-    UMat umat;
-    umat.nrows = nrows;
-    umat.ncols = ncols;
-    umat.elem = CLEAR_NET_ALLOC(nrows * ncols * sizeof(*umat.elem));
-    CLEAR_NET_ASSERT(umat.elem != NULL);
-    return umat;
-}
-
-void deallocUMat(UMat *umat) {
-    CLEAR_NET_DEALLOC(umat->elem);
-    umat->elem = NULL;
-    umat->nrows = 0;
-    umat->ncols = 0;
-}
-
-UVec allocUVec(ulong nelem) {
-    UVec uvec;
-    uvec.nelem = nelem;
-    uvec.elem = CLEAR_NET_ALLOC(nelem * sizeof(*uvec.elem));
-    CLEAR_NET_ASSERT(uvec.elem != NULL);
-    return uvec;
-}
-
-void deallocUVec(UVec *uvec) {
-    CLEAR_NET_DEALLOC(uvec->elem);
-    uvec->nelem = 0;
-    uvec->elem = NULL;
-}
-
-UMatList allocUMatList(ulong nrows, ulong ncols, ulong nchannels) {
-    UMatList list;
-    list.nelem = nchannels;
-    list.mats = CLEAR_NET_ALLOC(nchannels * sizeof(UMat));
-    CLEAR_NET_ASSERT(list.mats != NULL);
-    for (ulong i = 0; i < nchannels; ++i) {
-        list.mats[i] = allocUMat(nrows, ncols);
-    }
-
-    return list;
-}
-
-void deallocUMatList(UMatList *list) {
-    for (ulong i = 0; i < list->nelem; ++i) {
-        deallocUMat(&list->mats[i]);
-    }
-    CLEAR_NET_DEALLOC(list->mats);
-    list->nelem = 0;
-}
-
-void deallocUData(UData *data) {
-    switch(data->type) {
-    case(UVector):
-        deallocUVec(&data->data.vec);
-        break;
-    case(UMatrix):
-        deallocUMat(&data->data.mat);
-        break;
-    case(UMatrixList):
-        deallocUMatList(&data->data.mat_list);
-        break;
-
-    }
-}
 
 ulong activate(CompGraph *cg, ulong x, Activation act, scalar leaker) {
     switch (act) {
