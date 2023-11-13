@@ -95,6 +95,7 @@ UMat allocUMat(ulong nrows, ulong ncols) {
     UMat umat;
     umat.nrows = nrows;
     umat.ncols = ncols;
+    umat.stride = ncols;
     umat.elem = CLEAR_NET_ALLOC(nrows * ncols * sizeof(*umat.elem));
     CLEAR_NET_ASSERT(umat.elem != NULL);
     return umat;

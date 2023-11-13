@@ -8,7 +8,6 @@ typedef struct {
     ulong start_id;
     ulong nrows;
     ulong ncols;
-    ulong stride;
 } Mat;
 
 typedef struct {
