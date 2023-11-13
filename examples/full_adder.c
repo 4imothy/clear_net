@@ -1,7 +1,7 @@
-#define CLEAR_NET_IMPLEMENTATION
-#include "../clear_net.h"
+#include "../lib/clear_net.h"
+#include <stdio.h>
 
-CLEAR_NET_DEFINE_HYPERPARAMETERS
+#define la cn.la
 
 // a full adder with carry in and carry out
 int main(void) {
@@ -20,41 +20,47 @@ int main(void) {
     };
 
     // 2^3
-    size_t num_combinations = 8;
+    ulong num_combinations = 8;
     // a, b, cin
-    size_t num_inputs = 3;
+    ulong num_inputs = 3;
     // sum, cout
-    size_t num_outputs = 2;
-    size_t stride = 5;
-    Matrix input = cn_form_matrix(num_combinations, num_inputs, stride, data);
+    ulong num_outputs = 2;
+    ulong stride = 5;
+    Matrix input = la.formMatrix(num_combinations, num_inputs, stride, data);
     Matrix target =
-        cn_form_matrix(num_combinations, num_outputs, stride, &data[num_inputs]);
-    size_t num_epochs = 20000;
-    cn_default_hparams();
-    Net net = cn_alloc_vani_net(3);
-    cn_with_momentum(0.9);
-    cn_set_neg_scale(1);
-    cn_alloc_dense_layer(&net, Tanh, 3);
-    cn_alloc_dense_layer(&net, LeakyReLU, 8);
-    cn_alloc_dense_layer(&net, Sigmoid, num_outputs);
-    cn_randomize_net(&net, -1, 1);
-    cn_print_net(net, "net");
+        la.formMatrix(num_combinations, num_outputs, stride, &data[num_inputs]);
+    la.shuffleVanillaInput(&input, &target);
+    ulong num_epochs = 20000;
+
+    HParams hp = cn.defaultHParams();
+
+    cn.setLeaker(&hp, 1);
+    Net *net = cn.allocVanillaNet(hp, 3);
+    // cn_with_momentum(0.9);
+    cn.allocDenseLayer(net, Tanh, 3);
+    cn.allocDenseLayer(net, LeakyReLU, 8);
+    cn.allocDenseLayer(net, Sigmoid, num_outputs);
+    cn.randomizeNet(net, -1, 1);
+    cn.printNet(net, "net");
     float loss;
-    for (size_t i = 0; i < num_epochs; ++i) {
-        loss = cn_learn_vani(&net, input, target);
+    for (ulong i = 0; i < num_epochs; ++i) {
+        loss = cn.learnVanilla(net, input, target);
         if (i % (num_epochs / 10) == 0) {
             printf("Average loss: %g\n", loss);
         }
     }
     printf("Final loss: %g\n", loss);
-    cn_print_vani_results(net, input, target);
-    char *name = "model";
-    cn_save_net_to_file(net, name);
-    cn_dealloc_net(&net);
-    net = cn_alloc_net_from_file(name);
-    printf("After loading file\n");
-    cn_print_vani_results(net, input, target);
-    cn_dealloc_net(&net);
+
+    Vector out_store = la.allocVector(target.ncols);
+    for (ulong i = 0; i < input.nrows; ++i) {
+        Vector in = la.formVector(input.ncols, &MAT_AT(input, i, 0));
+        la.printVector(&in, "in");
+        cn.predictDense(net, in, &out_store);
+        la.printVector(&out_store, "out");
+    }
+
+    cn.deallocNet(net);
+    la.deallocVector(&out_store);
 
     return 0;
 }
