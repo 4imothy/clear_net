@@ -26,31 +26,25 @@ BENCH_MAT_MUL_FILE := $(BENCHMARK_DIR)/bench_mat_mul.c
 examples := mnist_vanilla mnist_conv mnist_mix xor full_adder iris lin_reg mnist_conv_tiny
 downloaders := get_mnist
 
-clear_net: $(LIB_FILES)
-
 .DEFAULT_GOAL := all
 
 all: $(examples)
 
-$(examples): clear_net $(EXAMPLE_FILES)
-	$(CC) $(CFLAGS) -o $@ $(EXAMPLE_DIR)/$@.c
+$(examples): $(LIB_FILES) $(EXAMPLE_FILES)
+	$(CC) $(CFLAGS) -o $@ $(LIB_FILES) $(EXAMPLE_DIR)/$@.c
 
 run_%: %
 	./$<
 
 tests := autodiff correlation gs_forward
 
-$(tests): clear_net $(TEST_FILES)
+$(tests): $(LIB_FILES) $(TEST_FILES)
 	$(CC) $(CFLAGS) -o $@ $(TEST_DIR)/$@.c $(LIB_FILES)
 
 test_%: %
 	$(PY) $(TEST_DIR)/$<.py
 
 test: $(addprefix test_, $(tests))
-
-run_test: $(LIB_FILES) test.c
-	$(CC) $(CFLAGS) -o $@ test.c $(LIB_FILES)
-	./run_test
 
 pip_update:
 	pip --disable-pip-version-check list --outdated --format=json | python -c "import json, sys; print('\n'.join([x['name'] for x in json.load(sys.stdin)]))" | xargs -n1 pip install -U
