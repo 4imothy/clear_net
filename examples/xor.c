@@ -27,7 +27,7 @@ int main(void) {
     Matrix input =
         la.formMatrix(data.nrows, 2, data.stride, &MAT_AT(data, 0, 0));
     Matrix target = la.formMatrix(data.nrows, 1, data.stride,
-                                   &MAT_AT(data, 0, data.ncols - 1));
+                                  &MAT_AT(data, 0, data.ncols - 1));
     scalar loss;
     ulong num_epochs = 10000;
     for (ulong i = 0; i < num_epochs; ++i) {
@@ -37,15 +37,7 @@ int main(void) {
         }
     }
     printf("Final loss: %g\n", loss);
-
-    Vector out_store = la.allocVector(target.ncols);
-    for (ulong i = 0; i < data.nrows; ++i) {
-        Vector in = la.formVector(input.ncols, &MAT_AT(input, i, 0));
-        la.printVector(&in, "in");
-        cn.predictDense(net, in, &out_store);
-        la.printVector(&out_store, "out");
-    }
-
+    cn.printVanillaPredictions(net, input, target);
     cn.deallocNet(net);
     la.deallocMatrix(&data);
     return 0;
