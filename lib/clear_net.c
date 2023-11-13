@@ -53,4 +53,6 @@ _cn_names const cn = {
     PAIR(predictDense),
     PAIR(printVanillaPredictions),
     PAIR(lossVanilla),
+    PAIR(saveModel),
+    PAIR(allocNetFromFile),
 };
