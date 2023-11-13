@@ -37,8 +37,12 @@ int main(int argc, char *argv[]) {
         ulong d = ad.add(cg, ad.mul(cg, a, b), b);
         c = ad.add(cg, c, ad.add(cg, c, one));
         c = ad.add(cg, c, ad.add(cg, c, ad.add(cg, one, ad.mul(cg, none, a))));
-        d = ad.add(cg, d, ad.add(cg, ad.mul(cg, d, two), ad.relu(cg, ad.add(cg, b, a))));
-        d = ad.add(cg, d, ad.add(cg, ad.mul(cg, d, three), ad.relu(cg, ad.sub(cg, b, a))));
+        d = ad.add(
+            cg, d,
+            ad.add(cg, ad.mul(cg, d, two), ad.relu(cg, ad.add(cg, b, a))));
+        d = ad.add(
+            cg, d,
+            ad.add(cg, ad.mul(cg, d, three), ad.relu(cg, ad.sub(cg, b, a))));
         ulong e = ad.sub(cg, c, d);
         ulong f = ad.relu(cg, e);
         ad.backprop(cg, f, leaker);
