@@ -2,11 +2,10 @@
 #include <stdio.h>
 #include <float.h>
 #include "autodiff.h"
-#include "net.h"
 #include "clear_net.h"
 
-// TODO make a seperate files for data manipulation
 // TODO split layers up into different files, put subtypes into seperate files, put printing stuff in different files
+// TODO to save space can not alloc for any storing index matirx as the number of elements between each element should be the same just store the stride again
 
 #define MAT_ID(mat, r, c) (mat).start_id + ((r) * (mat).ncols) + (c)
 #define VEC_ID(vec, i) (vec).start_id + (i)
@@ -138,7 +137,7 @@ struct Net {
     ulong nparams;
     UType output_type;
     UData input;
-    scalar rate;
+    HParams hp;
 };
 
 scalar randRange(scalar lower, scalar upper) {
@@ -299,7 +298,7 @@ void deallocUData(UData *data) {
     }
 }
 
-ulong activate(CompGraph *cg, ulong x, Activation act) {
+ulong activate(CompGraph *cg, ulong x, Activation act, scalar leaker) {
     switch (act) {
     case ReLU:
         return relu(cg, x);
@@ -308,9 +307,9 @@ ulong activate(CompGraph *cg, ulong x, Activation act) {
     case Tanh:
         return htan(cg, x);
     case LeakyReLU:
-        return leakyRelu(cg, x);
+        return leakyRelu(cg, x, leaker);
     case ELU:
-        return elu(cg, x);
+        return elu(cg, x, leaker);
     }
 }
 
@@ -369,7 +368,7 @@ void randomizeDenseLayer(CompGraph *cg, DenseLayer *layer, scalar lower, scalar 
     randomizeVec(cg, &layer->biases, lower, upper);
 }
 
-UVec forwardDense(CompGraph *cg, DenseLayer *layer, UVec input) {
+UVec forwardDense(CompGraph *cg, DenseLayer *layer, UVec input, scalar leaker) {
     for (ulong i = 0; i < layer->weights.ncols; ++i) {
         ulong res = initLeafScalar(cg, 0);
         for (ulong j = 0; j < input.nelem; ++j) {
@@ -380,7 +379,7 @@ UVec forwardDense(CompGraph *cg, DenseLayer *layer, UVec input) {
                           VEC_AT(input, j)));
         }
         res = add(cg, res, VEC_ID(layer->biases, i));
-        res = activate(cg, res, layer->act);
+        res = activate(cg, res, layer->act, leaker);
         VEC_AT(layer->output, i) = res;
     }
     return layer->output;
@@ -545,7 +544,7 @@ void setPadding(Padding padding, ulong k_nrows, ulong k_ncols, ulong *row_paddin
     }
 }
 
-UMat* forwardConv(CompGraph *cg, ConvolutionalLayer *layer, UMat *input) {
+UMat* forwardConv(CompGraph *cg, ConvolutionalLayer *layer, UMat *input, scalar leaker) {
     for (ulong i= 0 ; i < layer->nfilters; ++i) {
         for (ulong j = 0; i < layer->output_nrows; ++j) {
             for (ulong k = 0; k < layer->output_ncols; ++k) {
@@ -575,7 +574,7 @@ UMat* forwardConv(CompGraph *cg, ConvolutionalLayer *layer, UMat *input) {
         for (ulong j = 0; j < layer->output_nrows; ++j) {
             for (ulong k= 0; k < layer->output_ncols; ++k) {
                 MAT_AT(layer->outputs[i], j, k) = add(cg, MAT_ID(layer->filters[i].biases, j,k), MAT_AT(layer->outputs[i], j,k));
-                MAT_AT(layer->outputs[i], j, k) = activate(cg, MAT_AT(layer->outputs[i], j, k), layer->act);
+                MAT_AT(layer->outputs[i], j, k) = activate(cg, MAT_AT(layer->outputs[i], j, k), layer->act, leaker);
             }
         }
     }
@@ -726,27 +725,42 @@ UVec globalPoolLayer(CompGraph *cg, GlobalPoolingLayer *pooler, UMat *input) {
     return pooler->output;
 }
 
-Net* allocDefaultNet(void) {
+HParams defaultHParams(void) {
+    return (HParams) {
+        .rate = 0.1,
+        .leaker = 0.1,
+    };
+}
+
+void setRate(HParams *hp, scalar rate) {
+    hp->rate=rate;
+}
+
+void setLeaker(HParams *hp, scalar leaker) {
+    hp->leaker=leaker;
+}
+
+Net* allocNet(HParams hp) {
     Net *net = CLEAR_NET_ALLOC(sizeof(Net));
     net->layers = NULL;
     net->nlayers = 0;
     net->nparams = 0;
-    net->rate = 0.5;
+    net->hp = hp;
     net->cg = allocCompGraph(0);
     return net;
 }
 
-Net* allocVanillaNet(ulong input_nelem) {
+Net* allocVanillaNet(HParams hp, ulong input_nelem) {
     CLEAR_NET_ASSERT(input_nelem != 0);
     UData input;
     input.type = UVector;
     input.data.vec = allocUVec(input_nelem);
-    Net *net = allocDefaultNet();
+    Net *net = allocNet(hp);
     net->input = input;
     return net;
 }
 
-Net* allocConvNet(ulong input_nrows, ulong input_ncols, ulong nchannels) {
+Net* allocConvNet(HParams hp, ulong input_nrows, ulong input_ncols, ulong nchannels) {
     CLEAR_NET_ASSERT(input_nrows != 0 && input_ncols != 0 && nchannels != 0);
     UData input;
     if (nchannels == 0) {
@@ -757,7 +771,7 @@ Net* allocConvNet(ulong input_nrows, ulong input_ncols, ulong nchannels) {
         input.data.mat_list = allocUMatList(input_nrows, input_ncols, nchannels);
     }
 
-    Net *net = allocDefaultNet();
+    Net *net = allocNet(hp);
     net->input = input;
     return net;
 }
@@ -819,33 +833,52 @@ void randomizeNet(Net *net, scalar lower, scalar upper) {
     }
 }
 
-// TODO going to make a public predictDense which returns a normal vector
 UVec _predictDense(Net *net, CompGraph *cg, UVec prev) {
     for (ulong i = 0; i < net->nlayers; ++i) {
-        prev = forwardDense(cg, &net->layers[i].data.dense, prev);
+        prev = forwardDense(cg, &net->layers[i].data.dense, prev, net->hp.leaker);
     }
     return prev;
+}
+
+Vector *predictDense(Net *net, Vector input, Vector *store) {
+    CLEAR_NET_ASSERT(net->input.data.vec.nelem == input.nelem);
+    CompGraph *cg = net->cg;
+
+    for (ulong i = 0; i < input.nelem; ++i) {
+        VEC_AT(net->input.data.vec, i) = getSize(cg);
+        initLeafScalar(cg, VEC_AT(input, i));
+    }
+    UVec prediction = _predictDense(net, cg, net->input.data.vec);
+    CLEAR_NET_ASSERT(store->nelem == prediction.nelem);
+    for (ulong i = 0; i < store->nelem; ++i) {
+        VEC_AT(*store, i) = getVal(cg, VEC_AT(prediction, i));
+    }
+
+    return store;
 }
 
 void applyNetGrads(CompGraph * cg, Net *net) {
     for (size_t i = 0; i < net->nlayers; ++i) {
         if (net->layers[i].type == Dense) {
-            applyDenseGrads(cg, &net->layers[i].data.dense, net->rate);
+            applyDenseGrads(cg, &net->layers[i].data.dense, net->hp.rate);
         } else if (net->layers[i].type == Conv) {
-            applyConvGrads(cg, &net->layers[i].data.conv, net->rate);
+            applyConvGrads(cg, &net->layers[i].data.conv, net->hp.rate);
         }
     }
 }
 
 scalar learnVanilla(Net *net, Matrix input, Matrix target) {
     CLEAR_NET_ASSERT(input.nrows == target.nrows);
+    CLEAR_NET_ASSERT(net->input.data.vec.nelem == input.ncols);
     ulong train_size = input.nrows;
-    net->cg->size = net->nparams + 1;
     CompGraph *cg = net->cg;
+    setSize(cg, net->nparams + 1);
+    // net->cg->size = net->nparams + 1;
 
     scalar total_loss = 0;
     for (ulong i = 0; i < input.ncols; ++i) {
-        VEC_AT(net->input.data.vec, i) = cg->size + i;
+        // VEC_AT(net->input.data.vec, i) = cg->size + i;
+        VEC_AT(net->input.data.vec, i) = getSize(cg) + i;
     }
 
     Vec target_vec;
@@ -855,7 +888,7 @@ scalar learnVanilla(Net *net, Matrix input, Matrix target) {
             initLeafScalar(cg, MAT_AT(input, i, j));
         }
         UVec prediction = _predictDense(net, cg, net->input.data.vec);
-        target_vec.start_id = cg->size;
+        target_vec.start_id = getSize(cg);
 
         for (ulong j = 0; j < target.ncols; ++j) {
             initLeafScalar(cg, MAT_AT(target, i, j));
@@ -869,9 +902,9 @@ scalar learnVanilla(Net *net, Matrix input, Matrix target) {
                                            VEC_AT(prediction, j), VEC_ID(target_vec, j)),
                                            raiser));
         }
-        backprop(cg, loss);
+        backprop(cg, loss, net->hp.leaker);
         total_loss += getVal(cg, loss);
-        cg->size = net->nparams + 1;
+        setSize(cg, net->nparams + 1);
     }
     applyNetGrads(cg, net);
     resetGrads(cg, net->nparams);

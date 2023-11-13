@@ -5,11 +5,7 @@
 #define MAT_AT(mat, r, c) (mat).elem[(r) * (mat).stride + (c)]
 #define VEC_AT(vec, i) (vec).elem[(i)]
 
-// TODO when doing examples should create a public matrix type for scalar types
-// which is then used by the people
 // TODO need to do stochastic gradient descent stuff
-// TODO make a new macro which allocs and verifies that mem isn't null
-// TODO hparam struct that is created and passed to training
 
 typedef float scalar;
 typedef unsigned long ulong;
@@ -31,36 +27,59 @@ typedef struct {
 } Matrix;
 
 typedef struct {
+    scalar *elem;
+    ulong nelem;
+} Vector;
+
+typedef struct {
+    scalar rate;
+    scalar leaker;
+} HParams;
+
+typedef struct {
     struct {
-        CompGraph* (*allocCompGraph)(ulong max_size);
-        void (*deallocCompGraph)(CompGraph* cg);
-        ulong (*initLeafScalar)(CompGraph* cg, scalar num);
+        CompGraph* (*allocCompGraph)(ulong max_length);
+        void (*deallocCompGraph)(CompGraph *cg);
+        ulong (*initLeafScalar)(CompGraph *cg, scalar num);
+        void (*resetGrads)(CompGraph *cg, ulong count);
+        void (*applyGrad)(CompGraph *cg, ulong x, scalar rate);
         scalar (*getVal)(CompGraph *cg, ulong x);
         scalar (*getGrad)(CompGraph *cg, ulong x);
+        void (*setVal)(CompGraph *cg, ulong x, scalar num);
         ulong (*add)(CompGraph *cg, ulong left, ulong right);
         ulong (*sub)(CompGraph *cg, ulong left, ulong right);
         ulong (*mul)(CompGraph *cg, ulong left, ulong right);
         ulong (*raise)(CompGraph *cg, ulong to_raise, ulong pow);
         ulong (*relu)(CompGraph *cg, ulong x);
-        ulong (*leakyRelu)(CompGraph *cg, ulong x);
+        ulong (*leakyRelu)(CompGraph *cg, ulong x, scalar leaker);
         ulong (*htan)(CompGraph *cg, ulong x);
         ulong (*sigmoid)(CompGraph *cg, ulong x);
-        ulong (*elu)(CompGraph *cg, ulong x);
-        void (*backprop)(CompGraph *cg, ulong last);
+        ulong (*elu)(CompGraph *cg, ulong x, scalar leaker);
+        void (*backprop)(CompGraph *cg, ulong last, scalar leaker);
+        ulong (*getSize)(CompGraph *cg);
+        void (*setSize)(CompGraph *cg, ulong size);
     } ad;
     struct {
         Matrix (*allocMatrix)(ulong nrows, ulong ncols);
         void (*deallocMatrix)(Matrix *mat);
-        Matrix (*formMatrix)(long nrows, long ncols, long stride, scalar *elements);
+        Matrix (*formMatrix)(ulong nrows, ulong ncols, ulong stride, scalar *elements);
         void (*printMatrix)(Matrix *mat, char *name);
-    } mat;
-    Net* (*allocVanillaNet)(ulong input_nelem);
-    Net* (*allocConvNet)(ulong input_nrows, ulong input_ncols, ulong nchannels);
+        Vector (*allocVector)(ulong nelem);
+        Vector (*formVector)(ulong nelem, scalar *elem);
+        void (*printVector)(Vector *vec, char *name);
+        void (*deallocVector)(Vector *vec);
+    } la;
+    HParams (*defaultHParams)(void);
+    void (*setRate)(HParams *hp, scalar rate);
+    void (*setLeaker)(HParams *hp, scalar leaker);
     void (*randomizeNet)(Net *net, scalar lower, scalar upper);
+    Net* (*allocVanillaNet)(HParams hp, ulong input_nelem);
+    Net* (*allocConvNet)(HParams hp, ulong input_nrows, ulong input_ncols, ulong nchannels);
     void (*allocDenseLayer)(Net *net, Activation act, ulong dim_out);
     void (*deallocNet)(Net *net);
     scalar (*learnVanilla)(Net *net, Matrix input, Matrix target);
     void (*printNet)(Net *net, char *name);
+    Vector* (*predictDense)(Net *net, Vector input, Vector *store);
 } _cn_names;
 
 extern _cn_names const cn;
@@ -78,8 +97,5 @@ extern _cn_names const cn;
 #include "assert.h"
 #define CLEAR_NET_ASSERT assert
 #endif // CLEAR_NET_ASSERT
-#ifndef LEAKER
-#define LEAKER 0.1 // TODO make this a hparam
-#endif // LEAKER
 
 #endif // CLEAR_NET

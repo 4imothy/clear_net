@@ -2,12 +2,16 @@
 #define CN_NET
 #include "clear_net.h"
 
-Net* allocVanillaNet(ulong input_nelem);
-Net* allocConvNet(ulong input_nrows, ulong input_ncols, ulong nchannels);
+HParams defaultHParams(void);
+void setRate(HParams *hp, scalar rate);
+void setLeaker(HParams *hp, scalar leaker);
+Net* allocVanillaNet(HParams hp, ulong input_nelem);
+Net* allocConvNet(HParams hp, ulong input_nrows, ulong input_ncols, ulong nchannels);
 void randomizeNet(Net *net, scalar lower, scalar upper);
 void allocDenseLayer(Net *net, Activation act, ulong dim_out);
 void deallocNet(Net *net);
 scalar learnVanilla(Net *net, Matrix input, Matrix target);
 void printNet(Net *net, char *name);
+Vector *predictDense(Net *net, Vector input, Vector *store);
 
 #endif // CN_NET
