@@ -7,6 +7,7 @@
     printf("%s %f %f\n", #x, ad.getVal((cg), (x)), ad.getGrad((cg), (x)))
 
 int main(int argc, char *argv[]) {
+    scalar leaker = 0.1;
     CLEAR_NET_ASSERT(argc == 2);
     CompGraph *cg = ad.allocCompGraph(0);
     if (strequal(argv[1], "1")) {
@@ -17,7 +18,7 @@ int main(int argc, char *argv[]) {
         ulong e = ad.mul(cg, c, d);
         ulong f = ad.sub(cg, a, e);
         ulong g = ad.htan(cg, f);
-        ad.backprop(cg, g);
+        ad.backprop(cg, g, leaker);
         PRINT_VAL(a);
         PRINT_VAL(b);
         PRINT_VAL(c);
@@ -40,7 +41,7 @@ int main(int argc, char *argv[]) {
         d = ad.add(cg, d, ad.add(cg, ad.mul(cg, d, three), ad.relu(cg, ad.sub(cg, b, a))));
         ulong e = ad.sub(cg, c, d);
         ulong f = ad.relu(cg, e);
-        ad.backprop(cg, f);
+        ad.backprop(cg, f, leaker);
         PRINT_VAL(a);
         PRINT_VAL(b);
         PRINT_VAL(c);
@@ -52,7 +53,7 @@ int main(int argc, char *argv[]) {
         ulong b = ad.initLeafScalar(cg, 10);
         ulong c = ad.raise(cg, a, b);
         c = ad.raise(cg, c, ad.initLeafScalar(cg, 2));
-        ad.backprop(cg, c);
+        ad.backprop(cg, c, leaker);
         PRINT_VAL(a);
         PRINT_VAL(b);
         PRINT_VAL(c);
@@ -68,7 +69,7 @@ int main(int argc, char *argv[]) {
         ulong d = ad.initLeafScalar(cg, 5.0);
         d = ad.sub(cg, d, c);
         d = ad.add(cg, d, d);
-        ad.backprop(cg, d);
+        ad.backprop(cg, d, leaker);
         PRINT_VAL(a);
         PRINT_VAL(b);
         PRINT_VAL(c);
@@ -84,7 +85,7 @@ int main(int argc, char *argv[]) {
         ulong t3 = ad.add(cg, t1, t2);
         ulong n = ad.add(cg, t3, b);
         ulong o = ad.htan(cg, n);
-        ad.backprop(cg, o);
+        ad.backprop(cg, o, leaker);
         PRINT_VAL(x1);
         PRINT_VAL(w1);
         PRINT_VAL(x2);
@@ -94,7 +95,7 @@ int main(int argc, char *argv[]) {
         ulong b = ad.initLeafScalar(cg, 5.0);
         ulong c = ad.mul(cg, a, b);
         ulong d = ad.relu(cg, c);
-        ad.backprop(cg, d);
+        ad.backprop(cg, d, leaker);
         PRINT_VAL(a);
         PRINT_VAL(b);
         PRINT_VAL(c);
@@ -106,7 +107,7 @@ int main(int argc, char *argv[]) {
         ulong d = ad.mul(cg, c, ad.add(cg, a, b));
         ulong e = ad.mul(cg, d, a);
         ulong f = ad.sigmoid(cg, e);
-        ad.backprop(cg, f);
+        ad.backprop(cg, f, leaker);
         PRINT_VAL(a);
         PRINT_VAL(b);
         PRINT_VAL(c);
@@ -119,8 +120,8 @@ int main(int argc, char *argv[]) {
         ulong c = ad.initLeafScalar(cg, -10);
         ulong d = ad.mul(cg, c, ad.add(cg, a, b));
         ulong e = ad.mul(cg, d, a);
-        ulong f = ad.leakyRelu(cg, e);
-        ad.backprop(cg, f);
+        ulong f = ad.leakyRelu(cg, e, leaker);
+        ad.backprop(cg, f, leaker);
         PRINT_VAL(a);
         PRINT_VAL(b);
         PRINT_VAL(c);
@@ -130,11 +131,11 @@ int main(int argc, char *argv[]) {
     } else if (strequal(argv[1], "elu")) {
         ulong a = ad.initLeafScalar(cg, 5);
         ulong b = ad.initLeafScalar(cg, -6);
-        ulong c = ad.elu(cg, b);
+        ulong c = ad.elu(cg, b, leaker);
         ulong d = ad.mul(cg, a, ad.sub(cg, c, b));
         ulong e = ad.mul(cg, d, d);
-        ulong f = ad.elu(cg, e);
-        ad.backprop(cg, f);
+        ulong f = ad.elu(cg, e, leaker);
+        ad.backprop(cg, f, leaker);
         PRINT_VAL(a);
         PRINT_VAL(b);
         PRINT_VAL(c);
