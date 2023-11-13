@@ -1,10 +1,7 @@
-#include <stdio.h>
-#define CLEAR_NET_IMPLEMENTATION
-#include "../clear_net.h"
-#include <stdbool.h>
+#include "../lib/clear_net.h"
 #include <string.h>
 
-CLEAR_NET_DEFINE_HYPERPARAMETERS
+#define la cn.la
 
 // sepal length (cm), sepal width (cm), petal length (cm), petal width (cm),
 // target
@@ -181,47 +178,46 @@ int main(int argc, char *argv[]) {
     size_t val_size = 15;
     size_t train_size = 150 - val_size;
     Matrix train =
-        cn_form_matrix(train_size, data_cols, data_cols, train_values);
-    Matrix input = cn_form_matrix(train_size, input_dim, train.stride,
+        la.formMatrix(train_size, data_cols, data_cols, train_values);
+    Matrix input = la.formMatrix(train_size, input_dim, train.stride,
                                   &MAT_AT(train, 0, 0));
-    Matrix target = cn_form_matrix(train_size, output_dim, train.stride,
+    Matrix target = la.formMatrix(train_size, output_dim, train.stride,
                                    &MAT_AT(train, 0, input_dim));
     for (size_t i = 0; i < target.nrows; ++i) {
         MAT_AT(target, i, 0) /= 2;
     }
 
     Matrix val =
-        cn_form_matrix(val_size, data_cols, data_cols, validation_values);
+        la.formMatrix(val_size, data_cols, data_cols, validation_values);
     Matrix val_input =
-        cn_form_matrix(val_size, input_dim, val.stride, &MAT_AT(val, 0, 0));
-    Matrix val_target = cn_form_matrix(val_size, output_dim, val.stride,
+        la.formMatrix(val_size, input_dim, val.stride, &MAT_AT(val, 0, 0));
+    Matrix val_target = la.formMatrix(val_size, output_dim, val.stride,
                                        &MAT_AT(val, 0, input_dim));
     for (size_t i = 0; i < val_size; ++i) {
         MAT_AT(val_target, i, 0) /= 2;
     }
-    cn_default_hparams();
-    cn_set_rate(0.02);
-    cn_with_momentum(0.9);
-    Net net = cn_alloc_vani_net(input_dim);
-    cn_alloc_dense_layer(&net, Sigmoid, 1);
-    cn_randomize_net(&net, -1, 1);
+    HParams hp = cn.defaultHParams();
+    cn.setRate(&hp, 0.02);
+    cn.withMomentum(&hp, 0.9);
+    Net* net = cn.allocVanillaNet(hp, input_dim);
+    cn.allocDenseLayer(net, Sigmoid, 1);
+    cn.randomizeNet(net, -1, 1);
     size_t num_epochs = 10000;
     float loss;
     float error_break = 0.01;
     size_t i;
     size_t batch_size = 45;
-    cn_shuffle_vani_input(&input, &target);
+    la.shuffleMatrixRows(&input, &target);
     Matrix batch_in;
     Matrix batch_tar;
     CLEAR_NET_ASSERT(train_size % batch_size == 0);
     for (i = 0; i < num_epochs; ++i) {
         for (size_t batch_num = 0; batch_num < train_size / batch_size;
              ++batch_num) {
-            cn_get_batch_vani(&batch_in, &batch_tar, input, target, batch_num,
-                              batch_size);
-            cn_learn_vani(&net, batch_in, batch_tar);
+            la.setBatchFromMatrix(input, target, batch_num, batch_size, &batch_in, &batch_tar);
+            cn.learnVanilla(net, batch_in, batch_tar);
         }
-        loss = cn_loss_vani(&net, input, target);
+        loss = cn.lossVanilla(net, input, target);
         if (loss < error_break) {
             break;
         }
@@ -231,16 +227,10 @@ int main(int argc, char *argv[]) {
     }
     if (print) {
         printf("Final loss at %zu : %g\n", i, loss);
-        cn_print_vani_results(net, input, target);
-        char *file = "model";
-        cn_save_net_to_file(net, file);
-        cn_dealloc_net(&net);
-        printf("After loading from file\n");
-        net = cn_alloc_net_from_file(file);
-        cn_print_vani_results(net, input, target);
+        cn.printVanillaPredictions(net, input, target);
         printf("On validation set\n");
-        cn_print_vani_results(net, val_input, val_target);
-        cn_dealloc_net(&net);
+        cn.printVanillaPredictions(net, val_input, val_target);
     }
+    cn.deallocNet(net);
     return 0;
 }
