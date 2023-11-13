@@ -1,15 +1,17 @@
 #ifndef CLEAR_NET
 #define CLEAR_NET
-#include "stdlib.h"
+#include <float.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define MAT_AT(mat, r, c) (mat).elem[(r) * (mat).stride + (c)]
 #define VEC_AT(vec, i) (vec).elem[(i)]
 
-// TODO change the internal structure right now have to declared in name.c, name.h, clear_net.h, clear_net.c
-//   would be nice to store the output struct in the header file and extern it in the C file, then take that struct and access it in the clear_net.h can do that without exposing it I think
-// TODO move the Matrix and Vector to la.c and la.h
-// TODO need to do stochastic gradient descent stuff
-// TODO a print net results function
+// TODO need to do stochastic gradient descent stuff with batches and for
+// convolutional
+// TODO a print net results function for convolutional
 // TODO need to save and load a model
 
 typedef float scalar;
@@ -25,6 +27,13 @@ typedef enum {
 } Activation;
 
 typedef struct {
+    scalar rate;
+    scalar leaker;
+    scalar beta;
+    bool momentum;
+} HParams;
+
+typedef struct {
     scalar *elem;
     ulong stride;
     ulong nrows;
@@ -37,17 +46,12 @@ typedef struct {
 } Vector;
 
 typedef struct {
-    scalar rate;
-    scalar leaker;
-} HParams;
-
-typedef struct {
     struct {
-        CompGraph* (*allocCompGraph)(ulong max_length);
+        CompGraph *(*allocCompGraph)(ulong max_length);
         void (*deallocCompGraph)(CompGraph *cg);
         ulong (*initLeafScalar)(CompGraph *cg, scalar num);
         void (*resetGrads)(CompGraph *cg, ulong count);
-        void (*applyGrad)(CompGraph *cg, ulong x, scalar rate);
+        void (*applyGrad)(CompGraph *cg, ulong x);
         scalar (*getVal)(CompGraph *cg, ulong x);
         scalar (*getGrad)(CompGraph *cg, ulong x);
         void (*setVal)(CompGraph *cg, ulong x, scalar num);
@@ -65,26 +69,30 @@ typedef struct {
     } ad;
     struct {
         Matrix (*allocMatrix)(ulong nrows, ulong ncols);
+        Matrix (*formMatrix)(ulong nrows, ulong ncols, ulong stride,
+                             scalar *elements);
         void (*deallocMatrix)(Matrix *mat);
-        Matrix (*formMatrix)(ulong nrows, ulong ncols, ulong stride, scalar *elements);
         void (*printMatrix)(Matrix *mat, char *name);
         Vector (*allocVector)(ulong nelem);
         Vector (*formVector)(ulong nelem, scalar *elem);
         void (*printVector)(Vector *vec, char *name);
         void (*deallocVector)(Vector *vec);
-        void (*shuffleVanillaInput)(Matrix *input, Matrix *target);
+        void (*shuffleMatrixRows)(Matrix *input, Matrix *target);
     } la;
     HParams (*defaultHParams)(void);
     void (*setRate)(HParams *hp, scalar rate);
+    void (*withMomentum)(HParams *hp, scalar beta);
     void (*setLeaker)(HParams *hp, scalar leaker);
     void (*randomizeNet)(Net *net, scalar lower, scalar upper);
-    Net* (*allocVanillaNet)(HParams hp, ulong input_nelem);
-    Net* (*allocConvNet)(HParams hp, ulong input_nrows, ulong input_ncols, ulong nchannels);
+    Net *(*allocVanillaNet)(HParams hp, ulong input_nelem);
+    Net *(*allocConvNet)(HParams hp, ulong input_nrows, ulong input_ncols,
+                         ulong nchannels);
     void (*allocDenseLayer)(Net *net, Activation act, ulong dim_out);
     void (*deallocNet)(Net *net);
     scalar (*learnVanilla)(Net *net, Matrix input, Matrix target);
     void (*printNet)(Net *net, char *name);
-    Vector* (*predictDense)(Net *net, Vector input, Vector *store);
+    Vector *(*predictDense)(Net *net, Vector input, Vector *store);
+    void (*printVanillaPredictions)(Net *net, Matrix input, Matrix target);
 } _cn_names;
 
 extern _cn_names const cn;

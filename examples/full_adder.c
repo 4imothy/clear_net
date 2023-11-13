@@ -29,14 +29,14 @@ int main(void) {
     Matrix input = la.formMatrix(num_combinations, num_inputs, stride, data);
     Matrix target =
         la.formMatrix(num_combinations, num_outputs, stride, &data[num_inputs]);
-    la.shuffleVanillaInput(&input, &target);
+    la.shuffleMatrixRows(&input, &target);
     ulong num_epochs = 20000;
 
     HParams hp = cn.defaultHParams();
 
     cn.setLeaker(&hp, 1);
+    cn.withMomentum(&hp, 0.9);
     Net *net = cn.allocVanillaNet(hp, 3);
-    // cn_with_momentum(0.9);
     cn.allocDenseLayer(net, Tanh, 3);
     cn.allocDenseLayer(net, LeakyReLU, 8);
     cn.allocDenseLayer(net, Sigmoid, num_outputs);
@@ -50,17 +50,8 @@ int main(void) {
         }
     }
     printf("Final loss: %g\n", loss);
-
-    Vector out_store = la.allocVector(target.ncols);
-    for (ulong i = 0; i < input.nrows; ++i) {
-        Vector in = la.formVector(input.ncols, &MAT_AT(input, i, 0));
-        la.printVector(&in, "in");
-        cn.predictDense(net, in, &out_store);
-        la.printVector(&out_store, "out");
-    }
-
+    cn.printVanillaPredictions(net, input, target);
     cn.deallocNet(net);
-    la.deallocVector(&out_store);
 
     return 0;
 }

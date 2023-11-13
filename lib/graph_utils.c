@@ -1,10 +1,9 @@
-#include "clear_net.h"
-#include "autodiff.h"
 #include "graph_utils.h"
-#include "stdio.h"
+#include "autodiff.h"
+#include "clear_net.h"
 
 Mat createMat(CompGraph *cg, ulong nrows, ulong ncols, ulong *offset) {
-    Mat mat = (Mat) {
+    Mat mat = (Mat){
         .start_id = *offset,
         .nrows = nrows,
         .ncols = ncols,
@@ -44,18 +43,18 @@ void randomizeMat(CompGraph *cg, Mat *mat, scalar lower, scalar upper) {
     }
 }
 
-void applyMatGrads(CompGraph *cg, Mat *mat, scalar rate) {
+void applyMatGrads(CompGraph *cg, Mat *mat, HParams *hp) {
     for (ulong i = 0; i < mat->nrows; ++i) {
         for (ulong j = 0; j < mat->ncols; ++j) {
             // printf("before: %f\n", getVal(cg, MAT_ID(*mat, i, j)));
-            applyGrad(cg, MAT_ID(*mat, i, j), rate);
+            _applyGrad(cg, MAT_ID(*mat, i, j), hp);
             // printf("after: %f\n", getVal(cg, MAT_ID(*mat, i, j)));
         }
     }
 }
 
 Vec createVec(CompGraph *cg, ulong nelem, ulong *offset) {
-    Vec vec =  (Vec) {
+    Vec vec = (Vec){
         .nelem = nelem,
         .start_id = *offset,
     };
@@ -86,9 +85,9 @@ void randomizeVec(CompGraph *cg, Vec *vec, scalar lower, scalar upper) {
     }
 }
 
-void applyVecGrads(CompGraph *cg, Vec *vec, scalar rate) {
+void applyVecGrads(CompGraph *cg, Vec *vec, HParams *hp) {
     for (ulong i = 0; i < vec->nelem; ++i) {
-        applyGrad(cg, VEC_ID(*vec, i), rate);
+        _applyGrad(cg, VEC_ID(*vec, i), hp);
     }
 }
 
@@ -143,16 +142,15 @@ void deallocUMatList(UMatList *list) {
 }
 
 void deallocUData(UData *data) {
-    switch(data->type) {
-    case(UVector):
+    switch (data->type) {
+    case (UVector):
         deallocUVec(&data->data.vec);
         break;
-    case(UMatrix):
+    case (UMatrix):
         deallocUMat(&data->data.mat);
         break;
-    case(UMatrixList):
+    case (UMatrixList):
         deallocUMatList(&data->data.mat_list);
         break;
-
     }
 }

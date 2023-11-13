@@ -2,11 +2,12 @@
 #define CN_AUTODIFF
 #include "clear_net.h"
 
-CompGraph* allocCompGraph(ulong max_length);
+CompGraph *allocCompGraph(ulong max_length);
 void deallocCompGraph(CompGraph *cg);
 ulong initLeafScalar(CompGraph *cg, scalar num);
 void resetGrads(CompGraph *cg, ulong count);
-void applyGrad(CompGraph *cg, ulong x, scalar rate);
+void applyGrad(CompGraph *cg, ulong x);
+void _applyGrad(CompGraph *cg, ulong x, HParams *hp);
 scalar getVal(CompGraph *cg, ulong x);
 scalar getGrad(CompGraph *cg, ulong x);
 void setVal(CompGraph *cg, ulong x, scalar num);

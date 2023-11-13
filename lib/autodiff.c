@@ -1,8 +1,4 @@
 #include "clear_net.h"
-#include <float.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 // TODO change powf to have one for floats and doubles in case scalar is changed
 // to be a double
@@ -27,6 +23,7 @@ typedef enum {
 typedef struct {
     scalar num;
     scalar grad;
+    scalar store;
     Operation op;
     ulong prev_left;
     ulong prev_right;
@@ -46,7 +43,7 @@ ulong extendSize(ulong size) {
     return (size == 0 ? INITIAL_GRAPH_SIZE : size * 2);
 }
 
-CompGraph* allocCompGraph(ulong max_size) {
+CompGraph *allocCompGraph(ulong max_size) {
     CompGraph *cg = CLEAR_NET_ALLOC(sizeof(CompGraph));
     cg->size = 1;
     cg->max_size = max_size;
@@ -64,19 +61,16 @@ void reallocGradientStore(CompGraph *cg, ulong new_size) {
     cg->max_size = new_size;
 }
 
-ulong getSize(CompGraph *cg) {
-    return cg->size;
-}
+ulong getSize(CompGraph *cg) { return cg->size; }
 
-void setSize(CompGraph *cg, ulong size) {
-    cg->size = size;
-}
+void setSize(CompGraph *cg, ulong size) { cg->size = size; }
 
 Scalar createScalar(scalar num, ulong prev_left, ulong prev_right,
                     Operation op) {
     return (Scalar){
         .num = num,
         .grad = 0,
+        .store = 0,
         .prev_left = prev_left,
         .prev_right = prev_right,
         .op = op,
@@ -100,24 +94,25 @@ ulong initLeafScalar(CompGraph *cg, scalar num) {
     return initScalar(cg, num, 0, 0, None);
 }
 
-void setVal(CompGraph *cg, ulong x, scalar num) {
-    NODE(x).num = num;
-}
+void setVal(CompGraph *cg, ulong x, scalar num) { NODE(x).num = num; }
 
 void setValRand(CompGraph *cg, ulong x, scalar lower, scalar upper) {
     setVal(cg, x, randRange(lower, upper));
 }
 
-scalar getVal(CompGraph *cg, ulong x) {
-    return NODE(x).num;
-}
+scalar getVal(CompGraph *cg, ulong x) { return NODE(x).num; }
 
-scalar getGrad(CompGraph *cg, ulong x) {
-    return NODE(x).grad;
-}
+scalar getGrad(CompGraph *cg, ulong x) { return NODE(x).grad; }
 
-void applyGrad(CompGraph *cg, ulong x, scalar rate) {
-    NODE(x).num -= NODE(x).grad * rate;
+void applyGrad(CompGraph *cg, ulong x) { NODE(x).num -= NODE(x).grad; }
+
+void _applyGrad(CompGraph *cg, ulong x, HParams *hp) {
+    scalar change = NODE(x).grad * hp->rate;
+    if (hp->momentum) {
+        NODE(x).store = (hp->beta * NODE(x).store) + ((1 - hp->beta) * change);
+        change = NODE(x).store;
+    }
+    NODE(x).num -= change;
 }
 
 ulong add(CompGraph *cg, ulong left, ulong right) {
@@ -262,6 +257,6 @@ void backprop(CompGraph *cg, ulong last, scalar leaker) {
 
 void resetGrads(CompGraph *cg, ulong count) {
     for (ulong i = 0; i < count; ++i) {
-        NODE(i+1).grad = 0;
+        NODE(i + 1).grad = 0;
     }
 }
