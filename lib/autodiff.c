@@ -1,4 +1,3 @@
-#include "autodiff.h"
 #include "clear_net.h"
 #include <float.h>
 #include <math.h>
@@ -11,6 +10,33 @@
 #define INITIAL_GRAPH_SIZE 50
 #define NODE(id) (cg)->vars[(id)]
 #define POS(cg, x) NODE(x).num > 0
+
+typedef enum {
+    Add,
+    Sub,
+    Mul,
+    Raise,
+    Relu,
+    LeakyRelu,
+    Htan,
+    Sig,
+    Elu,
+    None,
+} Operation;
+
+typedef struct {
+    scalar num;
+    scalar grad;
+    Operation op;
+    ulong prev_left;
+    ulong prev_right;
+} Scalar;
+
+struct CompGraph {
+    Scalar *vars;
+    ulong size;
+    ulong max_size;
+};
 
 ulong extendSize(ulong size) {
     return (size == 0 ? INITIAL_GRAPH_SIZE : size * 2);
@@ -32,6 +58,14 @@ void deallocCompGraph(CompGraph *cg) {
 void reallocGradientStore(CompGraph *cg, ulong new_size) {
     cg->vars = CLEAR_NET_REALLOC(cg->vars, new_size * sizeof(*cg->vars));
     cg->max_size = new_size;
+}
+
+ulong getSize(CompGraph *cg) {
+    return cg->size;
+}
+
+void setSize(CompGraph *cg, ulong size) {
+    cg->size = size;
 }
 
 Scalar createScalar(scalar num, ulong prev_left, ulong prev_right,
@@ -136,14 +170,14 @@ void reluBackprop(CompGraph *cg, Scalar *var) {
     }
 }
 
-ulong leakyRelu(CompGraph *cg, ulong x) {
-    scalar val = POS(cg, x) ? NODE(x).num : LEAKER * NODE(x).num;
+ulong leakyRelu(CompGraph *cg, ulong x, scalar leaker) {
+    scalar val = POS(cg, x) ? NODE(x).num : leaker * NODE(x).num;
     ulong out = initScalar(cg, val, x, 0, LeakyRelu);
     return out;
 }
 
-void leakyReluBackprop(CompGraph *cg, Scalar *var) {
-    scalar change = var->num > 0 ? 1 : LEAKER;
+void leakyReluBackprop(CompGraph *cg, Scalar *var, scalar leaker) {
+    scalar change = var->num > 0 ? 1 : leaker;
     NODE(var->prev_left).grad += change * var->grad;
 }
 
@@ -167,19 +201,19 @@ void sigmoidBackprop(CompGraph *cg, Scalar *var) {
     NODE(var->prev_left).grad += var->num * (1 - var->num) * var->grad;
 }
 
-ulong elu(CompGraph *cg, ulong x) {
+ulong elu(CompGraph *cg, ulong x, scalar leaker) {
     scalar num = NODE(x).num;
-    scalar val = num > 0 ? num : LEAKER * (expf(num) - 1);
+    scalar val = num > 0 ? num : leaker * (expf(num) - 1);
     size_t out = initScalar(cg, val, x, 0, Elu);
     return out;
 }
 
-void eluBackprop(CompGraph *cg, Scalar *var) {
-    scalar change = var->num > 0 ? 1 : var->num + LEAKER;
+void eluBackprop(CompGraph *cg, Scalar *var, scalar leaker) {
+    scalar change = var->num > 0 ? 1 : var->num + leaker;
     NODE(var->prev_left).grad += change * var->grad;
 }
 
-void backprop(CompGraph *cg, ulong last) {
+void backprop(CompGraph *cg, ulong last, scalar leaker) {
     NODE(last).grad = 1;
     Scalar *cur;
     for (ulong i = cg->size - 1; i > 0; --i) {
@@ -201,10 +235,10 @@ void backprop(CompGraph *cg, ulong last) {
             reluBackprop(cg, cur);
             break;
         case LeakyRelu:
-            leakyReluBackprop(cg, cur);
+            leakyReluBackprop(cg, cur, leaker);
             break;
         case Elu:
-            eluBackprop(cg, cur);
+            eluBackprop(cg, cur, leaker);
             break;
         case Htan:
             tanhBackprop(cg, cur);
