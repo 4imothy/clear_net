@@ -16,5 +16,6 @@ scalar learnVanilla(Net *net, Matrix input, Matrix target);
 void printNet(Net *net, char *name);
 Vector *predictDense(Net *net, Vector input, Vector *store);
 void printVanillaPredictions(Net *net, Matrix input, Matrix target);
+scalar lossVanilla(Net *net, Matrix input, Matrix target);
 
 #endif // CN_NET

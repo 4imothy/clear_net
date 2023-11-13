@@ -532,6 +532,8 @@ HParams defaultHParams(void) {
     return (HParams){
         .rate = 0.1,
         .leaker = 0.1,
+        .momentum = false,
+        .beta = 0.9,
     };
 }
 
@@ -717,6 +719,21 @@ scalar learnVanilla(Net *net, Matrix input, Matrix target) {
     return total_loss / train_size;
 }
 
+scalar lossVanilla(Net *net, Matrix input, Matrix target) {
+    scalar loss = 0;
+
+    Vector out = allocVector(target.ncols);
+    for (ulong i = 0; i < input.nrows; ++i) {
+        Vector in = formVector(input.ncols, &MAT_AT(input, i, 0));
+        predictDense(net, in, &out);
+        Vector tar = formVector(target.ncols, &MAT_AT(target, i, 0));
+        for (ulong j = 0; j < out.nelem; ++j) {
+            loss += powf(VEC_AT(out, j) - VEC_AT(tar, j), 2);
+        }
+    }
+    return loss / input.nrows;
+}
+
 void printVanillaPredictions(Net *net, Matrix input, Matrix target) {
     CLEAR_NET_ASSERT(input.nrows == target.nrows);
     printf("Input | Net Output | Target \n");
@@ -728,7 +745,7 @@ void printVanillaPredictions(Net *net, Matrix input, Matrix target) {
         Vector in = formVector(input.ncols, &MAT_AT(input, i, 0));
         predictDense(net, in, &out);
         Vector tar = formVector(target.ncols, &MAT_AT(target, i, 0));
-        for (size_t j = 0; j < out.nelem; ++j) {
+        for (ulong j = 0; j < out.nelem; ++j) {
             loss += powf(VEC_AT(out, j) - VEC_AT(tar, j), 2);
         }
         printVectorInline(&in);
