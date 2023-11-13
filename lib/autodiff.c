@@ -38,6 +38,10 @@ struct CompGraph {
     ulong max_size;
 };
 
+scalar randRange(scalar lower, scalar upper) {
+    return ((scalar)rand() / RAND_MAX) * (upper - lower) + lower;
+}
+
 ulong extendSize(ulong size) {
     return (size == 0 ? INITIAL_GRAPH_SIZE : size * 2);
 }
@@ -98,6 +102,10 @@ ulong initLeafScalar(CompGraph *cg, scalar num) {
 
 void setVal(CompGraph *cg, ulong x, scalar num) {
     NODE(x).num = num;
+}
+
+void setValRand(CompGraph *cg, ulong x, scalar lower, scalar upper) {
+    setVal(cg, x, randRange(lower, upper));
 }
 
 scalar getVal(CompGraph *cg, ulong x) {

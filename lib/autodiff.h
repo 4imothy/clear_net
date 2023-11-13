@@ -22,5 +22,6 @@ ulong elu(CompGraph *cg, ulong x, scalar leaker);
 void backprop(CompGraph *cg, ulong last, scalar leaker);
 ulong getSize(CompGraph *cg);
 void setSize(CompGraph *cg, ulong size);
+void setValRand(CompGraph *cg, ulong x, scalar lower, scalar upper);
 
 #endif // CN_AUTODIFF
