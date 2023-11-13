@@ -3,9 +3,11 @@
 #include "graph_utils.h"
 #include "la.h"
 
+// TODO save and load teh model on xor just to make sure everything looks nice
 // TODO to save space can not alloc for any storing index matirx as the number
 // of elements between each element should be the same just store the stride
 // again
+// TODO make naming consistent always use net not model
 
 typedef struct {
     Mat weights;
@@ -82,10 +84,10 @@ typedef struct {
 struct Net {
     ulong nlayers;
     Layer *layers;
+    UData input;
     CompGraph *cg;
     ulong nparams;
     UType output_type;
-    UData input;
     HParams hp;
 };
 
@@ -373,7 +375,7 @@ UMat *forwardConv(CompGraph *cg, ConvolutionalLayer *layer, UMat *input,
                     add(cg, MAT_ID(layer->filters[i].biases, j, k),
                         MAT_AT(layer->outputs[i], j, k));
                 MAT_AT(layer->outputs[i], j, k) = activate(
-                    cg, MAT_AT(layer->outputs[i], j, k), layer->act, leaker);
+                                                           cg, MAT_AT(layer->outputs[i], j, k), layer->act, leaker);
             }
         }
     }
@@ -705,9 +707,9 @@ scalar learnVanilla(Net *net, Matrix input, Matrix target) {
         ulong loss = initLeafScalar(cg, 0);
         for (ulong j = 0; j < target_vec.nelem; ++j) {
             loss = add(
-                cg, loss,
-                raise(cg, sub(cg, VEC_AT(prediction, j), VEC_ID(target_vec, j)),
-                      raiser));
+                       cg, loss,
+                       raise(cg, sub(cg, VEC_AT(prediction, j), VEC_ID(target_vec, j)),
+                             raiser));
         }
         backprop(cg, loss, net->hp.leaker);
         total_loss += getVal(cg, loss);
@@ -757,4 +759,175 @@ void printVanillaPredictions(Net *net, Matrix input, Matrix target) {
     }
     printf("Average Loss: %f\n", loss / input.nrows);
     deallocVector(&out);
+}
+
+// TODO this saving should go to its own file
+#define FWRITE(ptr, nitems, fp) fwrite(ptr, sizeof(*ptr), nitems, fp);
+#define FREAD(ptr, nitems, fp) fread(ptr, sizeof(*ptr), nitems, fp);
+
+void saveHParams(HParams* hp, FILE* fp) {
+    FWRITE(&hp->rate, 1, fp);
+    FWRITE(&hp->leaker, 1, fp);
+    FWRITE(&hp->beta, 1, fp);
+    FWRITE(&hp->momentum, 1, fp);
+}
+
+HParams loadHParamsFromFile(FILE *fp) {
+    HParams hp;
+    FREAD(&hp.rate, 1, fp);
+    FREAD(&hp.leaker, 1, fp);
+    FREAD(&hp.beta, 1, fp);
+    FREAD(&hp.momentum, 1, fp);
+    return hp;
+}
+
+void saveMat(CompGraph *cg, Mat *mat, FILE *fp) {
+    for (ulong i = 0; i < mat->nrows; ++i) {
+        for (ulong j = 0; j < mat->ncols; ++j) {
+            scalar val = getVal(cg, MAT_ID(*mat, i, j));
+            FWRITE(&val, 1, fp);
+        }
+    }
+}
+
+void loadMatFromFile(CompGraph *cg, Mat *mat, FILE *fp) {
+    for (ulong i = 0; i < mat->nrows; ++i) {
+        for (ulong j = 0; j < mat->ncols; ++j) {
+            scalar val;
+            FREAD(&val, 1, fp);
+            setVal(cg, MAT_ID(*mat, i, j), val);
+        }
+    }
+}
+
+void saveVec(CompGraph *cg, Vec *vec, FILE *fp) {
+    for (ulong i = 0; i < vec->nelem; ++i) {
+        scalar val = getVal(cg, VEC_ID(*vec, i));
+        FWRITE(&val, 1, fp);
+    }
+}
+
+void loadVecFromFile(CompGraph *cg, Vec *vec, FILE *fp) {
+    for (ulong i = 0; i < vec->nelem; ++i) {
+        scalar val;
+        FREAD(&val, 1, fp);
+        setVal(cg, VEC_ID(*vec, i), val);
+    }
+}
+
+void saveDenseLayer(CompGraph *cg, DenseLayer *layer, FILE *fp) {
+    FWRITE(&layer->act, 1, fp);
+    FWRITE(&layer->weights.ncols, 1, fp);
+    saveMat(cg, &layer->weights, fp);
+    saveVec(cg, &layer->biases, fp);
+}
+
+void allocDenseLayerFromFile(Net *net, FILE* fp) {
+    Activation act;
+    FREAD(&act, 1, fp);
+    ulong out_dim;
+    FREAD(&out_dim, 1, fp);
+    allocDenseLayer(net, act, out_dim);
+    loadMatFromFile(net->cg, &net->layers[net->nlayers - 1].data.dense.weights, fp);
+    loadVecFromFile(net->cg, &net->layers[net->nlayers - 1].data.dense.biases, fp);
+}
+
+void saveModel(Net *net, char *path) {
+    FILE *fp = fopen(path, "wb");
+    FWRITE(&net->input.type, 1, fp);
+    FWRITE(&net->nlayers, 1, fp);
+    saveHParams(&net->hp, fp);
+
+    switch (net->input.type) {
+    case (UVector): // vanilla net
+        FWRITE(&net->input.data.vec.nelem, 1, fp);
+        break;
+    case (UMatrix): // convolutional net
+        FWRITE(&net->input.data.mat.nrows, 1, fp);
+        FWRITE(&net->input.data.mat.ncols, 1, fp);
+        break;
+    case (UMatrixList): // convolutional net with many channels to start
+        FWRITE(&net->input.data.mat_list.nelem, 1, fp);
+        FWRITE(&net->input.data.mat_list.mats->nrows, 1, fp);
+        FWRITE(&net->input.data.mat_list.mats->ncols, 1, fp);
+        break;
+    }
+
+    for (ulong i = 0; i < net->nlayers; ++i) {
+        FWRITE(&net->layers[i].type, 1, fp);
+        switch (net->layers[i].type) {
+        case (Dense):
+            saveDenseLayer(net->cg, &net->layers[i].data.dense, fp);
+            break;
+        case (Conv):
+            // TODO
+            break;
+        case (Pool):
+            // TODO
+            break;
+        case (GlobPool):
+            // TODO
+            break;
+        }
+    }
+    fclose(fp);
+}
+
+Net* allocNetFromFile(char* path) {
+    FILE *fp = fopen(path, "rb");
+    UType in_type;
+    FREAD(&in_type, 1, fp);
+    ulong nlayers;
+    FREAD(&nlayers, 1, fp);
+    HParams hp = loadHParamsFromFile(fp);
+    Net *net;
+    switch(in_type) {
+    case(UVector): {
+        ulong in_dim;
+        FREAD(&in_dim, 1, fp);
+        net = allocVanillaNet(hp, in_dim);
+        break;
+    }
+    case(UMatrix): {
+        ulong in_nrows;
+        ulong in_ncols;
+        FREAD(&in_nrows, 1, fp);
+        FREAD(&in_ncols, 1, fp);
+        net = allocConvNet(hp, in_nrows, in_ncols, 1);
+        break;
+    }
+    case(UMatrixList): {
+        ulong nchannels;
+        ulong in_nrows;
+        ulong in_ncols;
+        FREAD(&nchannels, 1, fp);
+        FREAD(&in_nrows, 1, fp);
+        FREAD(&in_ncols, 1, fp);
+        net = allocConvNet(hp, in_nrows, in_ncols, nchannels);
+        break;
+    }
+    }
+
+    LayerType type;
+    for (ulong i = 0; i < nlayers; ++i) {
+        FREAD(&type, 1, fp);
+        switch (type) {
+        case (Dense):
+            allocDenseLayerFromFile(net, fp);
+            break;
+        case (Conv):
+            // TODO
+            break;
+        case (Pool):
+            // TODO
+            break;
+        case (GlobPool):
+            // TODO
+            break;
+        }
+    }
+
+    fclose(fp);
+
+    return net;
 }
