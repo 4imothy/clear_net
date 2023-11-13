@@ -30,6 +30,7 @@ int main(void) {
                                   &MAT_AT(data, 0, data.ncols - 1));
     scalar loss;
     ulong num_epochs = 10000;
+
     for (ulong i = 0; i < num_epochs; ++i) {
         loss = cn.learnVanilla(net, input, target);
         if (i % 100 == 0) {
@@ -37,8 +38,13 @@ int main(void) {
         }
     }
     printf("Final loss: %g\n", loss);
+    char* file = "model";
     cn.printVanillaPredictions(net, input, target);
+    cn.saveModel(net, file);
     cn.deallocNet(net);
+    printf("after loading\n");
+    net = cn.allocNetFromFile("model");
+    cn.printVanillaPredictions(net, input, target);
     la.deallocMatrix(&data);
     return 0;
 }
