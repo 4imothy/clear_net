@@ -13,5 +13,7 @@ Vector allocVector(ulong nelem);
 void deallocVector(Vector *vec);
 void printVector(Vector *vec, char *name);
 void printVectorInline(Vector *vec);
+void setBatchFromMatrix(Matrix all_input, Matrix all_target, ulong batch_num,
+                        ulong batch_size, Matrix *batch_in, Matrix *batch_tar);
 
 #endif // CN_LA

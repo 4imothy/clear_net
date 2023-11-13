@@ -82,3 +82,11 @@ void printVector(Vector *vec, char *name) {
     printVectorInline(vec);
     printf("\n]\n");
 }
+
+void setBatchFromMatrix(Matrix all_input, Matrix all_target, ulong batch_num,
+                        ulong batch_size, Matrix *batch_in, Matrix *batch_tar) {
+    *batch_in = formMatrix(batch_size, all_input.ncols, all_input.stride,
+                           &MAT_AT(all_input, batch_num * batch_size, 0));
+    *batch_tar = formMatrix(batch_size, all_target.ncols, all_target.stride,
+                            &MAT_AT(all_target, batch_num * batch_size, 0));
+}
