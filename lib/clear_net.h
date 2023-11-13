@@ -78,6 +78,8 @@ typedef struct {
         void (*printVector)(Vector *vec, char *name);
         void (*deallocVector)(Vector *vec);
         void (*shuffleMatrixRows)(Matrix *input, Matrix *target);
+        void (*setBatchFromMatrix)(Matrix all_input, Matrix all_target, ulong batch_num,
+                        ulong batch_size, Matrix *batch_in, Matrix *batch_tar);
     } la;
     HParams (*defaultHParams)(void);
     void (*setRate)(HParams *hp, scalar rate);
@@ -93,6 +95,7 @@ typedef struct {
     void (*printNet)(Net *net, char *name);
     Vector *(*predictDense)(Net *net, Vector input, Vector *store);
     void (*printVanillaPredictions)(Net *net, Matrix input, Matrix target);
+    scalar (*lossVanilla)(Net *net, Matrix input, Matrix target);
 } _cn_names;
 
 extern _cn_names const cn;
