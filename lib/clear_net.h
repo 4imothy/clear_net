@@ -5,7 +5,12 @@
 #define MAT_AT(mat, r, c) (mat).elem[(r) * (mat).stride + (c)]
 #define VEC_AT(vec, i) (vec).elem[(i)]
 
+// TODO change the internal structure right now have to declared in name.c, name.h, clear_net.h, clear_net.c
+//   would be nice to store the output struct in the header file and extern it in the C file, then take that struct and access it in the clear_net.h can do that without exposing it I think
+// TODO move the Matrix and Vector to la.c and la.h
 // TODO need to do stochastic gradient descent stuff
+// TODO a print net results function
+// TODO need to save and load a model
 
 typedef float scalar;
 typedef unsigned long ulong;
@@ -46,6 +51,7 @@ typedef struct {
         scalar (*getVal)(CompGraph *cg, ulong x);
         scalar (*getGrad)(CompGraph *cg, ulong x);
         void (*setVal)(CompGraph *cg, ulong x, scalar num);
+        void (*setValRand)(CompGraph *cg, ulong x, scalar lower, scalar upper);
         ulong (*add)(CompGraph *cg, ulong left, ulong right);
         ulong (*sub)(CompGraph *cg, ulong left, ulong right);
         ulong (*mul)(CompGraph *cg, ulong left, ulong right);
@@ -56,8 +62,6 @@ typedef struct {
         ulong (*sigmoid)(CompGraph *cg, ulong x);
         ulong (*elu)(CompGraph *cg, ulong x, scalar leaker);
         void (*backprop)(CompGraph *cg, ulong last, scalar leaker);
-        ulong (*getSize)(CompGraph *cg);
-        void (*setSize)(CompGraph *cg, ulong size);
     } ad;
     struct {
         Matrix (*allocMatrix)(ulong nrows, ulong ncols);
@@ -68,6 +72,7 @@ typedef struct {
         Vector (*formVector)(ulong nelem, scalar *elem);
         void (*printVector)(Vector *vec, char *name);
         void (*deallocVector)(Vector *vec);
+        void (*shuffleVanillaInput)(Matrix *input, Matrix *target);
     } la;
     HParams (*defaultHParams)(void);
     void (*setRate)(HParams *hp, scalar rate);

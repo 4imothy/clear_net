@@ -40,6 +40,25 @@ void printMatrix(Matrix *mat, char *name) {
     printf("]\n");
 }
 
+void shuffleVanillaInput(Matrix *input, Matrix *target) {
+    CLEAR_NET_ASSERT(input->nrows == target->nrows);
+    scalar t;
+    for (ulong i = 0; i < input->nrows; ++i) {
+        ulong j = i + rand() % (input->nrows - i);
+        if (i != j) {
+            for (ulong k = 0; k < input->ncols; ++k) {
+                t = MAT_AT(*input, i, k);
+                MAT_AT(*input, i, k) = MAT_AT(*input, j, k);
+                MAT_AT(*input, j, k) = t;
+            }
+            for (ulong k = 0; k < target->ncols; ++k) {
+                t = MAT_AT(*target, i, k);
+                MAT_AT(*target, i, k) = MAT_AT(*target, j, k);
+                MAT_AT(*target, j, k) = t;
+            }
+        }
+    }
+}
 
 Vector formVector(ulong nelem, scalar *elem) {
     return (Vector){
@@ -85,6 +104,7 @@ _cn_names const cn = {
         .sigmoid = sigmoid,
         .elu = elu,
         .backprop = backprop,
+        .setValRand = setValRand,
     },
     .la = {
         .deallocMatrix = deallocMatrix,
@@ -95,6 +115,7 @@ _cn_names const cn = {
         .formVector = formVector,
         .printVector = printVector,
         .deallocVector = deallocVector,
+        .shuffleVanillaInput = shuffleVanillaInput,
     },
     .defaultHParams = defaultHParams,
     .setRate = setRate,
