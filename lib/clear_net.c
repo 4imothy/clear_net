@@ -3,7 +3,7 @@
 #include "autodiff.h"
 #include "net.h"
 
-Matrix formMatrix(long nrows, long ncols, long stride,
+Matrix formMatrix(ulong nrows, ulong ncols, ulong stride,
                       scalar *elements) {
     return (Matrix){
         .nrows = nrows,
@@ -13,15 +13,10 @@ Matrix formMatrix(long nrows, long ncols, long stride,
     };
 }
 
-// TODO make this use formMatrix
 Matrix allocMatrix(ulong nrows, ulong ncols) {
-    Matrix mat;
-    mat.nrows = nrows;
-    mat.ncols = ncols;
-    mat.stride = ncols;
-    mat.elem = CLEAR_NET_ALLOC(nrows * ncols * sizeof(*mat.elem));
-    CLEAR_NET_ASSERT(mat.elem != NULL);
-    return mat;
+    scalar *elem = CLEAR_NET_ALLOC(nrows * ncols * sizeof(scalar));
+    CLEAR_NET_ASSERT(elem);
+    return formMatrix(nrows, ncols, ncols, elem);
 }
 
 void deallocMatrix(Matrix *mat) {
@@ -45,6 +40,34 @@ void printMatrix(Matrix *mat, char *name) {
     printf("]\n");
 }
 
+
+Vector formVector(ulong nelem, scalar *elem) {
+    return (Vector){
+        .nelem = nelem,
+        .elem = elem,
+    };
+}
+
+Vector allocVector(ulong nelem) {
+    scalar *elem = CLEAR_NET_ALLOC(nelem * sizeof(scalar));
+    CLEAR_NET_ASSERT(elem);
+    return formVector(nelem, elem);
+}
+
+void deallocVector(Vector *vec) {
+    CLEAR_NET_DEALLOC(vec->elem);
+    vec->nelem = 0;
+}
+
+void printVector(Vector *vec, char *name) {
+    printf("%s = [\n", name);
+    printf("    ");
+    for (ulong i = 0; i < vec->nelem; ++i) {
+        printf("%f ", VEC_AT(*vec, i));
+    }
+    printf("\n]\n");
+}
+
 _cn_names const cn = {
     .ad = {
         .allocCompGraph = allocCompGraph,
@@ -63,12 +86,19 @@ _cn_names const cn = {
         .elu = elu,
         .backprop = backprop,
     },
-    .mat = {
+    .la = {
         .deallocMatrix = deallocMatrix,
         .allocMatrix = allocMatrix,
         .formMatrix = formMatrix,
         .printMatrix = printMatrix,
+        .allocVector = allocVector,
+        .formVector = formVector,
+        .printVector = printVector,
+        .deallocVector = deallocVector,
     },
+    .defaultHParams = defaultHParams,
+    .setRate = setRate,
+    .setLeaker = setLeaker,
     .allocConvNet = allocConvNet,
     .allocVanillaNet = allocVanillaNet,
     .allocDenseLayer = allocDenseLayer,
@@ -76,4 +106,5 @@ _cn_names const cn = {
     .deallocNet = deallocNet,
     .learnVanilla = learnVanilla,
     .printNet = printNet,
+    .predictDense = predictDense,
 };
