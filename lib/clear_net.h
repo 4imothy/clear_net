@@ -9,10 +9,9 @@
 #define MAT_AT(mat, r, c) (mat).elem[(r) * (mat).stride + (c)]
 #define VEC_AT(vec, i) (vec).elem[(i)]
 
-// TODO need to do stochastic gradient descent stuff with batches and for
-// convolutional
-// TODO a print net results function for convolutional
-// TODO need to save and load a model
+// TODO need to do sgd with batches for conv
+// TODO a print net results function for conv
+// TODO need to save and load a model for conv
 
 typedef float scalar;
 typedef unsigned long ulong;
@@ -97,7 +96,7 @@ typedef struct {
     Vector *(*predictDense)(Net *net, Vector input, Vector *store);
     void (*printVanillaPredictions)(Net *net, Matrix input, Matrix target);
     scalar (*lossVanilla)(Net *net, Matrix input, Matrix target);
-    void (*saveModel)(Net *net, char *path);
+    void (*saveNet)(Net *net, char *path);
     Net* (*allocNetFromFile)(char* path);
 } _cn_names;
 
