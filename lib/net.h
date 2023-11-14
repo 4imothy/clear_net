@@ -17,7 +17,7 @@ void printNet(Net *net, char *name);
 Vector *predictDense(Net *net, Vector input, Vector *store);
 void printVanillaPredictions(Net *net, Matrix input, Matrix target);
 scalar lossVanilla(Net *net, Matrix input, Matrix target);
-void saveModel(Net *net, char *path);
+void saveNet(Net *net, char *path);
 Net* allocNetFromFile(char* path);
 
 #endif // CN_NET

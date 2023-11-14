@@ -3,11 +3,10 @@
 #include "graph_utils.h"
 #include "la.h"
 
-// TODO save and load teh model on xor just to make sure everything looks nice
 // TODO to save space can not alloc for any storing index matirx as the number
 // of elements between each element should be the same just store the stride
 // again
-// TODO make naming consistent always use net not model
+// TODO split each layer into its own .c and .h
 
 typedef struct {
     Mat weights;
@@ -832,7 +831,7 @@ void allocDenseLayerFromFile(Net *net, FILE* fp) {
     loadVecFromFile(net->cg, &net->layers[net->nlayers - 1].data.dense.biases, fp);
 }
 
-void saveModel(Net *net, char *path) {
+void saveNet(Net *net, char *path) {
     FILE *fp = fopen(path, "wb");
     FWRITE(&net->input.type, 1, fp);
     FWRITE(&net->nlayers, 1, fp);
