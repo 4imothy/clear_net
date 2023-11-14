@@ -180,9 +180,9 @@ int main(int argc, char *argv[]) {
     Matrix train =
         la.formMatrix(train_size, data_cols, data_cols, train_values);
     Matrix input = la.formMatrix(train_size, input_dim, train.stride,
-                                  &MAT_AT(train, 0, 0));
+                                 &MAT_AT(train, 0, 0));
     Matrix target = la.formMatrix(train_size, output_dim, train.stride,
-                                   &MAT_AT(train, 0, input_dim));
+                                  &MAT_AT(train, 0, input_dim));
     for (size_t i = 0; i < target.nrows; ++i) {
         MAT_AT(target, i, 0) /= 2;
     }
@@ -192,14 +192,14 @@ int main(int argc, char *argv[]) {
     Matrix val_input =
         la.formMatrix(val_size, input_dim, val.stride, &MAT_AT(val, 0, 0));
     Matrix val_target = la.formMatrix(val_size, output_dim, val.stride,
-                                       &MAT_AT(val, 0, input_dim));
+                                      &MAT_AT(val, 0, input_dim));
     for (size_t i = 0; i < val_size; ++i) {
         MAT_AT(val_target, i, 0) /= 2;
     }
     HParams hp = cn.defaultHParams();
     cn.setRate(&hp, 0.02);
     cn.withMomentum(&hp, 0.9);
-    Net* net = cn.allocVanillaNet(hp, input_dim);
+    Net *net = cn.allocVanillaNet(hp, input_dim);
     cn.allocDenseLayer(net, Sigmoid, 1);
     cn.randomizeNet(net, -1, 1);
     size_t num_epochs = 10000;
@@ -214,7 +214,8 @@ int main(int argc, char *argv[]) {
     for (i = 0; i < num_epochs; ++i) {
         for (size_t batch_num = 0; batch_num < train_size / batch_size;
              ++batch_num) {
-            la.setBatchFromMatrix(input, target, batch_num, batch_size, &batch_in, &batch_tar);
+            la.setBatchFromMatrix(input, target, batch_num, batch_size,
+                                  &batch_in, &batch_tar);
             cn.learnVanilla(net, batch_in, batch_tar);
         }
         loss = cn.lossVanilla(net, input, target);
@@ -230,7 +231,14 @@ int main(int argc, char *argv[]) {
         cn.printVanillaPredictions(net, input, target);
         printf("On validation set\n");
         cn.printVanillaPredictions(net, val_input, val_target);
+        char* file = "model";
+        cn.saveNet(net, file);
+        cn.deallocNet(net);
+        printf("after loading\n");
+        net = cn.allocNetFromFile("model");
+        cn.printVanillaPredictions(net, val_input, val_target);
     }
+
     cn.deallocNet(net);
     return 0;
 }

@@ -40,7 +40,7 @@ int main(void) {
     printf("Final loss: %g\n", loss);
     char* file = "model";
     cn.printVanillaPredictions(net, input, target);
-    cn.saveModel(net, file);
+    cn.saveNet(net, file);
     cn.deallocNet(net);
     printf("after loading\n");
     net = cn.allocNetFromFile("model");

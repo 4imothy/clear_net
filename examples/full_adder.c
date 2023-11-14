@@ -51,7 +51,12 @@ int main(void) {
     }
     printf("Final loss: %g\n", loss);
     cn.printVanillaPredictions(net, input, target);
+    char *file = "model";
+    cn.saveModel(net, file);
     cn.deallocNet(net);
-
+    net = cn.allocNetFromFile(file);
+    printf("after loading\n");
+    cn.printVanillaPredictions(net, input, target);
+    cn.deallocNet(net);
     return 0;
 }
