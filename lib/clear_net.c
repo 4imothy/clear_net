@@ -50,7 +50,7 @@ _cn_names const cn = {
     PAIR(deallocNet),
     PAIR(learnVanilla),
     PAIR(printNet),
-    PAIR(predictDense),
+    PAIR(predictVanilla),
     PAIR(printVanillaPredictions),
     PAIR(lossVanilla),
     PAIR(saveNet),
