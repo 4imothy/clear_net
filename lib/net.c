@@ -476,11 +476,18 @@ void createGlobalPoolingLayer(Net *net, Pooling strat) {
     CLEAR_NET_ASSERT(net->layers[net->nlayers - 1].type == Conv ||
                      net->layers[net->nlayers - 1].type == Pool);
 
-    // TODO this doesn't handle case where previous layer is Pooling
-    GlobalPoolingLayer gpooler = (GlobalPoolingLayer){
-        .strat = strat,
-        .output = allocUVec(net->layers[net->nlayers - 1].data.conv.nfilters),
-    };
+    GlobalPoolingLayer gpooler;
+    if (net->layers[net->nlayers - 1].type == Conv) {
+        gpooler = (GlobalPoolingLayer){
+            .strat = strat,
+            .output = allocUVec(net->layers[net->nlayers - 1].data.conv.nfilters)
+        };
+    } else {
+        gpooler = (GlobalPoolingLayer){
+            .strat = strat,
+            .output = allocUVec(net->layers[net->nlayers - 1].data.pool.noutput),
+        };
+    }
     Layer l;
     l.type = GlobPool;
     l.data.glob_pool = gpooler;
@@ -642,7 +649,7 @@ void randomizeNet(Net *net, scalar lower, scalar upper) {
     }
 }
 
-UVec _predictDense(Net *net, CompGraph *cg, UVec prev) {
+UVec _predictVanilla(Net *net, CompGraph *cg, UVec prev) {
     for (ulong i = 0; i < net->nlayers; ++i) {
         prev =
             forwardDense(cg, &net->layers[i].data.dense, prev, net->hp.leaker);
@@ -650,7 +657,7 @@ UVec _predictDense(Net *net, CompGraph *cg, UVec prev) {
     return prev;
 }
 
-Vector *predictDense(Net *net, Vector input, Vector *store) {
+Vector *predictVanilla(Net *net, Vector input, Vector *store) {
     CLEAR_NET_ASSERT(net->input.data.vec.nelem == input.nelem);
     CompGraph *cg = net->cg;
 
@@ -658,7 +665,7 @@ Vector *predictDense(Net *net, Vector input, Vector *store) {
         VEC_AT(net->input.data.vec, i) = getSize(cg);
         initLeafScalar(cg, VEC_AT(input, i));
     }
-    UVec prediction = _predictDense(net, cg, net->input.data.vec);
+    UVec prediction = _predictVanilla(net, cg, net->input.data.vec);
     CLEAR_NET_ASSERT(store->nelem == prediction.nelem);
     for (ulong i = 0; i < store->nelem; ++i) {
         VEC_AT(*store, i) = getVal(cg, VEC_AT(prediction, i));
@@ -695,7 +702,7 @@ scalar learnVanilla(Net *net, Matrix input, Matrix target) {
         for (ulong j = 0; j < input.ncols; ++j) {
             initLeafScalar(cg, MAT_AT(input, i, j));
         }
-        UVec prediction = _predictDense(net, cg, net->input.data.vec);
+        UVec prediction = _predictVanilla(net, cg, net->input.data.vec);
         target_vec.start_id = getSize(cg);
 
         for (ulong j = 0; j < target.ncols; ++j) {
@@ -726,7 +733,7 @@ scalar lossVanilla(Net *net, Matrix input, Matrix target) {
     Vector out = allocVector(target.ncols);
     for (ulong i = 0; i < input.nrows; ++i) {
         Vector in = formVector(input.ncols, &MAT_AT(input, i, 0));
-        predictDense(net, in, &out);
+        predictVanilla(net, in, &out);
         Vector tar = formVector(target.ncols, &MAT_AT(target, i, 0));
         for (ulong j = 0; j < out.nelem; ++j) {
             loss += powf(VEC_AT(out, j) - VEC_AT(tar, j), 2);
@@ -744,7 +751,7 @@ void printVanillaPredictions(Net *net, Matrix input, Matrix target) {
 
     for (ulong i = 0; i < input.nrows; ++i) {
         Vector in = formVector(input.ncols, &MAT_AT(input, i, 0));
-        predictDense(net, in, &out);
+        predictVanilla(net, in, &out);
         Vector tar = formVector(target.ncols, &MAT_AT(target, i, 0));
         for (ulong j = 0; j < out.nelem; ++j) {
             loss += powf(VEC_AT(out, j) - VEC_AT(tar, j), 2);
