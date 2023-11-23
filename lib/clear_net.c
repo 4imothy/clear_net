@@ -23,7 +23,7 @@ _cn_names const cn = {
             PAIR(htan),
             PAIR(sigmoid),
             PAIR(elu),
-            PAIR(backprop),
+            PAIR(backward),
             PAIR(setValRand),
         },
     .la =
@@ -39,7 +39,7 @@ _cn_names const cn = {
             PAIR(shuffleMatrixRows),
             PAIR(setBatchFromMatrix),
         },
-    PAIR(defaultHParams),
+    PAIR(allocDefaultHParams),
     PAIR(setRate),
     PAIR(setLeaker),
     PAIR(withMomentum),

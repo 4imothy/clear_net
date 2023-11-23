@@ -2,12 +2,19 @@
 #define CN_NET
 #include "clear_net.h"
 
-HParams defaultHParams(void);
+struct HParams {
+    scalar rate;
+    scalar leaker;
+    scalar beta;
+    bool momentum;
+};
+
+HParams *allocDefaultHParams(void);
 void setRate(HParams *hp, scalar rate);
 void setLeaker(HParams *hp, scalar leaker);
 void withMomentum(HParams *hp, scalar beta);
-Net *allocVanillaNet(HParams hp, ulong input_nelem);
-Net *allocConvNet(HParams hp, ulong input_nrows, ulong input_ncols,
+Net *allocVanillaNet(HParams *hp, ulong input_nelem);
+Net *allocConvNet(HParams *hp, ulong input_nrows, ulong input_ncols,
                   ulong nchannels);
 void randomizeNet(Net *net, scalar lower, scalar upper);
 void allocDenseLayer(Net *net, Activation act, ulong dim_out);

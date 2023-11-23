@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #define MAT_AT(mat, r, c) (mat).elem[(r) * (mat).stride + (c)]
 #define VEC_AT(vec, i) (vec).elem[(i)]
@@ -12,11 +13,13 @@
 // TODO need to do sgd with batches for conv
 // TODO a print net results function for conv
 // TODO need to save and load a model for conv
+// TODO return the ulong of the index call maybe return a struct with the id and the loss scalar
 
 typedef float scalar;
 typedef unsigned long ulong;
 typedef struct CompGraph CompGraph;
 typedef struct Net Net;
+typedef struct HParams HParams;
 typedef enum {
     Sigmoid,
     ReLU,
@@ -24,13 +27,6 @@ typedef enum {
     LeakyReLU,
     ELU,
 } Activation;
-
-typedef struct {
-    scalar rate;
-    scalar leaker;
-    scalar beta;
-    bool momentum;
-} HParams;
 
 typedef struct {
     scalar *elem;
@@ -64,7 +60,7 @@ typedef struct {
         ulong (*htan)(CompGraph *cg, ulong x);
         ulong (*sigmoid)(CompGraph *cg, ulong x);
         ulong (*elu)(CompGraph *cg, ulong x, scalar leaker);
-        void (*backprop)(CompGraph *cg, ulong last, scalar leaker);
+        void (*backward)(CompGraph *cg, ulong last, scalar leaker);
     } ad;
     struct {
         Matrix (*allocMatrix)(ulong nrows, ulong ncols);
@@ -81,13 +77,13 @@ typedef struct {
                                    ulong batch_num, ulong batch_size,
                                    Matrix *batch_in, Matrix *batch_tar);
     } la;
-    HParams (*defaultHParams)(void);
+    HParams* (*allocDefaultHParams)(void);
     void (*setRate)(HParams *hp, scalar rate);
     void (*withMomentum)(HParams *hp, scalar beta);
     void (*setLeaker)(HParams *hp, scalar leaker);
     void (*randomizeNet)(Net *net, scalar lower, scalar upper);
-    Net *(*allocVanillaNet)(HParams hp, ulong input_nelem);
-    Net *(*allocConvNet)(HParams hp, ulong input_nrows, ulong input_ncols,
+    Net *(*allocVanillaNet)(HParams *hp, ulong input_nelem);
+    Net *(*allocConvNet)(HParams *hp, ulong input_nrows, ulong input_ncols,
                          ulong nchannels);
     void (*allocDenseLayer)(Net *net, Activation act, ulong dim_out);
     void (*deallocNet)(Net *net);
@@ -112,7 +108,6 @@ extern _cn_names const cn;
 #define CLEAR_NET_DEALLOC free
 #endif // CLEAR_NET_MALLOC
 #ifndef CLEAR_NET_ASSERT
-#include "assert.h"
 #define CLEAR_NET_ASSERT assert
 #endif // CLEAR_NET_ASSERT
 

@@ -1,4 +1,5 @@
 #include "autodiff.h"
+#include "net.h"
 #include "clear_net.h"
 #include "graph_utils.h"
 #include "la.h"
@@ -536,13 +537,13 @@ UVec globalPoolLayer(CompGraph *cg, GlobalPoolingLayer *pooler, UMat *input) {
     return pooler->output;
 }
 
-HParams defaultHParams(void) {
-    return (HParams){
-        .rate = 0.1,
-        .leaker = 0.1,
-        .momentum = false,
-        .beta = 0.9,
-    };
+HParams* allocDefaultHParams(void) {
+    HParams* hp = CLEAR_NET_ALLOC(sizeof(HParams));
+    hp->rate = 0.1;
+    hp->leaker = 0.1;
+    hp->momentum = false;
+    hp->beta = 0.9;
+    return hp;
 }
 
 void setRate(HParams *hp, scalar rate) { hp->rate = rate; }
@@ -554,17 +555,17 @@ void withMomentum(HParams *hp, scalar beta) {
     hp->beta = beta;
 }
 
-Net *allocNet(HParams hp) {
+Net *allocNet(HParams *hp) {
     Net *net = CLEAR_NET_ALLOC(sizeof(Net));
     net->layers = NULL;
     net->nlayers = 0;
     net->nparams = 0;
-    net->hp = hp;
+    net->hp = *hp;
     net->cg = allocCompGraph(0);
     return net;
 }
 
-Net *allocVanillaNet(HParams hp, ulong input_nelem) {
+Net *allocVanillaNet(HParams* hp, ulong input_nelem) {
     CLEAR_NET_ASSERT(input_nelem != 0);
     UData input;
     input.type = UVector;
@@ -574,7 +575,7 @@ Net *allocVanillaNet(HParams hp, ulong input_nelem) {
     return net;
 }
 
-Net *allocConvNet(HParams hp, ulong input_nrows, ulong input_ncols,
+Net *allocConvNet(HParams *hp, ulong input_nrows, ulong input_ncols,
                   ulong nchannels) {
     CLEAR_NET_ASSERT(input_nrows != 0 && input_ncols != 0 && nchannels != 0);
     UData input;
@@ -717,7 +718,7 @@ scalar learnVanilla(Net *net, Matrix input, Matrix target) {
                        raise(cg, sub(cg, VEC_AT(prediction, j), VEC_ID(target_vec, j)),
                              raiser));
         }
-        backprop(cg, loss, net->hp.leaker);
+        backward(cg, loss, net->hp.leaker);
         total_loss += getVal(cg, loss);
         setSize(cg, net->nparams + 1);
     }
@@ -778,12 +779,12 @@ void saveHParams(HParams* hp, FILE* fp) {
     FWRITE(&hp->momentum, 1, fp);
 }
 
-HParams loadHParamsFromFile(FILE *fp) {
-    HParams hp;
-    FREAD(&hp.rate, 1, fp);
-    FREAD(&hp.leaker, 1, fp);
-    FREAD(&hp.beta, 1, fp);
-    FREAD(&hp.momentum, 1, fp);
+HParams *allocHParamsFromFile(FILE *fp) {
+    HParams *hp = CLEAR_NET_ALLOC(sizeof(HParams));
+    FREAD(&hp->rate, 1, fp);
+    FREAD(&hp->leaker, 1, fp);
+    FREAD(&hp->beta, 1, fp);
+    FREAD(&hp->momentum, 1, fp);
     return hp;
 }
 
@@ -885,7 +886,7 @@ Net* allocNetFromFile(char* path) {
     FREAD(&in_type, 1, fp);
     ulong nlayers;
     FREAD(&nlayers, 1, fp);
-    HParams hp = loadHParamsFromFile(fp);
+    HParams *hp = allocHParamsFromFile(fp);
     Net *net;
     switch(in_type) {
     case(UVector): {
