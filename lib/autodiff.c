@@ -1,4 +1,5 @@
 #include "clear_net.h"
+#include "net.h"
 
 // TODO change powf to have one for floats and doubles in case scalar is changed
 // to be a double
@@ -121,7 +122,7 @@ ulong add(CompGraph *cg, ulong left, ulong right) {
     return out;
 }
 
-void addBackprop(CompGraph *cg, Scalar *var) {
+void addBackward(CompGraph *cg, Scalar *var) {
     NODE(var->prev_left).grad += var->grad;
     NODE(var->prev_right).grad += var->grad;
 }
@@ -132,7 +133,7 @@ ulong sub(CompGraph *cg, ulong left, ulong right) {
     return out;
 }
 
-void subBackprop(CompGraph *cg, Scalar *var) {
+void subBackward(CompGraph *cg, Scalar *var) {
     NODE(var->prev_left).grad += var->grad;
     NODE(var->prev_right).grad -= var->grad;
 }
@@ -143,7 +144,7 @@ ulong mul(CompGraph *cg, ulong left, ulong right) {
     return out;
 }
 
-void mulBackprop(CompGraph *cg, Scalar *var) {
+void mulBackward(CompGraph *cg, Scalar *var) {
     NODE(var->prev_left).grad += var->grad * NODE(var->prev_right).num;
     NODE(var->prev_right).grad += var->grad * NODE(var->prev_left).num;
 }
@@ -154,7 +155,7 @@ ulong raise(CompGraph *cg, ulong to_raise, ulong pow) {
     return out;
 }
 
-void raiseBackprop(CompGraph *cg, Scalar *var) {
+void raiseBackward(CompGraph *cg, Scalar *var) {
     scalar l_num = NODE(var->prev_left).num;
     scalar r_num = NODE(var->prev_right).num;
     NODE(var->prev_left).grad += r_num * powf(l_num, r_num - 1) * var->grad;
@@ -167,7 +168,7 @@ ulong relu(CompGraph *cg, ulong x) {
     return out;
 }
 
-void reluBackprop(CompGraph *cg, Scalar *var) {
+void reluBackward(CompGraph *cg, Scalar *var) {
     if (var->num > 0) {
         NODE(var->prev_left).grad += var->grad;
     }
@@ -179,7 +180,7 @@ ulong leakyRelu(CompGraph *cg, ulong x, scalar leaker) {
     return out;
 }
 
-void leakyReluBackprop(CompGraph *cg, Scalar *var, scalar leaker) {
+void leakyReluBackward(CompGraph *cg, Scalar *var, scalar leaker) {
     scalar change = var->num > 0 ? 1 : leaker;
     NODE(var->prev_left).grad += change * var->grad;
 }
@@ -190,7 +191,7 @@ ulong htan(CompGraph *cg, ulong x) {
     return out;
 }
 
-void tanhBackprop(CompGraph *cg, Scalar *var) {
+void tanhBackward(CompGraph *cg, Scalar *var) {
     NODE(var->prev_left).grad += (1 - powf(var->num, 2)) * var->grad;
 }
 
@@ -200,7 +201,7 @@ ulong sigmoid(CompGraph *cg, ulong x) {
     return out;
 }
 
-void sigmoidBackprop(CompGraph *cg, Scalar *var) {
+void sigmoidBackward(CompGraph *cg, Scalar *var) {
     NODE(var->prev_left).grad += var->num * (1 - var->num) * var->grad;
 }
 
@@ -211,43 +212,43 @@ ulong elu(CompGraph *cg, ulong x, scalar leaker) {
     return out;
 }
 
-void eluBackprop(CompGraph *cg, Scalar *var, scalar leaker) {
+void eluBackward(CompGraph *cg, Scalar *var, scalar leaker) {
     scalar change = var->num > 0 ? 1 : var->num + leaker;
     NODE(var->prev_left).grad += change * var->grad;
 }
 
-void backprop(CompGraph *cg, ulong last, scalar leaker) {
+void backward(CompGraph *cg, ulong last, scalar leaker) {
     NODE(last).grad = 1;
     Scalar *cur;
     for (ulong i = cg->size - 1; i > 0; --i) {
         cur = &NODE(i);
         switch (cur->op) {
         case Add:
-            addBackprop(cg, cur);
+            addBackward(cg, cur);
             break;
         case Sub:
-            subBackprop(cg, cur);
+            subBackward(cg, cur);
             break;
         case Mul:
-            mulBackprop(cg, cur);
+            mulBackward(cg, cur);
             break;
         case Raise:
-            raiseBackprop(cg, cur);
+            raiseBackward(cg, cur);
             break;
         case Relu:
-            reluBackprop(cg, cur);
+            reluBackward(cg, cur);
             break;
         case LeakyRelu:
-            leakyReluBackprop(cg, cur, leaker);
+            leakyReluBackward(cg, cur, leaker);
             break;
         case Elu:
-            eluBackprop(cg, cur, leaker);
+            eluBackward(cg, cur, leaker);
             break;
         case Htan:
-            tanhBackprop(cg, cur);
+            tanhBackward(cg, cur);
             break;
         case Sig:
-            sigmoidBackprop(cg, cur);
+            sigmoidBackward(cg, cur);
             break;
         case None:
             break;

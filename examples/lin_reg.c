@@ -73,8 +73,8 @@ int main(void) {
     Matrix val_in = la.formMatrix(num_train, dim_input, num_var, val);
     Matrix val_out = la.formMatrix(num_train, 1, num_var, &val[dim_input]);
 
-    HParams hp = cn.defaultHParams();
-    cn.setRate(&hp, 0.01);
+    HParams *hp = cn.allocDefaultHParams();
+    cn.setRate(hp, 0.01);
     Net *net = cn.allocVanillaNet(hp, 8);
     cn.allocDenseLayer(net, Tanh, 1);
     cn.randomizeNet(net, -1, 1);

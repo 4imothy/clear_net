@@ -1,12 +1,11 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "./external/stb_image.h"
-#define CLEAR_NET_IMPLEMENTATION
-#include "../clear_net.h"
+#include "../lib/clear_net.h"
 
 #include <dirent.h>
 #include <sys/stat.h>
 
-CLEAR_NET_DEFINE_HYPERPARAMETERS
+#define la cn.la
 
 const size_t img_height = 28;
 const size_t img_width = 28;
@@ -71,39 +70,39 @@ int main(void) {
     srand(0);
 
     char *train_path = "./datasets/mnist/train";
-    Matrix train = cn_alloc_matrix(num_train_files, num_pixels + dim_output);
+    Matrix train = la.allocMatrix(num_train_files, num_pixels + dim_output);
     int res = get_data_from_dir(&train, train_path, num_train_files);
     if (res) {
         return 1;
     }
     // randomize for stochastic gradient descent
-    Matrix train_input = cn_form_matrix(num_train_files, num_pixels,
+    Matrix train_input = la.formMatrix(num_train_files, num_pixels,
                                         train.ncols, &MAT_AT(train, 0, 0));
     Matrix train_output =
-        cn_form_matrix(num_train_files, dim_output, train.ncols,
+        la.formMatrix(num_train_files, dim_output, train.ncols,
                        &MAT_AT(train, 0, num_pixels));
 
-    cn_shuffle_vani_input(&train_input, &train_output);
+    la.shuffleMatrixRows(&train_input, &train_output);
 
     char *test_path = "./datasets/mnist/test";
-    Matrix test = cn_alloc_matrix(num_test_files, num_pixels + dim_output);
+    Matrix test = la.allocMatrix(num_test_files, num_pixels + dim_output);
     res = get_data_from_dir(&test, test_path, num_test_files);
     if (res != 0) {
         return 1;
     }
-    Matrix test_input = cn_form_matrix(num_test_files, num_pixels, test.ncols,
+    Matrix test_input = la.formMatrix(num_test_files, num_pixels, test.ncols,
                                        &MAT_AT(test, 0, 0));
-    Matrix test_output = cn_form_matrix(num_test_files, dim_output, test.ncols,
+    Matrix test_output = la.formMatrix(num_test_files, dim_output, test.ncols,
                                         &MAT_AT(test, 0, num_pixels));
 
-    cn_default_hparams();
-    cn_set_rate(0.005);
-    cn_with_momentum(0.9);
-    Net net = cn_alloc_vani_net(num_pixels);
-    cn_alloc_dense_layer(&net, Sigmoid, 16);
-    cn_alloc_dense_layer(&net, Sigmoid, 16);
-    cn_alloc_dense_layer(&net, Sigmoid, dim_output);
-    cn_randomize_net(&net, -1, 1);
+    HParams *hp = cn.allocDefaultHParams();
+    cn.setRate(hp, 0.005);
+    cn.withMomentum(hp, 0.9);
+    Net *net = cn.allocVanillaNet(hp, num_pixels);
+    cn.allocDenseLayer(net, Sigmoid, 16);
+    cn.allocDenseLayer(net, Sigmoid, 16);
+    cn.allocDenseLayer(net, Sigmoid, dim_output);
+    cn.randomizeNet(net, -1, 1);
     size_t num_epochs = 20000;
     float error;
     float error_break = 0.10;
@@ -112,16 +111,15 @@ int main(void) {
     Matrix batch_output;
     size_t batch_size = 100;
     CLEAR_NET_ASSERT(num_train_files % batch_size == 0);
-    printf("Initial Cost: %f\n", cn_loss_vani(&net, train_input, train_output));
+    printf("Initial Cost: %f\n", cn.lossVanilla(net, train_input, train_output));
     printf("Beginning Training\n");
     for (size_t i = 0; i < num_epochs; ++i) {
         for (size_t batch_num = 0; batch_num < (num_train_files / batch_size);
              ++batch_num) {
-            cn_get_batch_vani(&batch_input, &batch_output, train_input,
-                              train_output, batch_num, batch_size);
-            cn_learn_vani(&net, batch_input, batch_output);
+            la.setBatchFromMatrix(train_input, train_output, batch_num, batch_size, &batch_input, &batch_output);
+            cn.learnVanilla(net, batch_input, batch_output);
         }
-        error = cn_loss_vani(&net, train_input, train_output);
+        error = cn.lossVanilla(net, train_input, train_output);
         printf("Cost after epoch %zu: %f\n", i, error);
         if (error < error_break) {
             printf("Less than: %f error after epoch %zu\n", error_break, i);
@@ -130,16 +128,16 @@ int main(void) {
     }
 
     printf("Final Error on training set: %f\n",
-           cn_loss_vani(&net, train_input, train_output));
+           cn.lossVanilla(net, train_input, train_output));
     char *file = "model";
-    cn_save_net_to_file(net, file);
-    cn_dealloc_net(&net);
-    net = cn_alloc_net_from_file(file);
+    cn.saveNet(net, file);
+    cn.deallocNet(net);
+    net = cn.allocNetFromFile(file);
     printf("On training\n");
-    cn_print_target_output_pairs_vani(net, train_input, train_output);
+    cn.printVanillaPredictions(net, train_input, train_output);
     printf("On testing\n");
-    cn_print_target_output_pairs_vani(net, test_input, test_output);
-    cn_dealloc_net(&net);
-    cn_dealloc_matrix(&train);
-    cn_dealloc_matrix(&test);
+    cn.printVanillaPredictions(net, test_input, test_output);
+    cn.deallocNet(net);
+    la.deallocMatrix(&train);
+    la.deallocMatrix(&test);
 }

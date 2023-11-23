@@ -196,9 +196,9 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < val_size; ++i) {
         MAT_AT(val_target, i, 0) /= 2;
     }
-    HParams hp = cn.defaultHParams();
-    cn.setRate(&hp, 0.02);
-    cn.withMomentum(&hp, 0.9);
+    HParams *hp = cn.allocDefaultHParams();
+    cn.setRate(hp, 0.02);
+    cn.withMomentum(hp, 0.9);
     Net *net = cn.allocVanillaNet(hp, input_dim);
     cn.allocDenseLayer(net, Sigmoid, 1);
     cn.randomizeNet(net, -1, 1);

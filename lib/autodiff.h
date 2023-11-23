@@ -20,7 +20,7 @@ ulong leakyRelu(CompGraph *cg, ulong x, scalar leaker);
 ulong htan(CompGraph *cg, ulong x);
 ulong sigmoid(CompGraph *cg, ulong x);
 ulong elu(CompGraph *cg, ulong x, scalar leaker);
-void backprop(CompGraph *cg, ulong last, scalar leaker);
+void backward(CompGraph *cg, ulong last, scalar leaker);
 ulong getSize(CompGraph *cg);
 void setSize(CompGraph *cg, ulong size);
 void setValRand(CompGraph *cg, ulong x, scalar lower, scalar upper);

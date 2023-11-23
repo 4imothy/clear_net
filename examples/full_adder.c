@@ -32,10 +32,10 @@ int main(void) {
     la.shuffleMatrixRows(&input, &target);
     ulong num_epochs = 20000;
 
-    HParams hp = cn.defaultHParams();
+    HParams *hp = cn.allocDefaultHParams();
 
-    cn.setLeaker(&hp, 1);
-    cn.withMomentum(&hp, 0.9);
+    cn.setLeaker(hp, 1);
+    cn.withMomentum(hp, 0.9);
     Net *net = cn.allocVanillaNet(hp, 3);
     cn.allocDenseLayer(net, Tanh, 3);
     cn.allocDenseLayer(net, LeakyReLU, 8);
@@ -52,7 +52,7 @@ int main(void) {
     printf("Final loss: %g\n", loss);
     cn.printVanillaPredictions(net, input, target);
     char *file = "model";
-    cn.saveModel(net, file);
+    cn.saveNet(net, file);
     cn.deallocNet(net);
     net = cn.allocNetFromFile(file);
     printf("after loading\n");

@@ -5,8 +5,8 @@
 
 int main(void) {
     srand(0);
-    HParams hp = cn.defaultHParams();
-    cn.setRate(&hp, 10);
+    HParams* hp = cn.allocDefaultHParams();
+    cn.setRate(hp, 10);
     Net *net = cn.allocVanillaNet(hp, 2);
     cn.allocDenseLayer(net, Sigmoid, 2);
     cn.allocDenseLayer(net, Sigmoid, 1);
