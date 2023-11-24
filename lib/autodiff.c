@@ -118,7 +118,7 @@ void _applyGrad(CompGraph *cg, ulong x, HParams *hp) {
 
 ulong add(CompGraph *cg, ulong left, ulong right) {
     scalar val = NODE(left).num + NODE(right).num;
-    size_t out = initScalar(cg, val, left, right, Add);
+    ulong out = initScalar(cg, val, left, right, Add);
     return out;
 }
 
@@ -129,7 +129,7 @@ void addBackward(CompGraph *cg, Scalar *var) {
 
 ulong sub(CompGraph *cg, ulong left, ulong right) {
     scalar val = NODE(left).num - NODE(right).num;
-    size_t out = initScalar(cg, val, left, right, Sub);
+    ulong out = initScalar(cg, val, left, right, Sub);
     return out;
 }
 
@@ -140,7 +140,7 @@ void subBackward(CompGraph *cg, Scalar *var) {
 
 ulong mul(CompGraph *cg, ulong left, ulong right) {
     scalar val = NODE(left).num * NODE(right).num;
-    size_t out = initScalar(cg, val, left, right, Mul);
+    ulong out = initScalar(cg, val, left, right, Mul);
     return out;
 }
 
@@ -151,7 +151,7 @@ void mulBackward(CompGraph *cg, Scalar *var) {
 
 ulong raise(CompGraph *cg, ulong to_raise, ulong pow) {
     scalar val = powf(NODE(to_raise).num, NODE(pow).num);
-    size_t out = initScalar(cg, val, to_raise, pow, Raise);
+    ulong out = initScalar(cg, val, to_raise, pow, Raise);
     return out;
 }
 
@@ -208,7 +208,7 @@ void sigmoidBackward(CompGraph *cg, Scalar *var) {
 ulong elu(CompGraph *cg, ulong x, scalar leaker) {
     scalar num = NODE(x).num;
     scalar val = num > 0 ? num : leaker * (expf(num) - 1);
-    size_t out = initScalar(cg, val, x, 0, Elu);
+    ulong out = initScalar(cg, val, x, 0, Elu);
     return out;
 }
 

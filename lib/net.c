@@ -16,12 +16,6 @@ typedef struct {
     UVec output;
 } DenseLayer;
 
-typedef enum {
-    Same,
-    Valid,
-    Full,
-} Padding;
-
 typedef struct {
     Mat *kernels;
     Mat biases;
@@ -151,7 +145,7 @@ void deallocDenseLayer(DenseLayer *layer) {
     zeroVec(&layer->biases);
 }
 
-void printDenseLayer(CompGraph *cg, DenseLayer *dense, size_t index) {
+void printDenseLayer(CompGraph *cg, DenseLayer *dense, ulong index) {
     printf("Layer #%zu: Dense\n", index);
     printMat(cg, &dense->weights, "weight matrix");
     printVec(cg, &dense->biases, "bias vector");
@@ -247,7 +241,7 @@ void allocConvLayer(Net *net, Padding padding, Activation act, ulong noutput,
     layer.filters = CLEAR_NET_ALLOC(layer.nfilters * sizeof(*layer.filters));
     layer.outputs = CLEAR_NET_ALLOC(layer.nfilters * sizeof(*layer.outputs));
 
-    size_t offset = net->nparams + 1;
+    ulong offset = net->nparams + 1;
     for (ulong i = 0; i < layer.nfilters; ++i) {
         Filter filter;
         filter.kernels = CLEAR_NET_ALLOC(nimput * sizeof(*filter.kernels));
@@ -302,16 +296,14 @@ void randomizeConvLayer(CompGraph *cg, ConvolutionalLayer *layer, scalar lower,
     }
 }
 
-ulong correlate(CompGraph *cg, Mat kern, UMat input, ulong top_left_row,
-                ulong top_left_col) {
+ulong correlate(CompGraph *cg, Mat kern, UMat input, long top_left_row,
+                long top_left_col) {
     ulong res = initLeafScalar(cg, 0);
-    ulong rows = kern.nrows;
-    ulong col = kern.ncols;
-    for (ulong i = 0; i < rows; ++i) {
-        for (ulong j = 0; j < col; ++j) {
-            ulong r = top_left_row + i;
-            ulong c = top_left_col + i;
-            if (r >= 0 && c >= 0 && r < input.nrows && c < input.ncols) {
+    for (long i = 0; i < (long)kern.nrows; ++i) {
+        for (long j = 0; j < (long)kern.ncols; ++j) {
+            long r = top_left_row + i;
+            long c = top_left_col + j;
+            if (r >= 0 && c >= 0 && r < (long)input.nrows && c < (long)input.ncols) {
                 ulong val = mul(cg, MAT_AT(input, r, c), MAT_ID(kern, i, j));
                 res = add(cg, res, val);
             }
@@ -341,12 +333,13 @@ void setPadding(Padding padding, ulong k_nrows, ulong k_ncols,
 UMat *forwardConv(CompGraph *cg, ConvolutionalLayer *layer, UMat *input,
                   scalar leaker) {
     for (ulong i = 0; i < layer->nfilters; ++i) {
-        for (ulong j = 0; i < layer->output_nrows; ++j) {
+        for (ulong j = 0; j < layer->output_nrows; ++j) {
             for (ulong k = 0; k < layer->output_ncols; ++k) {
                 MAT_AT(layer->outputs[i], j, k) = initLeafScalar(cg, 0);
             }
         }
     }
+
     ulong row_padding;
     ulong col_padding;
 
@@ -355,12 +348,13 @@ UMat *forwardConv(CompGraph *cg, ConvolutionalLayer *layer, UMat *input,
 
     for (ulong i = 0; i < layer->nimput; ++i) {
         for (ulong j = 0; j < layer->nfilters; ++j) {
-            for (ulong k = 0; layer->output_nrows; ++k) {
-                for (ulong l = 0; l < layer->output_ncols; ++l) {
-                    ulong top_left_row = k - row_padding;
-                    ulong top_left_col = l - col_padding;
+            for (long k = 0; k < (long)layer->output_nrows; ++k) {
+                for (long l = 0; l < (long)layer->output_ncols; ++l) {
+                    long top_left_row = k - row_padding;
+                    long top_left_col = l - col_padding;
                     ulong res = correlate(cg, layer->filters[j].kernels[i],
-                                          input[i], top_left_row, top_left_col);
+                                          input[i],
+top_left_row, top_left_col);
                     MAT_AT(layer->outputs[j], k, l) =
                         add(cg, MAT_AT(layer->outputs[j], k, l), res);
                 }
@@ -374,8 +368,7 @@ UMat *forwardConv(CompGraph *cg, ConvolutionalLayer *layer, UMat *input,
                 MAT_AT(layer->outputs[i], j, k) =
                     add(cg, MAT_ID(layer->filters[i].biases, j, k),
                         MAT_AT(layer->outputs[i], j, k));
-                MAT_AT(layer->outputs[i], j, k) = activate(
-                                                           cg, MAT_AT(layer->outputs[i], j, k), layer->act, leaker);
+                MAT_AT(layer->outputs[i], j, k) = activate(cg, MAT_AT(layer->outputs[i], j, k), layer->act, leaker);
             }
         }
     }
@@ -595,7 +588,7 @@ Net *allocConvNet(HParams *hp, ulong input_nrows, ulong input_ncols,
 
 void printNet(Net *net, char *name) {
     printf("%s = [\n", name);
-    for (size_t i = 0; i < net->nlayers; ++i) {
+    for (ulong i = 0; i < net->nlayers; ++i) {
         Layer layer = net->layers[i];
         switch (layer.type) {
         case (Dense):
@@ -675,19 +668,10 @@ Vector *predictVanilla(Net *net, Vector input, Vector *store) {
     return store;
 }
 
-void applyNetGrads(CompGraph *cg, Net *net) {
-    for (size_t i = 0; i < net->nlayers; ++i) {
-        if (net->layers[i].type == Dense) {
-            applyDenseGrads(cg, &net->layers[i].data.dense, &net->hp);
-        } else if (net->layers[i].type == Conv) {
-            applyConvGrads(cg, &net->layers[i].data.conv, &net->hp);
-        }
-    }
-}
-
-scalar learnVanilla(Net *net, Matrix input, Matrix target) {
+scalar lossVanilla(Net *net, Matrix input, Matrix target) {
     CLEAR_NET_ASSERT(input.nrows == target.nrows);
     CLEAR_NET_ASSERT(net->input.data.vec.nelem == input.ncols);
+    resetGrads(net->cg, net->nparams);
     ulong train_size = input.nrows;
     CompGraph *cg = net->cg;
     setSize(cg, net->nparams + 1);
@@ -722,25 +706,18 @@ scalar learnVanilla(Net *net, Matrix input, Matrix target) {
         total_loss += getVal(cg, loss);
         setSize(cg, net->nparams + 1);
     }
-    applyNetGrads(cg, net);
-    resetGrads(cg, net->nparams);
 
     return total_loss / train_size;
 }
 
-scalar lossVanilla(Net *net, Matrix input, Matrix target) {
-    scalar loss = 0;
-
-    Vector out = allocVector(target.ncols);
-    for (ulong i = 0; i < input.nrows; ++i) {
-        Vector in = formVector(input.ncols, &MAT_AT(input, i, 0));
-        predictVanilla(net, in, &out);
-        Vector tar = formVector(target.ncols, &MAT_AT(target, i, 0));
-        for (ulong j = 0; j < out.nelem; ++j) {
-            loss += powf(VEC_AT(out, j) - VEC_AT(tar, j), 2);
+void backprop(Net *net) {
+    for (ulong i = 0; i < net->nlayers; ++i) {
+        if (net->layers[i].type == Dense) {
+            applyDenseGrads(net->cg, &net->layers[i].data.dense, &net->hp);
+        } else if (net->layers[i].type == Conv) {
+            applyConvGrads(net->cg, &net->layers[i].data.conv, &net->hp);
         }
     }
-    return loss / input.nrows;
 }
 
 void printVanillaPredictions(Net *net, Matrix input, Matrix target) {

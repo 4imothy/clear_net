@@ -25,9 +25,9 @@ void zeroMat(Mat *mat) {
 
 void printMat(CompGraph *cg, Mat *mat, char *name) {
     printf("%s = [\n", name);
-    for (size_t i = 0; i < mat->nrows; ++i) {
+    for (ulong i = 0; i < mat->nrows; ++i) {
         printf("    ");
-        for (size_t j = 0; j < mat->ncols; ++j) {
+        for (ulong j = 0; j < mat->ncols; ++j) {
             printf("%f ", getVal(cg, MAT_ID(*mat, i, j)));
         }
         printf("\n");
@@ -73,7 +73,7 @@ void zeroVec(Vec *vec) {
 void printVec(CompGraph *cg, Vec *vec, char *name) {
     printf("%s = [\n", name);
     printf("    ");
-    for (size_t i = 0; i < vec->nelem; ++i) {
+    for (ulong i = 0; i < vec->nelem; ++i) {
         printf("%f ", getVal(cg, VEC_ID(*vec, i)));
     }
     printf("\n]\n");

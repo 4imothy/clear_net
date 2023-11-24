@@ -48,11 +48,11 @@ _cn_names const cn = {
     PAIR(allocDenseLayer),
     PAIR(randomizeNet),
     PAIR(deallocNet),
-    PAIR(learnVanilla),
     PAIR(printNet),
     PAIR(predictVanilla),
     PAIR(printVanillaPredictions),
     PAIR(lossVanilla),
+    PAIR(backprop),
     PAIR(saveNet),
     PAIR(allocNetFromFile),
 };
