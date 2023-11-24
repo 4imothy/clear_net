@@ -25,6 +25,6 @@ void printVanillaPredictions(Net *net, Matrix input, Matrix target);
 scalar lossVanilla(Net *net, Matrix input, Matrix target);
 void backprop(Net *net);
 void saveNet(Net *net, char *path);
-Net* allocNetFromFile(char* path);
+Net *allocNetFromFile(char *path);
 
 #endif // CN_NET

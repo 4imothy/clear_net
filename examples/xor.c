@@ -5,7 +5,7 @@
 
 int main(void) {
     srand(0);
-    HParams* hp = cn.allocDefaultHParams();
+    HParams *hp = cn.allocDefaultHParams();
     cn.setRate(hp, 10);
     Net *net = cn.allocVanillaNet(hp, 2);
     cn.allocDenseLayer(net, Sigmoid, 2);
@@ -39,7 +39,7 @@ int main(void) {
         cn.backprop(net);
     }
     printf("Final loss: %g\n", loss);
-    char* file = "model";
+    char *file = "model";
     cn.printVanillaPredictions(net, input, target);
     cn.saveNet(net, file);
     cn.deallocNet(net);

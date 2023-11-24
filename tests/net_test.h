@@ -102,8 +102,10 @@ void printVanillaPredictions(Net *net, Matrix input, Matrix target);
 scalar lossVanilla(Net *net, Matrix input, Matrix target);
 void backprop(Net *net);
 void saveNet(Net *net, char *path);
-Net* allocNetFromFile(char* path);
-void allocConvLayer(Net *net, Padding padding, Activation act, ulong noutput, ulong kernel_nrows, ulong kernel_ncols);
-UMat *forwardConv(CompGraph *cg, ConvolutionalLayer *layer, UMat *input, scalar leaker);
+Net *allocNetFromFile(char *path);
+void allocConvLayer(Net *net, Padding padding, Activation act, ulong noutput,
+                    ulong kernel_nrows, ulong kernel_ncols);
+UMat *forwardConv(CompGraph *cg, ConvolutionalLayer *layer, UMat *input,
+                  scalar leaker);
 
 #endif // CN_NET_TEST

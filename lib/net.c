@@ -1,5 +1,5 @@
-#include "autodiff.h"
 #include "net.h"
+#include "autodiff.h"
 #include "clear_net.h"
 #include "graph_utils.h"
 #include "la.h"
@@ -303,7 +303,8 @@ ulong correlate(CompGraph *cg, Mat kern, UMat input, long top_left_row,
         for (long j = 0; j < (long)kern.ncols; ++j) {
             long r = top_left_row + i;
             long c = top_left_col + j;
-            if (r >= 0 && c >= 0 && r < (long)input.nrows && c < (long)input.ncols) {
+            if (r >= 0 && c >= 0 && r < (long)input.nrows &&
+                c < (long)input.ncols) {
                 ulong val = mul(cg, MAT_AT(input, r, c), MAT_ID(kern, i, j));
                 res = add(cg, res, val);
             }
@@ -353,8 +354,7 @@ UMat *forwardConv(CompGraph *cg, ConvolutionalLayer *layer, UMat *input,
                     long top_left_row = k - row_padding;
                     long top_left_col = l - col_padding;
                     ulong res = correlate(cg, layer->filters[j].kernels[i],
-                                          input[i],
-top_left_row, top_left_col);
+                                          input[i], top_left_row, top_left_col);
                     MAT_AT(layer->outputs[j], k, l) =
                         add(cg, MAT_AT(layer->outputs[j], k, l), res);
                 }
@@ -368,7 +368,8 @@ top_left_row, top_left_col);
                 MAT_AT(layer->outputs[i], j, k) =
                     add(cg, MAT_ID(layer->filters[i].biases, j, k),
                         MAT_AT(layer->outputs[i], j, k));
-                MAT_AT(layer->outputs[i], j, k) = activate(cg, MAT_AT(layer->outputs[i], j, k), layer->act, leaker);
+                MAT_AT(layer->outputs[i], j, k) = activate(
+                    cg, MAT_AT(layer->outputs[i], j, k), layer->act, leaker);
             }
         }
     }
@@ -474,12 +475,13 @@ void createGlobalPoolingLayer(Net *net, Pooling strat) {
     if (net->layers[net->nlayers - 1].type == Conv) {
         gpooler = (GlobalPoolingLayer){
             .strat = strat,
-            .output = allocUVec(net->layers[net->nlayers - 1].data.conv.nfilters)
-        };
+            .output =
+                allocUVec(net->layers[net->nlayers - 1].data.conv.nfilters)};
     } else {
         gpooler = (GlobalPoolingLayer){
             .strat = strat,
-            .output = allocUVec(net->layers[net->nlayers - 1].data.pool.noutput),
+            .output =
+                allocUVec(net->layers[net->nlayers - 1].data.pool.noutput),
         };
     }
     Layer l;
@@ -530,8 +532,8 @@ UVec globalPoolLayer(CompGraph *cg, GlobalPoolingLayer *pooler, UMat *input) {
     return pooler->output;
 }
 
-HParams* allocDefaultHParams(void) {
-    HParams* hp = CLEAR_NET_ALLOC(sizeof(HParams));
+HParams *allocDefaultHParams(void) {
+    HParams *hp = CLEAR_NET_ALLOC(sizeof(HParams));
     hp->rate = 0.1;
     hp->leaker = 0.1;
     hp->momentum = false;
@@ -558,7 +560,7 @@ Net *allocNet(HParams *hp) {
     return net;
 }
 
-Net *allocVanillaNet(HParams* hp, ulong input_nelem) {
+Net *allocVanillaNet(HParams *hp, ulong input_nelem) {
     CLEAR_NET_ASSERT(input_nelem != 0);
     UData input;
     input.type = UVector;
@@ -698,9 +700,9 @@ scalar lossVanilla(Net *net, Matrix input, Matrix target) {
         ulong loss = initLeafScalar(cg, 0);
         for (ulong j = 0; j < target_vec.nelem; ++j) {
             loss = add(
-                       cg, loss,
-                       raise(cg, sub(cg, VEC_AT(prediction, j), VEC_ID(target_vec, j)),
-                             raiser));
+                cg, loss,
+                raise(cg, sub(cg, VEC_AT(prediction, j), VEC_ID(target_vec, j)),
+                      raiser));
         }
         backward(cg, loss, net->hp.leaker);
         total_loss += getVal(cg, loss);
@@ -749,7 +751,7 @@ void printVanillaPredictions(Net *net, Matrix input, Matrix target) {
 #define FWRITE(ptr, nitems, fp) fwrite(ptr, sizeof(*ptr), nitems, fp);
 #define FREAD(ptr, nitems, fp) fread(ptr, sizeof(*ptr), nitems, fp);
 
-void saveHParams(HParams* hp, FILE* fp) {
+void saveHParams(HParams *hp, FILE *fp) {
     FWRITE(&hp->rate, 1, fp);
     FWRITE(&hp->leaker, 1, fp);
     FWRITE(&hp->beta, 1, fp);
@@ -806,14 +808,16 @@ void saveDenseLayer(CompGraph *cg, DenseLayer *layer, FILE *fp) {
     saveVec(cg, &layer->biases, fp);
 }
 
-void allocDenseLayerFromFile(Net *net, FILE* fp) {
+void allocDenseLayerFromFile(Net *net, FILE *fp) {
     Activation act;
     FREAD(&act, 1, fp);
     ulong out_dim;
     FREAD(&out_dim, 1, fp);
     allocDenseLayer(net, act, out_dim);
-    loadMatFromFile(net->cg, &net->layers[net->nlayers - 1].data.dense.weights, fp);
-    loadVecFromFile(net->cg, &net->layers[net->nlayers - 1].data.dense.biases, fp);
+    loadMatFromFile(net->cg, &net->layers[net->nlayers - 1].data.dense.weights,
+                    fp);
+    loadVecFromFile(net->cg, &net->layers[net->nlayers - 1].data.dense.biases,
+                    fp);
 }
 
 void saveNet(Net *net, char *path) {
@@ -857,7 +861,7 @@ void saveNet(Net *net, char *path) {
     fclose(fp);
 }
 
-Net* allocNetFromFile(char* path) {
+Net *allocNetFromFile(char *path) {
     FILE *fp = fopen(path, "rb");
     UType in_type;
     FREAD(&in_type, 1, fp);
@@ -865,14 +869,14 @@ Net* allocNetFromFile(char* path) {
     FREAD(&nlayers, 1, fp);
     HParams *hp = allocHParamsFromFile(fp);
     Net *net;
-    switch(in_type) {
-    case(UVector): {
+    switch (in_type) {
+    case (UVector): {
         ulong in_dim;
         FREAD(&in_dim, 1, fp);
         net = allocVanillaNet(hp, in_dim);
         break;
     }
-    case(UMatrix): {
+    case (UMatrix): {
         ulong in_nrows;
         ulong in_ncols;
         FREAD(&in_nrows, 1, fp);
@@ -880,7 +884,7 @@ Net* allocNetFromFile(char* path) {
         net = allocConvNet(hp, in_nrows, in_ncols, 1);
         break;
     }
-    case(UMatrixList): {
+    case (UMatrixList): {
         ulong nchannels;
         ulong in_nrows;
         ulong in_ncols;

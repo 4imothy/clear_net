@@ -1,11 +1,11 @@
 #ifndef CLEAR_NET
 #define CLEAR_NET
+#include <assert.h>
 #include <float.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 
 #define MAT_AT(mat, r, c) (mat).elem[(r) * (mat).stride + (c)]
 #define VEC_AT(vec, i) (vec).elem[(i)]
@@ -13,7 +13,8 @@
 // TODO need to do sgd with batches for conv
 // TODO a print net results function for conv
 // TODO need to save and load a model for conv
-// TODO return the ulong of the index call maybe return a struct with the id and the loss scalar
+// TODO return the ulong of the index call maybe return a struct with the id and
+// the loss scalar
 
 typedef float scalar;
 typedef unsigned long ulong;
@@ -84,7 +85,7 @@ typedef struct {
                                    ulong batch_num, ulong batch_size,
                                    Matrix *batch_in, Matrix *batch_tar);
     } la;
-    HParams* (*allocDefaultHParams)(void);
+    HParams *(*allocDefaultHParams)(void);
     void (*setRate)(HParams *hp, scalar rate);
     void (*withMomentum)(HParams *hp, scalar beta);
     void (*setLeaker)(HParams *hp, scalar leaker);
@@ -100,7 +101,7 @@ typedef struct {
     scalar (*lossVanilla)(Net *net, Matrix input, Matrix target);
     void (*backprop)(Net *net);
     void (*saveNet)(Net *net, char *path);
-    Net* (*allocNetFromFile)(char* path);
+    Net *(*allocNetFromFile)(char *path);
 } _cn_names;
 
 extern _cn_names const cn;

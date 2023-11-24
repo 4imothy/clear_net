@@ -232,7 +232,7 @@ int main(int argc, char *argv[]) {
         cn.printVanillaPredictions(net, input, target);
         printf("On validation set\n");
         cn.printVanillaPredictions(net, val_input, val_target);
-        char* file = "model";
+        char *file = "model";
         cn.saveNet(net, file);
         cn.deallocNet(net);
         printf("after loading\n");

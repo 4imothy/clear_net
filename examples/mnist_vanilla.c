@@ -1,6 +1,6 @@
 #define STB_IMAGE_IMPLEMENTATION
-#include "./external/stb_image.h"
 #include "../lib/clear_net.h"
+#include "./external/stb_image.h"
 
 #include <dirent.h>
 #include <sys/stat.h>
@@ -76,11 +76,11 @@ int main(void) {
         return 1;
     }
     // randomize for stochastic gradient descent
-    Matrix train_input = la.formMatrix(num_train_files, num_pixels,
-                                        train.ncols, &MAT_AT(train, 0, 0));
+    Matrix train_input = la.formMatrix(num_train_files, num_pixels, train.ncols,
+                                       &MAT_AT(train, 0, 0));
     Matrix train_output =
         la.formMatrix(num_train_files, dim_output, train.ncols,
-                       &MAT_AT(train, 0, num_pixels));
+                      &MAT_AT(train, 0, num_pixels));
 
     la.shuffleMatrixRows(&train_input, &train_output);
 
@@ -91,9 +91,9 @@ int main(void) {
         return 1;
     }
     Matrix test_input = la.formMatrix(num_test_files, num_pixels, test.ncols,
-                                       &MAT_AT(test, 0, 0));
+                                      &MAT_AT(test, 0, 0));
     Matrix test_output = la.formMatrix(num_test_files, dim_output, test.ncols,
-                                        &MAT_AT(test, 0, num_pixels));
+                                       &MAT_AT(test, 0, num_pixels));
 
     HParams *hp = cn.allocDefaultHParams();
     cn.setRate(hp, 0.005);
@@ -111,12 +111,14 @@ int main(void) {
     Matrix batch_output;
     ulong batch_size = 100;
     CLEAR_NET_ASSERT(num_train_files % batch_size == 0);
-    printf("Initial Cost: %f\n", cn.lossVanilla(net, train_input, train_output));
+    printf("Initial Cost: %f\n",
+           cn.lossVanilla(net, train_input, train_output));
     printf("Beginning Training\n");
     for (ulong i = 0; i < num_epochs; ++i) {
         for (ulong batch_num = 0; batch_num < (num_train_files / batch_size);
              ++batch_num) {
-            la.setBatchFromMatrix(train_input, train_output, batch_num, batch_size, &batch_input, &batch_output);
+            la.setBatchFromMatrix(train_input, train_output, batch_num,
+                                  batch_size, &batch_input, &batch_output);
             cn.lossVanilla(net, batch_input, batch_output);
             cn.backprop(net);
         }
