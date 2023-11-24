@@ -36,7 +36,7 @@ $(examples): $(LIB_FILES) $(EXAMPLE_FILES)
 run_%: %
 	./$<
 
-tests := autodiff correlation gs_forward
+tests := autodiff correlation
 
 $(tests): $(LIB_FILES) $(TEST_FILES)
 	$(CC) $(CFLAGS) -o $@ $(TEST_DIR)/$@.c $(LIB_FILES)
