@@ -7,12 +7,12 @@
 
 #define la cn.la
 
-const size_t img_height = 28;
-const size_t img_width = 28;
-const size_t num_pixels = img_height * img_width;
-const size_t num_train_files = 60000;
-const size_t num_test_files = 10000;
-const size_t dim_output = 10;
+const ulong img_height = 28;
+const ulong img_width = 28;
+const ulong num_pixels = img_height * img_width;
+const ulong num_train_files = 60000;
+const ulong num_test_files = 10000;
+const ulong dim_output = 10;
 
 int get_data_from_dir(Matrix *data, char *path, int num_files) {
     DIR *directory = opendir(path);
@@ -55,7 +55,7 @@ int get_data_from_dir(Matrix *data, char *path, int num_files) {
                 MAT_AT(*data, count, j) = img_pixels[j] / 255.f;
             }
             // the python script set it up so the first character is the label
-            size_t label = (entry->d_name[0] - '0');
+            ulong label = (entry->d_name[0] - '0');
             MAT_AT(*data, count, num_pixels + label) = 1;
             count++;
         }
@@ -103,21 +103,22 @@ int main(void) {
     cn.allocDenseLayer(net, Sigmoid, 16);
     cn.allocDenseLayer(net, Sigmoid, dim_output);
     cn.randomizeNet(net, -1, 1);
-    size_t num_epochs = 20000;
-    float error;
-    float error_break = 0.10;
+    ulong num_epochs = 20000;
+    scalar error;
+    scalar error_break = 0.10;
     // Use stochastic gradient descent
     Matrix batch_input;
     Matrix batch_output;
-    size_t batch_size = 100;
+    ulong batch_size = 100;
     CLEAR_NET_ASSERT(num_train_files % batch_size == 0);
     printf("Initial Cost: %f\n", cn.lossVanilla(net, train_input, train_output));
     printf("Beginning Training\n");
-    for (size_t i = 0; i < num_epochs; ++i) {
-        for (size_t batch_num = 0; batch_num < (num_train_files / batch_size);
+    for (ulong i = 0; i < num_epochs; ++i) {
+        for (ulong batch_num = 0; batch_num < (num_train_files / batch_size);
              ++batch_num) {
             la.setBatchFromMatrix(train_input, train_output, batch_num, batch_size, &batch_input, &batch_output);
-            cn.learnVanilla(net, batch_input, batch_output);
+            cn.lossVanilla(net, batch_input, batch_output);
+            cn.backprop(net);
         }
         error = cn.lossVanilla(net, train_input, train_output);
         printf("Cost after epoch %zu: %f\n", i, error);

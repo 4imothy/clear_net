@@ -32,10 +32,11 @@ int main(void) {
     ulong num_epochs = 10000;
 
     for (ulong i = 0; i < num_epochs; ++i) {
-        loss = cn.learnVanilla(net, input, target);
+        loss = cn.lossVanilla(net, input, target);
         if (i % 100 == 0) {
             printf("Average loss: %f\n", loss);
         }
+        cn.backprop(net);
     }
     printf("Final loss: %g\n", loss);
     char* file = "model";

@@ -6,38 +6,38 @@
 
 const ulong num_train = 100;
 const ulong num_var = 8 + 1;
-float train[num_train * num_var] = {0};
-float val[num_train * num_var] = {0};
+scalar train[num_train * num_var] = {0};
+scalar val[num_train * num_var] = {0};
 
-float rand_rangef(float lower, float upper) {
-    return ((float)rand()) / RAND_MAX * (upper - lower) + lower;
+scalar rand_rangef(scalar lower, scalar upper) {
+    return ((scalar)rand()) / RAND_MAX * (upper - lower) + lower;
 }
 
 #define do_func(a, b, c, d, e, f, g, h)                                        \
     (2 + 4 * (a)-3 * (b) + 5 * (c) + 6 * (d)-2 * (e) + 7 * (f)-8 * (g) +       \
      9 * (h))
 
-const float len = 1;
-const float lower = -1.0f * len;
-const float upper = len;
+const scalar len = 1;
+const scalar lower = -1.0f * len;
+const scalar upper = len;
 
 // data is normalized
-const float max = do_func(1, 1, 1, 1, 1, 1, 1, 1);
+const scalar max = do_func(1, 1, 1, 1, 1, 1, 1, 1);
 
 const ulong dim_input = num_var - 1;
 
-float mul_max(float x) { return (x * max); }
+scalar mul_max(scalar x) { return (x * max); }
 
 int main(void) {
     srand(0);
-    float a;
-    float b;
-    float c;
-    float d;
-    float e;
-    float f;
-    float g;
-    float h;
+    scalar a;
+    scalar b;
+    scalar c;
+    scalar d;
+    scalar e;
+    scalar f;
+    scalar g;
+    scalar h;
     for (ulong i = 0; i < num_train; ++i) {
         for (ulong j = 0; j < num_var; ++j) {
             train[i * num_var + j] = rand_rangef(lower, upper);
@@ -79,10 +79,10 @@ int main(void) {
     cn.allocDenseLayer(net, Tanh, 1);
     cn.randomizeNet(net, -1, 1);
     ulong num_epochs = 200000;
-    float error_break = 0.01f;
-    float loss;
+    scalar error_break = 0.01f;
+    scalar loss;
     for (ulong i = 0; i < num_epochs; ++i) {
-        loss = cn.learnVanilla(net, input, output);
+        loss = cn.lossVanilla(net, input, output);
         if (i % (num_epochs / 20) == 0) {
             printf("Cost at %zu: %f\n", i, loss);
         }
@@ -90,7 +90,9 @@ int main(void) {
             printf("Less than: %f error at epoch %zu\n", error_break, i);
             break;
         }
+        cn.backprop(net);
     }
+
     printf("Final output: %f\n", cn.lossVanilla(net, input, output));
     cn.printVanillaPredictions(net, val_in, val_out);
     char *file_name = "model";

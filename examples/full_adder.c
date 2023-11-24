@@ -7,7 +7,7 @@
 int main(void) {
     srand(0);
     // clang-format off
-    float data[] = {
+    scalar data[] = {
         // a  b  cin  sum  cout
         0,  0,  0,   0,   0,
         0,  0,  1,   1,   0,
@@ -42,12 +42,13 @@ int main(void) {
     cn.allocDenseLayer(net, Sigmoid, num_outputs);
     cn.randomizeNet(net, -1, 1);
     cn.printNet(net, "net");
-    float loss;
+    scalar loss;
     for (ulong i = 0; i < num_epochs; ++i) {
-        loss = cn.learnVanilla(net, input, target);
+        loss = cn.lossVanilla(net, input, target);
         if (i % (num_epochs / 10) == 0) {
             printf("Average loss: %g\n", loss);
         }
+        cn.backprop(net);
     }
     printf("Final loss: %g\n", loss);
     cn.printVanillaPredictions(net, input, target);

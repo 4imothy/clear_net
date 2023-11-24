@@ -6,7 +6,7 @@
 // sepal length (cm), sepal width (cm), petal length (cm), petal width (cm),
 // target
 // clang-format off
-float train_values[] = {
+scalar train_values[] = {
     5.1, 3.5, 1.4, 0.2, 0,
     4.9, 3.0, 1.4, 0.2, 0,
     4.7, 3.2, 1.3, 0.2, 0,
@@ -144,7 +144,7 @@ float train_values[] = {
     6.7, 3.3, 5.7, 2.5, 2,
 };
 
-float validation_values[] = {
+scalar validation_values[] = {
     4.8, 3.0, 1.4, 0.3, 0,
     5.1, 3.8, 1.6, 0.2, 0,
     4.6, 3.2, 1.4, 0.2, 0,
@@ -172,18 +172,18 @@ int main(int argc, char *argv[]) {
     }
 
     srand(0);
-    size_t data_cols = 5;
-    size_t input_dim = 4;
-    size_t output_dim = data_cols - input_dim;
-    size_t val_size = 15;
-    size_t train_size = 150 - val_size;
+    ulong data_cols = 5;
+    ulong input_dim = 4;
+    ulong output_dim = data_cols - input_dim;
+    ulong val_size = 15;
+    ulong train_size = 150 - val_size;
     Matrix train =
         la.formMatrix(train_size, data_cols, data_cols, train_values);
     Matrix input = la.formMatrix(train_size, input_dim, train.stride,
                                  &MAT_AT(train, 0, 0));
     Matrix target = la.formMatrix(train_size, output_dim, train.stride,
                                   &MAT_AT(train, 0, input_dim));
-    for (size_t i = 0; i < target.nrows; ++i) {
+    for (ulong i = 0; i < target.nrows; ++i) {
         MAT_AT(target, i, 0) /= 2;
     }
 
@@ -193,7 +193,7 @@ int main(int argc, char *argv[]) {
         la.formMatrix(val_size, input_dim, val.stride, &MAT_AT(val, 0, 0));
     Matrix val_target = la.formMatrix(val_size, output_dim, val.stride,
                                       &MAT_AT(val, 0, input_dim));
-    for (size_t i = 0; i < val_size; ++i) {
+    for (ulong i = 0; i < val_size; ++i) {
         MAT_AT(val_target, i, 0) /= 2;
     }
     HParams *hp = cn.allocDefaultHParams();
@@ -202,21 +202,22 @@ int main(int argc, char *argv[]) {
     Net *net = cn.allocVanillaNet(hp, input_dim);
     cn.allocDenseLayer(net, Sigmoid, 1);
     cn.randomizeNet(net, -1, 1);
-    size_t num_epochs = 10000;
-    float loss;
-    float error_break = 0.01;
-    size_t i;
-    size_t batch_size = 45;
+    ulong num_epochs = 10000;
+    scalar loss;
+    scalar error_break = 0.01;
+    ulong i;
+    ulong batch_size = 45;
     la.shuffleMatrixRows(&input, &target);
     Matrix batch_in;
     Matrix batch_tar;
     CLEAR_NET_ASSERT(train_size % batch_size == 0);
     for (i = 0; i < num_epochs; ++i) {
-        for (size_t batch_num = 0; batch_num < train_size / batch_size;
+        for (ulong batch_num = 0; batch_num < train_size / batch_size;
              ++batch_num) {
             la.setBatchFromMatrix(input, target, batch_num, batch_size,
                                   &batch_in, &batch_tar);
-            cn.learnVanilla(net, batch_in, batch_tar);
+            cn.lossVanilla(net, batch_in, batch_tar);
+            cn.backprop(net);
         }
         loss = cn.lossVanilla(net, input, target);
         if (loss < error_break) {
