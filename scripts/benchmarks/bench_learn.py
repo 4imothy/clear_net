@@ -1,6 +1,4 @@
 """Bench clear_net with other ways to create nets."""
-# TODO not able to use psutil to measure memory, maybe
-# issue with using an env or the process ending too fast
 import subprocess
 import psutil
 import os
