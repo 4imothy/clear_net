@@ -1,5 +1,7 @@
 #+startup: overview
 
+* TODOS
+** TODO better benching suite with abiity to measure memory used
 * Speed Optimizing
 - Parallelize
 - Use cuda with nvidia cuda compiler
