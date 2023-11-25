@@ -1,7 +1,14 @@
 .DS_Store
-# python env for benching
+# python
 env
-# binaries
+__pycache__
+# ignore file of youtube demo
+resources/youtube_demo.mov
+# datasets
+./datasets
+# model save files
+model
+# examples
 correlation
 xor
 adder
@@ -16,9 +23,3 @@ mnist_conv
 mnist_vanilla
 mnist_mix
 gs_forward
-# model save files
-model
-# ignore file of youtube demo
-resources/youtube_demo.mov
-# ignore large datasets
-./datasets
