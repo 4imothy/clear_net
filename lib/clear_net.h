@@ -13,8 +13,8 @@
 // TODO need to do sgd with batches for conv
 // TODO a print net results function for conv
 // TODO need to save and load a model for conv
-// TODO return the ulong of the index call maybe return a struct with the id and
-// the loss scalar
+// TODO better benching suite with ability to measure the amount of memory used
+// TODO clear security vulnrebilities
 
 typedef float scalar;
 typedef unsigned long ulong;
