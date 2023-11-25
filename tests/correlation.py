@@ -1,103 +1,63 @@
 """Testing the autodifferentiation engine."""
-import subprocess
 import os
 import numpy as np
 import scipy as sp
+from tests import (
+    input_elem,
+    matrix_elem,
+    get_mat_res,
+    compare_matrices
+)
 
 
-cwd = os.getcwd()
 script_path = os.path.abspath(__file__)
 script_name = os.path.splitext(os.path.basename(script_path))[0]
 my_impl = "./" + script_name
-poss_values = [0.10290608318034533, 0.8051580508692876,
-               0.39055048005351034, 0.7739175926400883,
-               0.24730207704015073, 0.7987075645399935,
-               0.24602568871407338, 0.6268407447350659,
-               0.4646505260697441, 0.20524882983167547,
-               0.5031590491750169, 0.2550151936024112,
-               0.3354895253780905, 0.6825483746871936,
-               0.6204572461588524, 0.6487941004544666,
-               0.742795723261874, 0.8436721618301802,
-               0.0433154872324607, 0.42621935359557017]
-poss_kernel_elements = [2, 6, 7, 8, 4, 0, 6, 4, 2, 0, 9, 7,
-                        5, 9, 8, 8, 4, 6, 0, 2, 4, 7, 6, 1,
-                        7, 5, 2, 9, 6, 7, 8]
-
-
-def get_res(code):
-    """Get the result from running my implementation."""
-    output_bytes = subprocess.check_output(my_impl + f" {code}",
-                                           shell=True, cwd=cwd)
-    output_str = output_bytes.decode('utf-8')
-    parts = output_str.split()
-    elements = []
-    for part in parts:
-        elements.append(float(part))
-    rows, cols = map(int, elements[:2])
-    elements = elements[2:]
-    matrix = np.array(elements).reshape(rows, cols)
-    return matrix
-
-
-def compare_and_print(cn_mat, sp_mat, name, atol=1e-7):
-    """Compare the two matrices and print results."""
-    elementwise_comparison = np.isclose(cn_mat, sp_mat, atol=atol)
-    if np.all(elementwise_comparison):
-        print(f"Pass: {name}")
-    else:
-        print(f"Fail: {name}")
-        print("Differences:")
-        diff_indices = np.where(~elementwise_comparison)
-        for i, j in zip(*diff_indices):
-            sp_val = sp_mat[i, j]
-            cn_val = cn_mat[i, j]
-            print(
-                f"Different at ({i}, {j}): scipy: {sp_val}, cn: {cn_val}")
 
 
 def test_same_zeros():
     """Test same correlation with result being all zeros."""
-    cn_res = get_res("same_zeros")
+    cn_res = get_mat_res(my_impl, "same_zeros")
     input_matrix = np.zeros((15, 15))
 
     poss_idx = 0
     for i in range(15):
         for j in range(15):
-            input_matrix[i, j] = poss_values[poss_idx]
-            poss_idx = (poss_idx + 1) % len(poss_values)
+            input_matrix[i, j] = input_elem[poss_idx]
+            poss_idx = (poss_idx + 1) % len(input_elem)
     kernel = np.zeros((3, 3))
     output_matrix = sp.signal.correlate2d(input_matrix, kernel, mode='same')
-    compare_and_print(cn_res, output_matrix, "same zeros")
+    compare_matrices(cn_res, output_matrix, "same zeros")
 
 
 def test_same_identity():
     """Test same correlation with identity kernel."""
-    cn_res = get_res("same_identity")
+    cn_res = get_mat_res(my_impl, "same_identity")
     dim = 10
     input_matrix = np.zeros((dim, dim))
 
     poss_idx = 0
     for i in range(dim):
         for j in range(dim):
-            input_matrix[i, j] = poss_values[poss_idx]
-            poss_idx = (poss_idx + 1) % len(poss_values)
+            input_matrix[i, j] = input_elem[poss_idx]
+            poss_idx = (poss_idx + 1) % len(input_elem)
     kernel = np.zeros((3, 3))
     kernel[1][1] = 1
     output_matrix = sp.signal.correlate2d(input_matrix, kernel, mode='same')
-    compare_and_print(cn_res, output_matrix, "same identity")
+    compare_matrices(cn_res, output_matrix, "same identity")
 
 
 def test_same_guassian_blur_3x3():
     """Test same correlation with guassian blur filter."""
-    cn_res = get_res("same_guassian_blur_3")
+    cn_res = get_mat_res(my_impl, "same_guassian_blur_3")
     dim = 20
     input_matrix = np.zeros((dim, dim))
 
     poss_idx = 0
     for i in range(dim):
         for j in range(dim):
-            input_matrix[i, j] = poss_values[poss_idx]
-            poss_idx = (poss_idx + 1) % len(poss_values)
+            input_matrix[i, j] = input_elem[poss_idx]
+            poss_idx = (poss_idx + 1) % len(input_elem)
     kernel = np.zeros((3, 3))
     kernel[0][0] = 1 / 16
     kernel[0][1] = 2 / 16
@@ -109,20 +69,20 @@ def test_same_guassian_blur_3x3():
     kernel[2][1] = 2 / 16
     kernel[2][2] = 1 / 16
     output_matrix = sp.signal.correlate2d(input_matrix, kernel, mode='same')
-    compare_and_print(cn_res, output_matrix, "same guassian 3x3")
+    compare_matrices(cn_res, output_matrix, "same guassian 3x3")
 
 
 def test_same_guassian_blur_5x5():
     """Test same correlation with guassian blur filter."""
-    cn_res = get_res("same_guassian_blur_5")
+    cn_res = get_mat_res(my_impl, "same_guassian_blur_5")
     dim = 20
     input_matrix = np.zeros((dim, dim))
 
     poss_idx = 0
     for i in range(dim):
         for j in range(dim):
-            input_matrix[i, j] = poss_values[poss_idx]
-            poss_idx = (poss_idx + 1) % len(poss_values)
+            input_matrix[i, j] = input_elem[poss_idx]
+            poss_idx = (poss_idx + 1) % len(input_elem)
     k_size = 5
     kernel = np.zeros((k_size, k_size))
     kernel[0][0] = 1
@@ -153,28 +113,28 @@ def test_same_guassian_blur_5x5():
 
     kernel = kernel / kernel.sum()  # Normalize the kernel
     output_matrix = sp.signal.correlate2d(input_matrix, kernel, mode='same')
-    compare_and_print(cn_res, output_matrix, "same guassian 5x5", 1e-3)
+    compare_matrices(cn_res, output_matrix, "same guassian 5x5", 1e-3)
 
 
-def do_test_with_default_elements(code, input_rows, input_cols, krows, kcols, mode,
-                                  print_name):
+def do_test_with_default_elements(code, input_rows, input_cols, krows, kcols,
+                                  mode, print_name):
     """Do the test on the given example."""
-    cn_res = get_res(code)
+    cn_res = get_mat_res(my_impl, code)
     input_matrix = np.zeros((input_rows, input_cols))
     poss_idx = 0
     for i in range(input_rows):
         for j in range(input_cols):
-            input_matrix[i, j] = poss_values[poss_idx]
-            poss_idx = (poss_idx + 1) % len(poss_values)
+            input_matrix[i, j] = input_elem[poss_idx]
+            poss_idx = (poss_idx + 1) % len(input_elem)
     kernel = np.zeros((krows, kcols))
     poss_idx = 0
     for i in range(krows):
         for j in range(kcols):
-            kernel[i][j] = poss_kernel_elements[poss_idx]
-            poss_idx = (poss_idx + 1) % len(poss_kernel_elements)
+            kernel[i][j] = matrix_elem[poss_idx]
+            poss_idx = (poss_idx + 1) % len(matrix_elem)
 
     output_matrix = sp.signal.correlate2d(input_matrix, kernel, mode=mode)
-    compare_and_print(cn_res, output_matrix, print_name)
+    compare_matrices(cn_res, output_matrix, print_name)
 
 
 # tests with predefined elements
