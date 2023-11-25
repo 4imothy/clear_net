@@ -8,7 +8,7 @@ resources/youtube_demo.mov
 ./datasets
 # model save files
 model
-# examples
+# execs
 correlation
 xor
 adder
@@ -23,3 +23,4 @@ mnist_conv
 mnist_vanilla
 mnist_mix
 gs_forward
+forward_dense
