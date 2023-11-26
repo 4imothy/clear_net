@@ -1,11 +1,10 @@
-#define CLEAR_NET_IMPLEMENTATION
-#include "../clear_net.h"
+#include "../lib/clear_net.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "./external/stb_image.h"
 #include <dirent.h>
 #include <sys/stat.h>
 
-CLEAR_NET_DEFINE_HYPERPARAMETERS
+#define la cn.la
 
 const size_t img_height = 28;
 const size_t img_width = 28;
@@ -73,8 +72,8 @@ int main(void) {
     Matrix *train = CLEAR_NET_ALLOC(num_train_files * sizeof(Matrix));
     Vector *train_targets = CLEAR_NET_ALLOC(num_train_files * sizeof(Vector));
     for (size_t i = 0; i < num_train_files; ++i) {
-        train[i] = cn_alloc_matrix(img_height, img_width);
-        train_targets[i] = cn_alloc_vector(dim_output);
+        train[i] = la.allocMatrix(img_height, img_width);
+        train_targets[i] = la.allocVector(dim_output);
     }
     int res =
         get_data_from_dir(train, train_targets, train_path, num_train_files);
@@ -82,65 +81,36 @@ int main(void) {
         return 1;
     }
 
-    Matrix **input_list = CLEAR_NET_ALLOC(num_train_files * sizeof(Matrix *));
-    for (size_t i = 0; i < num_train_files; ++i) {
-        input_list[i] = &train[i];
-    }
+    IOData *input = la.formDataFromMatrices(train, num_train_files);
+    IOData *target = la.formDataFromVectors(train_targets, num_train_files);
 
-    LAData *targets = CLEAR_NET_ALLOC(num_train_files * sizeof(LAData));
-    for (size_t i = 0; i < num_train_files; ++i) {
-        targets[i].type = Vec;
-        targets[i].data.vec = train_targets[i];
-    }
+    HParams *hp = cn.allocDefaultHParams();
+    cn.setRate(hp, 0.01);
+    Net *net = cn.allocConvNet(hp, img_height, img_width, nchannels);
+    cn.allocConvLayer(net, Valid, Sigmoid, 3, 9, 9);
+    cn.allocConvLayer(net, Valid, Sigmoid, 5, 5, 5);
+    cn.allocPoolingLayer(net, Average, 4, 4);
+    cn.allocConvLayer(net, Valid, Sigmoid, 10, 3, 3);
+    cn.allocGlobalPoolingLayer(net, Max);
+    cn.randomizeNet(net, -1, 1);
 
-    cn_shuffle_conv_input(&input_list, &targets, num_train_files);
-
-    cn_default_hparams();
-    // cn_with_momentum(0.9);
-    Net net = cn_alloc_conv_net(img_height, img_width, nchannels);
-    cn_alloc_conv_layer(&net, Valid, Sigmoid, 3, 9, 9);
-    cn_alloc_conv_layer(&net, Valid, Sigmoid, 5, 5, 5);
-    cn_alloc_pooling_layer(&net, Average, 4, 4);
-    cn_alloc_conv_layer(&net, Valid, Sigmoid, 10, 3, 3);
-    cn_alloc_global_pooling_layer(&net, Max);
-    cn_randomize_net(&net, -1, 1);
-
-    cn_set_rate(0.05);
     printf("Initial Cost: %f\n",
-           cn_loss_conv(&net, input_list, targets, num_train_files));
+           cn.lossConv(net, input, target));
     printf("Beginning Training\n");
 
-    size_t nepochs = 2000;
-    size_t batch_size = 50;
+
+    ulong nepochs = 2000;
+    ulong batch_size = 50;
     CLEAR_NET_ASSERT(num_train_files % batch_size == 0);
-    Matrix **batch_in = CLEAR_NET_ALLOC(batch_size * sizeof(Matrix *));
-    LAData *batch_tar = CLEAR_NET_ALLOC(batch_size * sizeof(LAData));
-    size_t nbatches = num_train_files / batch_size;
     float loss;
     for (size_t i = 0; i < nepochs; ++i) {
-        for (size_t batch_num = 0; batch_num < nbatches; ++batch_num) {
-            cn_get_batch_conv(batch_in, batch_tar, input_list, targets,
-                              batch_num, batch_size);
-            printf("Loss at batch: %zu is %f\n", batch_num,
-                   cn_learn_conv(&net, batch_in, batch_tar, batch_size));
-        }
-        loss = cn_loss_conv(&net, input_list, targets, num_train_files);
+        loss = cn.lossConv(net, input, target);
+        cn.backprop(net);
         printf("Loss at epoch %zu: %f\n", i, loss);
         if (loss < 0.25) {
             break;
         }
     }
-
-    cn_print_conv_results(net, input_list, targets, num_train_files);
-
-    char *file = "model";
-    printf("Loss on validation: %f\n",
-           cn_loss_conv(&net, input_list, targets, num_train_files));
-    cn_save_net_to_file(net, file);
-    cn_dealloc_net(&net);
-    net = cn_alloc_net_from_file(file);
-    printf("Loss on validation after loading save: %f\n",
-           cn_loss_conv(&net, input_list, targets, num_train_files));
 
     return 0;
 }

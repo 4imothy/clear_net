@@ -26,5 +26,11 @@ scalar lossVanilla(Net *net, Matrix input, Matrix target);
 void backprop(Net *net);
 void saveNet(Net *net, char *path);
 Net *allocNetFromFile(char *path);
+void allocConvLayer(Net *net, Padding padding, Activation act, ulong noutput,
+                       ulong kernel_nrows, ulong kernel_ncols);
+void allocPoolingLayer(Net *net, Pooling strat, ulong kernel_nrows,
+                       ulong kernel_ncols);
+void allocGlobalPoolingLayer(Net *net, Pooling strat);
+scalar lossConv(Net *net, IOData *input, IOData* target);
 
 #endif // CN_NET

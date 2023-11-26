@@ -38,6 +38,9 @@ _cn_names const cn = {
             PAIR(deallocVector),
             PAIR(shuffleMatrixRows),
             PAIR(setBatchFromMatrix),
+            PAIR(formDataFromVectors),
+            PAIR(formDataFromMatrices),
+            PAIR(formDataFromMultiChannelMatrices),
         },
     PAIR(allocDefaultHParams),
     PAIR(setRate),
@@ -55,4 +58,8 @@ _cn_names const cn = {
     PAIR(backprop),
     PAIR(saveNet),
     PAIR(allocNetFromFile),
+    PAIR(allocConvLayer),
+    PAIR(allocPoolingLayer),
+    PAIR(allocGlobalPoolingLayer),
+    PAIR(lossConv),
 };

@@ -103,11 +103,6 @@ typedef struct {
     ulong k_ncols;
 } ConvolutionalLayer;
 
-typedef enum {
-    Max,
-    Average,
-} Pooling;
-
 typedef struct {
     UMat *outputs;
     Pooling strat;

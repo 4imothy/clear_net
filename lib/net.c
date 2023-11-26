@@ -4,10 +4,10 @@
 #include "graph_utils.h"
 #include "la.h"
 
-// TODO to save space can not alloc for any storing index matirx as the number
+// FUTURE to save space can not alloc for any storing index matirx as the number
 // of elements between each element should be the same just store the stride
 // again
-// TODO split each layer into its own .c and .h
+// FUTURE split each layer into its own .c and .h
 
 typedef struct {
     Mat weights;
@@ -35,11 +35,6 @@ typedef struct {
     ulong k_nrows;
     ulong k_ncols;
 } ConvolutionalLayer;
-
-typedef enum {
-    Max,
-    Average,
-} Pooling;
 
 typedef struct {
     UMat *outputs;
@@ -397,12 +392,12 @@ void allocPoolingLayer(Net *net, Pooling strat, ulong kernel_nrows,
         net->layers[net->nlayers - 1].data.conv.output_nrows / kernel_nrows;
     pooler.output_ncols =
         net->layers[net->nlayers - 1].data.conv.output_ncols / kernel_ncols;
-    ulong nimput = net->layers[net->nlayers - 1].data.conv.nfilters;
-    pooler.outputs = CLEAR_NET_ALLOC(nimput * sizeof(Mat));
-    for (ulong i = 0; i < nimput; ++i) {
+    pooler.noutput = net->layers[net->nlayers - 1].data.conv.nfilters;
+    pooler.outputs = CLEAR_NET_ALLOC(pooler.noutput * sizeof(UMat));
+    for (ulong i = 0; i < pooler.noutput; ++i) {
         pooler.outputs[i] = allocUMat(pooler.output_nrows, pooler.output_ncols);
     }
-    pooler.noutput = nimput;
+
 
     Layer l;
     l.type = Pool;
@@ -424,7 +419,7 @@ void deallocPoolingLayer(PoolingLayer *layer) {
     layer->noutput = 0;
 }
 
-UMat *poolLayer(CompGraph *cg, PoolingLayer *pooler, UMat *input) {
+UMat *forwardPool(CompGraph *cg, PoolingLayer *pooler, UMat *input) {
     for (ulong i = 0; i < pooler->noutput; ++i) {
         for (ulong j = 0; j < input[i].nrows; j += pooler->k_nrows) {
             for (ulong k = 0; k < input[i].ncols; k += pooler->k_ncols) {
@@ -435,7 +430,7 @@ UMat *poolLayer(CompGraph *cg, PoolingLayer *pooler, UMat *input) {
                 ulong nelem = pooler->k_nrows * pooler->k_ncols;
                 for (ulong l = 0; l < pooler->k_nrows; ++l) {
                     for (ulong m = 0; m < pooler->k_ncols; ++m) {
-                        cur = MAT_AT(*input, j + l, k + m);
+                        cur = MAT_AT(input[i], j + l, k + m);
                         switch (pooler->strat) {
                         case (Max):
                             if (getVal(cg, cur) > max_store) {
@@ -466,7 +461,7 @@ UMat *poolLayer(CompGraph *cg, PoolingLayer *pooler, UMat *input) {
     return pooler->outputs;
 }
 
-void createGlobalPoolingLayer(Net *net, Pooling strat) {
+void allocGlobalPoolingLayer(Net *net, Pooling strat) {
     CLEAR_NET_ASSERT(net->nlayers > 0);
     CLEAR_NET_ASSERT(net->layers[net->nlayers - 1].type == Conv ||
                      net->layers[net->nlayers - 1].type == Pool);
@@ -496,7 +491,7 @@ void deallocGlobalPoolingLayer(GlobalPoolingLayer *layer) {
     layer->strat = 0;
 }
 
-UVec globalPoolLayer(CompGraph *cg, GlobalPoolingLayer *pooler, UMat *input) {
+UVec forwardGlobPool(CompGraph *cg, GlobalPoolingLayer *pooler, UMat *input) {
     for (ulong i = 0; i < pooler->output.nelem; ++i) {
         scalar max_store = -1 * FLT_MAX;
         ulong max_id;
@@ -574,7 +569,7 @@ Net *allocConvNet(HParams *hp, ulong input_nrows, ulong input_ncols,
                   ulong nchannels) {
     CLEAR_NET_ASSERT(input_nrows != 0 && input_ncols != 0 && nchannels != 0);
     UData input;
-    if (nchannels == 0) {
+    if (nchannels == 1) {
         input.type = UMatrix;
         input.data.mat = allocUMat(input_nrows, input_ncols);
     } else {
@@ -645,12 +640,53 @@ void randomizeNet(Net *net, scalar lower, scalar upper) {
     }
 }
 
-UVec _predictVanilla(Net *net, CompGraph *cg, UVec prev) {
+UVec _predictVanilla(Net *net, UVec prev) {
     for (ulong i = 0; i < net->nlayers; ++i) {
         prev =
-            forwardDense(cg, &net->layers[i].data.dense, prev, net->hp.leaker);
+            forwardDense(net->cg, &net->layers[i].data.dense, prev, net->hp.leaker);
     }
     return prev;
+}
+
+// there also needs to be a vector store and needs to be able to return both
+// maybe remove vector type and only use matrices with one row to make the types better
+// Use the union type doesn't need to be public except that it does for public prediction, get it to work first then write to use all matrices
+UData _predictConv(Net *net, UMat *prevs) {
+    UVec uvec;
+    scalar leaker = net->hp.leaker;
+    CompGraph *cg = net->cg;
+    for (ulong i = 0; i < net->nlayers; ++i) {
+        Layer layer = net->layers[i];
+        switch (layer.type) {
+        case(Dense):
+            uvec = forwardDense(cg, &layer.data.dense, uvec, leaker);
+            break;
+        case(Conv):
+            prevs = forwardConv(cg, &layer.data.conv, prevs, leaker);
+            break;
+        case(Pool):
+            prevs = forwardPool(cg, &layer.data.pool, prevs);
+            break;
+        case(GlobPool):
+            uvec = forwardGlobPool(cg, &layer.data.glob_pool, prevs);
+        }
+    }
+
+    UData data;
+    data.type = net->output_type;
+    switch(data.type) {
+    case(UVector):
+        data.data.vec = uvec;
+        break;
+    case(UMatrix):
+        data.data.mat = *prevs;
+        break;
+    case(UMatrixList):
+        data.data.mat_list.mats = prevs;
+        data.data.mat_list.nelem = net->layers[net->nlayers - 1].data.conv.nfilters;
+        break;
+    }
+    return data;
 }
 
 Vector *predictVanilla(Net *net, Vector input, Vector *store) {
@@ -661,7 +697,7 @@ Vector *predictVanilla(Net *net, Vector input, Vector *store) {
         VEC_AT(net->input.data.vec, i) = getSize(cg);
         initLeafScalar(cg, VEC_AT(input, i));
     }
-    UVec prediction = _predictVanilla(net, cg, net->input.data.vec);
+    UVec prediction = _predictVanilla(net, net->input.data.vec);
     CLEAR_NET_ASSERT(store->nelem == prediction.nelem);
     for (ulong i = 0; i < store->nelem; ++i) {
         VEC_AT(*store, i) = getVal(cg, VEC_AT(prediction, i));
@@ -689,7 +725,7 @@ scalar lossVanilla(Net *net, Matrix input, Matrix target) {
         for (ulong j = 0; j < input.ncols; ++j) {
             initLeafScalar(cg, MAT_AT(input, i, j));
         }
-        UVec prediction = _predictVanilla(net, cg, net->input.data.vec);
+        UVec prediction = _predictVanilla(net, net->input.data.vec);
         target_vec.start_id = getSize(cg);
 
         for (ulong j = 0; j < target.ncols; ++j) {
@@ -710,6 +746,120 @@ scalar lossVanilla(Net *net, Matrix input, Matrix target) {
     }
 
     return total_loss / train_size;
+}
+
+// Vec list, Mat list
+// TODO better interface to TargetData and use it for all inputs and targets
+// TODO better names for UVec Vec and stuff, change Vec to be the scalar form
+// TODO move clear_net.h to outer level of directory
+// TODO take a void pointer and then a type
+scalar lossConv(Net *net, IOData *input, IOData* target) {
+    resetGrads(net->cg, net->nparams);
+    CLEAR_NET_ASSERT(input->type == MatList || input->type == MultiMatList);
+    if (net->input.type == UMatrixList) {
+        CLEAR_NET_ASSERT(net->layers[0].data.conv.nimput == input->nchannels);
+    }
+
+    if (net->output_type == UVector) {
+        CLEAR_NET_ASSERT(target->type == VecList);
+    } else {
+        CLEAR_NET_ASSERT(target->type == MatList);
+    }
+
+
+    scalar total_loss = 0;
+    setSize(net->cg, net->nparams + 1);
+    CompGraph *cg = net->cg;
+    ulong offset = getSize(cg);
+
+    if (net->layers[0].data.conv.nimput > 1) {
+        for (ulong i = 0; i < net->layers[0].data.conv.nimput; ++i) {
+            for (ulong j = 0; j < net->input.data.mat_list.mats->nrows; ++j) {
+                for (ulong k = 0; k < net->input.data.mat_list.mats->ncols; ++k) {
+                    MAT_AT(net->input.data.mat_list.mats[i], j ,k) = offset++;
+                }
+            }
+        }
+    } else {
+        for (ulong i = 0; i < net->input.data.mat.nrows; ++i) {
+            for (ulong j = 0; j < net->input.data.mat.ncols; ++j) {
+                MAT_AT(net->input.data.mat, i, j) = offset++;
+            }
+        }
+    }
+
+    for (ulong i = 0; i < input->nelem; ++i) {
+        if (net->layers[0].data.conv.nimput > 1) {
+            for (ulong j = 0; j < net->layers[0].data.conv.nimput; ++j) {
+                for (ulong k = 0; k < net->input.data.mat_list.mats->nrows; ++k) {
+                    for (ulong l = 0; l < net->input.data.mat_list.mats->ncols; ++l) {
+                        initLeafScalar(cg, MAT_AT(input->data.multi_mat_list[i][j], k, l));
+                    }
+                }
+            }
+        } else {
+            for (ulong j = 0; j < net->input.data.mat.nrows; ++j) {
+                for (ulong k = 0; k < net->input.data.mat.ncols; ++k) {
+                    initLeafScalar(cg, MAT_AT(input->data.mat_list[i], j, k));
+                }
+            }
+        }
+        // TODO mat_list should just be a pointer so to not access the extra .mats
+        UData out;
+        if (net->input.type == UMatrixList) {
+            out = _predictConv(net, net->input.data.mat_list.mats);
+        } else {
+            out = _predictConv(net, &net->input.data.mat);
+        }
+        size_t raiser = initLeafScalar(cg, 2);
+        ulong loss = initLeafScalar(cg, 0);
+        switch (out.type) {
+        case (UVector): {
+            Vec target_vec;
+            target_vec.nelem = target->data.vec_list->nelem;
+            target_vec.start_id = getSize(cg);
+            for (ulong j = 0; j < target_vec.nelem; ++j) {
+                initLeafScalar(cg, VEC_AT(target->data.vec_list[i], j));
+            }
+
+            for (ulong j = 0; j < target_vec.nelem; ++j) {
+                loss = add(
+                           cg, loss,
+                           raise(cg, sub(cg, VEC_AT(out.data.vec, j), VEC_ID(target_vec, j)),
+                                 raiser));
+            }
+            break;
+        }
+        case (UMatrix): {
+            Mat target_mat;
+            target_mat.start_id = getSize(cg);
+            target_mat.nrows = target->data.mat_list->nrows;
+            target_mat.ncols = target->data.mat_list->ncols;
+            for (ulong j = 0; j < target_mat.nrows; ++j) {
+                for (ulong k = 0; k < target_mat.ncols; ++k) {
+                    initLeafScalar(cg, MAT_AT(target->data.mat_list[i], j, k));
+                }
+            }
+            for (ulong j = 0; j < target_mat.nrows; ++j) {
+                for (ulong k = 0; k < target_mat.ncols; ++k) {
+                    loss = add(
+                               cg, loss,
+                               raise(cg, sub(cg, MAT_AT(out.data.mat, j, k), MAT_ID(target_mat, j, k)),
+                                     raiser));
+                }
+            }
+            break;
+        }
+        case(UMatrixList): {
+            CLEAR_NET_ASSERT(0 && "not supported");
+        }
+        }
+        backward(cg, loss, net->hp.leaker);
+        total_loss += getVal(cg, loss);
+        setSize(cg, net->nparams + 1);
+    }
+
+    return total_loss / input->nelem;
 }
 
 void backprop(Net *net) {

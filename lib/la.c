@@ -1,4 +1,54 @@
 #include "clear_net.h"
+#include "la.h"
+
+IOData *formDataFromVectors(Vector *vectors, ulong nelem) {
+    IOData* data = CLEAR_NET_ALLOC(sizeof(IOData));
+    data->type = VecList;
+    data->nelem = nelem;
+    data->nchannels = 1;
+    data->data.vec_list = vectors;
+    return data;
+}
+
+IOData *formDataFromMatrices(Matrix *matrices, ulong nelem) {
+    IOData* data = CLEAR_NET_ALLOC(sizeof(IOData));
+    data->type = MatList;
+    data->nelem = nelem;
+    data->nchannels = 1;
+    data->data.mat_list = matrices;
+    return data;
+}
+
+IOData *formDataFromMultiChannelMatrices(Matrix **multi_matrices, ulong nelem, ulong nchannels) {
+    IOData* data = CLEAR_NET_ALLOC(sizeof(IOData));
+    data->type = MultiMatList;
+    data->nelem = nelem;
+    data->nchannels = nchannels;
+    data->data.multi_mat_list = multi_matrices;
+    return data;
+}
+
+void deallocIOData(IOData *data) {
+    for (ulong i= 0 ; i < data->nelem; ++i) {
+        switch(data->type) {
+        case(MatList): {
+            deallocMatrix(&data->data.mat_list[i]);
+            break;
+        }
+        case(VecList): {
+            deallocVector(&data->data.vec_list[i]);
+            break;
+        }
+        case(MultiMatList):
+            for (ulong j = 0 ; j < data->nelem; ++j) {
+                deallocMatrix(&data->data.multi_mat_list[i][j]);
+            }
+            break;
+        }
+    }
+
+    CLEAR_NET_DEALLOC(data);
+}
 
 Matrix formMatrix(ulong nrows, ulong ncols, ulong stride, scalar *elements) {
     return (Matrix){
@@ -20,7 +70,6 @@ void deallocMatrix(Matrix *mat) {
 }
 
 void printMatrix(Matrix *mat, char *name) {
-    printf("start\n");
     printf("%s = [\n", name);
     for (ulong i = 0; i < mat->nrows; ++i) {
         printf("    ");

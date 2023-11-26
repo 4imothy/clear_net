@@ -10,7 +10,6 @@ void do_test(Padding padding, ulong input_nrows, ulong input_ncols,
     setLeaker(hp, 1);
     Net *net = allocConvNet(hp, input_nrows, input_ncols, nchannels);
     allocConvLayer(net, padding, default_act, 1, kern_nrows, kern_ncols);
-    // TODO put these in a fill mat and fill UMat
     Mat kern = net->layers[0].data.conv.filters[0].kernels[0];
     fill_mat(net->cg, &kern, kern_pool, kern_pool_len);
 
