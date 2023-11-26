@@ -28,27 +28,22 @@ typedef struct {
     ulong nelem;
 } UVec;
 
-typedef struct {
-    UMat *mats;
-    ulong nelem;
-} UMatList;
-
-// Used when the input type for a net is unknown
 typedef union {
     UVec vec;
     UMat mat;
-    UMatList mat_list;
-} UVecMatU;
+    UMat *mats;
+} UStore;
 
 typedef enum {
-    UVector,
-    UMatrix,
-    UMatrixList,
+    UVEC,
+    UMAT,
+    UMATLIST,
 } UType;
 
 typedef struct {
-    UVecMatU data;
+    UStore data;
     UType type;
+    ulong nchannels;
 } UData;
 
 Mat createMat(CompGraph *cg, ulong nrows, ulong ncols, ulong *offset);
@@ -65,6 +60,6 @@ UMat allocUMat(ulong nrows, ulong ncols);
 void deallocUMat(UMat *umat);
 UVec allocUVec(ulong nelem);
 void deallocUVec(UVec *uvec);
-UMatList allocUMatList(ulong nrows, ulong ncols, ulong nchannels);
-void deallocUMatList(UMatList *list);
+UMat* allocUMatList(ulong nrows, ulong ncols, ulong nchannels);
+void deallocUMatList(UMat **list, ulong nelem);
 void deallocUData(UData *data);

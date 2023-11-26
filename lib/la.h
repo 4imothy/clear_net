@@ -4,9 +4,9 @@
 #include "clear_net.h"
 
 typedef enum {
-    VecList,
-    MatList,
-    MultiMatList,
+    VECTORS,
+    MATRICES,
+    MULTIMATRICES,
 } IODataType;
 
 typedef union {

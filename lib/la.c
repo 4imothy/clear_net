@@ -3,7 +3,7 @@
 
 IOData *formDataFromVectors(Vector *vectors, ulong nelem) {
     IOData* data = CLEAR_NET_ALLOC(sizeof(IOData));
-    data->type = VecList;
+    data->type = VECTORS;
     data->nelem = nelem;
     data->nchannels = 1;
     data->data.vec_list = vectors;
@@ -12,7 +12,7 @@ IOData *formDataFromVectors(Vector *vectors, ulong nelem) {
 
 IOData *formDataFromMatrices(Matrix *matrices, ulong nelem) {
     IOData* data = CLEAR_NET_ALLOC(sizeof(IOData));
-    data->type = MatList;
+    data->type = MATRICES;
     data->nelem = nelem;
     data->nchannels = 1;
     data->data.mat_list = matrices;
@@ -21,7 +21,7 @@ IOData *formDataFromMatrices(Matrix *matrices, ulong nelem) {
 
 IOData *formDataFromMultiChannelMatrices(Matrix **multi_matrices, ulong nelem, ulong nchannels) {
     IOData* data = CLEAR_NET_ALLOC(sizeof(IOData));
-    data->type = MultiMatList;
+    data->type = MULTIMATRICES;
     data->nelem = nelem;
     data->nchannels = nchannels;
     data->data.multi_mat_list = multi_matrices;
@@ -31,15 +31,15 @@ IOData *formDataFromMultiChannelMatrices(Matrix **multi_matrices, ulong nelem, u
 void deallocIOData(IOData *data) {
     for (ulong i= 0 ; i < data->nelem; ++i) {
         switch(data->type) {
-        case(MatList): {
+        case(MATRICES): {
             deallocMatrix(&data->data.mat_list[i]);
             break;
         }
-        case(VecList): {
+        case(VECTORS): {
             deallocVector(&data->data.vec_list[i]);
             break;
         }
-        case(MultiMatList):
+        case(MULTIMATRICES):
             for (ulong j = 0 ; j < data->nelem; ++j) {
                 deallocMatrix(&data->data.multi_mat_list[i][j]);
             }

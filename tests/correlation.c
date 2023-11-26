@@ -1,7 +1,7 @@
 #include "tests.h"
 
 const ulong nchannels = 1;
-const Activation default_act = LeakyReLU;
+const Activation default_act = LEAKYRELU;
 
 void do_test(Padding padding, ulong input_nrows, ulong input_ncols,
              ulong kern_nrows, ulong kern_ncols, scalar *kern_pool,
@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
         const size_t dim = 15;
         float elem[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
         ulong elem_len = LEN(elem);
-        do_test(Same, dim, dim, 3, 3, elem, elem_len, input_elem,
+        do_test(SAME, dim, dim, 3, 3, elem, elem_len, input_elem,
                 input_elem_len);
     }
 
@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
         float elem[] = {0, 0, 0, 0, 1, 0, 0, 0, 0};
         ulong elem_len = LEN(elem);
         const size_t dim = 10;
-        do_test(Same, dim, dim, 3, 3, elem, elem_len, input_elem,
+        do_test(SAME, dim, dim, 3, 3, elem, elem_len, input_elem,
                 input_elem_len);
     }
 
@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
         float elem[] = {0.0625, 0.1250, 0.0625, 0.1250, 0.25,
                         0.1250, 0.0625, 0.1250, 0.0625};
         ulong elem_len = LEN(elem);
-        do_test(Same, dim, dim, 3, 3, elem, elem_len, input_elem,
+        do_test(SAME, dim, dim, 3, 3, elem, elem_len, input_elem,
                 input_elem_len);
     }
 
@@ -56,47 +56,47 @@ int main(int argc, char *argv[]) {
                         0.0256, 0.0147, 0.0586, 0.0952, 0.0586, 0.0147, 0.0037,
                         0.0147, 0.0256, 0.0147, 0.0037};
         ulong elem_len = LEN(elem);
-        do_test(Same, dim, dim, 5, 5, elem, elem_len, input_elem,
+        do_test(SAME, dim, dim, 5, 5, elem, elem_len, input_elem,
                 input_elem_len);
     }
 
     else if (strequal(argv[1], "same_even_kernel")) {
-        do_test(Same, 20, 20, 4, 4, matrix_elem, matrix_elem_len, input_elem,
+        do_test(SAME, 20, 20, 4, 4, matrix_elem, matrix_elem_len, input_elem,
                 input_elem_len);
     }
 
     else if (strequal(argv[1], "same_rect")) {
-        do_test(Same, 30, 30, 5, 3, matrix_elem, matrix_elem_len, input_elem,
+        do_test(SAME, 30, 30, 5, 3, matrix_elem, matrix_elem_len, input_elem,
                 input_elem_len);
     }
 
     else if (strequal(argv[1], "full_7x7")) {
-        do_test(Full, 30, 30, 7, 7, matrix_elem, matrix_elem_len, input_elem,
+        do_test(FULL, 30, 30, 7, 7, matrix_elem, matrix_elem_len, input_elem,
                 input_elem_len);
     }
 
     else if (strequal(argv[1], "full_even")) {
-        do_test(Full, 15, 15, 4, 4, matrix_elem, matrix_elem_len, input_elem,
+        do_test(FULL, 15, 15, 4, 4, matrix_elem, matrix_elem_len, input_elem,
                 input_elem_len);
     }
 
     else if (strequal(argv[1], "full_rect")) {
-        do_test(Full, 30, 30, 4, 7, matrix_elem, matrix_elem_len, input_elem,
+        do_test(FULL, 30, 30, 4, 7, matrix_elem, matrix_elem_len, input_elem,
                 input_elem_len);
     }
 
     else if (strequal(argv[1], "valid_7x7")) {
-        do_test(Valid, 11, 11, 7, 7, matrix_elem, matrix_elem_len, input_elem,
+        do_test(VALID, 11, 11, 7, 7, matrix_elem, matrix_elem_len, input_elem,
                 input_elem_len);
     }
 
     else if (strequal(argv[1], "valid_rect")) {
-        do_test(Valid, 23, 23, 1, 6, matrix_elem, matrix_elem_len, input_elem,
+        do_test(VALID, 23, 23, 1, 6, matrix_elem, matrix_elem_len, input_elem,
                 input_elem_len);
     }
 
     else if (strequal(argv[1], "valid_rect_input")) {
-        do_test(Valid, 10, 20, 4, 4, matrix_elem, matrix_elem_len, input_elem,
+        do_test(VALID, 10, 20, 4, 4, matrix_elem, matrix_elem_len, input_elem,
                 input_elem_len);
     }
 }

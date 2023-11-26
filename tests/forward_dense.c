@@ -1,6 +1,6 @@
 #include "tests.h"
 
-const Activation default_act = LeakyReLU;
+const Activation default_act = LEAKYRELU;
 
 void do_test(ulong input_nelem, ulong out_nelem, scalar *mat_pool,
              ulong mat_pool_len, scalar *input_pool, ulong input_pool_len) {

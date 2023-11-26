@@ -99,9 +99,9 @@ int main(void) {
     cn.setRate(hp, 0.005);
     cn.withMomentum(hp, 0.9);
     Net *net = cn.allocVanillaNet(hp, num_pixels);
-    cn.allocDenseLayer(net, Sigmoid, 16);
-    cn.allocDenseLayer(net, Sigmoid, 16);
-    cn.allocDenseLayer(net, Sigmoid, dim_output);
+    cn.allocDenseLayer(net, SIGMOID, 16);
+    cn.allocDenseLayer(net, SIGMOID, 16);
+    cn.allocDenseLayer(net, SIGMOID, dim_output);
     cn.randomizeNet(net, -1, 1);
     ulong num_epochs = 20000;
     scalar error;

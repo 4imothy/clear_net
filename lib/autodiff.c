@@ -9,16 +9,16 @@
 #define POS(cg, x) NODE(x).num > 0
 
 typedef enum {
-    Add,
-    Sub,
-    Mul,
-    Raise,
-    Relu,
-    LeakyRelu,
-    Htan,
-    Sig,
-    Elu,
-    None,
+    ADD,
+    SUB,
+    MUL,
+    RAISE,
+    RECLU,
+    LEAKYRECLU,
+    HTAN,
+    SIG,
+    EXPLU,
+    NONE,
 } Operation;
 
 typedef struct {
@@ -92,7 +92,7 @@ ulong initScalar(CompGraph *cg, scalar num, ulong prev_left, ulong prev_right,
 }
 
 ulong initLeafScalar(CompGraph *cg, scalar num) {
-    return initScalar(cg, num, 0, 0, None);
+    return initScalar(cg, num, 0, 0, NONE);
 }
 
 void setVal(CompGraph *cg, ulong x, scalar num) { NODE(x).num = num; }
@@ -118,7 +118,7 @@ void _applyGrad(CompGraph *cg, ulong x, HParams *hp) {
 
 ulong add(CompGraph *cg, ulong left, ulong right) {
     scalar val = NODE(left).num + NODE(right).num;
-    ulong out = initScalar(cg, val, left, right, Add);
+    ulong out = initScalar(cg, val, left, right, ADD);
     return out;
 }
 
@@ -129,7 +129,7 @@ void addBackward(CompGraph *cg, Scalar *var) {
 
 ulong sub(CompGraph *cg, ulong left, ulong right) {
     scalar val = NODE(left).num - NODE(right).num;
-    ulong out = initScalar(cg, val, left, right, Sub);
+    ulong out = initScalar(cg, val, left, right, SUB);
     return out;
 }
 
@@ -140,7 +140,7 @@ void subBackward(CompGraph *cg, Scalar *var) {
 
 ulong mul(CompGraph *cg, ulong left, ulong right) {
     scalar val = NODE(left).num * NODE(right).num;
-    ulong out = initScalar(cg, val, left, right, Mul);
+    ulong out = initScalar(cg, val, left, right, MUL);
     return out;
 }
 
@@ -151,7 +151,7 @@ void mulBackward(CompGraph *cg, Scalar *var) {
 
 ulong raise(CompGraph *cg, ulong to_raise, ulong pow) {
     scalar val = powf(NODE(to_raise).num, NODE(pow).num);
-    ulong out = initScalar(cg, val, to_raise, pow, Raise);
+    ulong out = initScalar(cg, val, to_raise, pow, RAISE);
     return out;
 }
 
@@ -164,7 +164,7 @@ void raiseBackward(CompGraph *cg, Scalar *var) {
 
 ulong relu(CompGraph *cg, ulong x) {
     scalar val = POS(cg, x) > 0 ? NODE(x).num : 0;
-    ulong out = initScalar(cg, val, x, 0, Relu);
+    ulong out = initScalar(cg, val, x, 0, RECLU);
     return out;
 }
 
@@ -176,7 +176,7 @@ void reluBackward(CompGraph *cg, Scalar *var) {
 
 ulong leakyRelu(CompGraph *cg, ulong x, scalar leaker) {
     scalar val = POS(cg, x) ? NODE(x).num : leaker * NODE(x).num;
-    ulong out = initScalar(cg, val, x, 0, LeakyRelu);
+    ulong out = initScalar(cg, val, x, 0, LEAKYRECLU);
     return out;
 }
 
@@ -187,7 +187,7 @@ void leakyReluBackward(CompGraph *cg, Scalar *var, scalar leaker) {
 
 ulong htan(CompGraph *cg, ulong x) {
     scalar val = tanhf(NODE(x).num);
-    ulong out = initScalar(cg, val, x, 0, Htan);
+    ulong out = initScalar(cg, val, x, 0, HTAN);
     return out;
 }
 
@@ -197,7 +197,7 @@ void tanhBackward(CompGraph *cg, Scalar *var) {
 
 ulong sigmoid(CompGraph *cg, ulong x) {
     scalar val = 1 / (1 + expf(-1 * (NODE(x).num)));
-    ulong out = initScalar(cg, val, x, 0, Sig);
+    ulong out = initScalar(cg, val, x, 0, SIG);
     return out;
 }
 
@@ -208,7 +208,7 @@ void sigmoidBackward(CompGraph *cg, Scalar *var) {
 ulong elu(CompGraph *cg, ulong x, scalar leaker) {
     scalar num = NODE(x).num;
     scalar val = num > 0 ? num : leaker * (expf(num) - 1);
-    ulong out = initScalar(cg, val, x, 0, Elu);
+    ulong out = initScalar(cg, val, x, 0, EXPLU);
     return out;
 }
 
@@ -223,34 +223,34 @@ void backward(CompGraph *cg, ulong last, scalar leaker) {
     for (ulong i = cg->size - 1; i > 0; --i) {
         cur = &NODE(i);
         switch (cur->op) {
-        case Add:
+        case ADD:
             addBackward(cg, cur);
             break;
-        case Sub:
+        case SUB:
             subBackward(cg, cur);
             break;
-        case Mul:
+        case MUL:
             mulBackward(cg, cur);
             break;
-        case Raise:
+        case RAISE:
             raiseBackward(cg, cur);
             break;
-        case Relu:
+        case RECLU:
             reluBackward(cg, cur);
             break;
-        case LeakyRelu:
+        case LEAKYRECLU:
             leakyReluBackward(cg, cur, leaker);
             break;
-        case Elu:
+        case EXPLU:
             eluBackward(cg, cur, leaker);
             break;
-        case Htan:
+        case HTAN:
             tanhBackward(cg, cur);
             break;
-        case Sig:
+        case SIG:
             sigmoidBackward(cg, cur);
             break;
-        case None:
+        case NONE:
             break;
         }
     }

@@ -8,8 +8,8 @@ int main(void) {
     HParams *hp = cn.allocDefaultHParams();
     cn.setRate(hp, 10);
     Net *net = cn.allocVanillaNet(hp, 2);
-    cn.allocDenseLayer(net, Sigmoid, 2);
-    cn.allocDenseLayer(net, Sigmoid, 1);
+    cn.allocDenseLayer(net, SIGMOID, 2);
+    cn.allocDenseLayer(net, SIGMOID, 1);
     cn.randomizeNet(net, -1, 1);
     cn.printNet(net, "net");
     Matrix data = la.allocMatrix(4, 3);

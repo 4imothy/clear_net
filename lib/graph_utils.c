@@ -122,36 +122,35 @@ void deallocUVec(UVec *uvec) {
     uvec->elem = NULL;
 }
 
-UMatList allocUMatList(ulong nrows, ulong ncols, ulong nchannels) {
-    UMatList list;
-    list.nelem = nchannels;
-    list.mats = CLEAR_NET_ALLOC(nchannels * sizeof(UMat));
-    CLEAR_NET_ASSERT(list.mats != NULL);
-    for (ulong i = 0; i < nchannels; ++i) {
-        list.mats[i] = allocUMat(nrows, ncols);
-    }
 
+UMat* allocUMatList(ulong nrows, ulong ncols, ulong nelem) {
+    UMat *list = CLEAR_NET_ALLOC(nelem * sizeof(UMat));
+    CLEAR_NET_ASSERT(list != NULL);
+    for (ulong i = 0; i < nelem; ++i) {
+        list[i] = allocUMat(nrows, ncols);
+    }
     return list;
 }
 
-void deallocUMatList(UMatList *list) {
-    for (ulong i = 0; i < list->nelem; ++i) {
-        deallocUMat(&list->mats[i]);
+void deallocUMatList(UMat **list, ulong nelem) {
+    for (ulong i = 0; i < nelem; ++i) {
+        if (list[i] != NULL) {
+            deallocUMat(&(*list)[i]);
+        }
     }
-    CLEAR_NET_DEALLOC(list->mats);
-    list->nelem = 0;
+    CLEAR_NET_DEALLOC(list);
 }
 
 void deallocUData(UData *data) {
     switch (data->type) {
-    case (UVector):
+    case (UVEC):
         deallocUVec(&data->data.vec);
         break;
-    case (UMatrix):
+    case (UMAT):
         deallocUMat(&data->data.mat);
         break;
-    case (UMatrixList):
-        deallocUMatList(&data->data.mat_list);
+    case (UMATLIST):
+        deallocUMatList(&data->data.mats, data->nchannels);
         break;
     }
 }

@@ -38,8 +38,8 @@ int main(void) {
     cn.withMomentum(hp, 0.9);
     Net *net = cn.allocVanillaNet(hp, 3);
     cn.allocDenseLayer(net, Tanh, 3);
-    cn.allocDenseLayer(net, LeakyReLU, 8);
-    cn.allocDenseLayer(net, Sigmoid, num_outputs);
+    cn.allocDenseLayer(net, LEAKYRELU, 8);
+    cn.allocDenseLayer(net, SIGMOID, num_outputs);
     cn.randomizeNet(net, -1, 1);
     cn.printNet(net, "net");
     scalar loss;

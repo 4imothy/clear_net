@@ -200,7 +200,7 @@ int main(int argc, char *argv[]) {
     cn.setRate(hp, 0.02);
     cn.withMomentum(hp, 0.9);
     Net *net = cn.allocVanillaNet(hp, input_dim);
-    cn.allocDenseLayer(net, Sigmoid, 1);
+    cn.allocDenseLayer(net, SIGMOID, 1);
     cn.randomizeNet(net, -1, 1);
     ulong num_epochs = 10000;
     scalar loss;

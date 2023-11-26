@@ -126,10 +126,10 @@ typedef union {
 } LayerData;
 
 typedef enum {
-    Dense,
-    Conv,
-    Pool,
-    GlobPool,
+    DENSE,
+    CONV,
+    POOL,
+    GLOBPOOL,
 } LayerType;
 
 typedef struct {

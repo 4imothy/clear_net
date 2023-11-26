@@ -15,6 +15,7 @@
 // FUTURE need to save and load a model for conv
 // FUTURE better benching suite with ability to measure the amount of memory used
 // FUTURE clear security vulnrebilities
+// FUTURE make a data loading library that works well with clear_net
 
 typedef float scalar;
 typedef unsigned long ulong;
@@ -24,16 +25,16 @@ typedef struct HParams HParams;
 typedef struct IOData IOData;
 
 typedef enum {
-    Sigmoid,
-    ReLU,
-    Tanh,
-    LeakyReLU,
+    SIGMOID,
+    RELU,
+    TANH,
+    LEAKYRELU,
     ELU,
 } Activation;
 
 typedef enum {
-    Max,
-    Average,
+    MAX,
+    AVERAGE,
 } Pooling;
 
 typedef struct {
@@ -49,9 +50,9 @@ typedef struct {
 } Vector;
 
 typedef enum {
-    Same,
-    Valid,
-    Full,
+    SAME,
+    VALID,
+    FULL,
 } Padding;
 
 typedef struct {

@@ -87,11 +87,11 @@ int main(void) {
     HParams *hp = cn.allocDefaultHParams();
     cn.setRate(hp, 0.01);
     Net *net = cn.allocConvNet(hp, img_height, img_width, nchannels);
-    cn.allocConvLayer(net, Valid, Sigmoid, 3, 9, 9);
-    cn.allocConvLayer(net, Valid, Sigmoid, 5, 5, 5);
-    cn.allocPoolingLayer(net, Average, 4, 4);
-    cn.allocConvLayer(net, Valid, Sigmoid, 10, 3, 3);
-    cn.allocGlobalPoolingLayer(net, Max);
+    cn.allocConvLayer(net, VALID, SIGMOID, 3, 9, 9);
+    cn.allocConvLayer(net, VALID, SIGMOID, 5, 5, 5);
+    cn.allocPoolingLayer(net, AVERAGE, 4, 4);
+    cn.allocConvLayer(net, VALID, SIGMOID, 10, 3, 3);
+    cn.allocGlobalPoolingLayer(net, MAX);
     cn.randomizeNet(net, -1, 1);
 
     printf("Initial Cost: %f\n",
