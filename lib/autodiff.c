@@ -1,12 +1,14 @@
 #include "clear_net.h"
 #include "net.h"
 
-// TODO change powf to have one for floats and doubles in case scalar is changed
-// to be a double
+// TODO this causes issues with printing with %f so create a new to_char function for easier printing also export the scalar stuff to a scalar.c/h
 
 #define INITIAL_GRAPH_SIZE 50
 #define NODE(id) (cg)->vars[(id)]
 #define POS(cg, x) NODE(x).num > 0
+#define IS_FLOAT sizeof(scalar) == sizeof(float)
+#define IS_DOUBLE sizeof(scalar) == sizeof(double)
+#define IS_LONG_DOUBLE sizeof(scalar) == sizeof(long double)
 
 typedef enum {
     ADD,
@@ -35,6 +37,44 @@ struct CompGraph {
     ulong size;
     ulong max_size;
 };
+
+char* type_not_supported_message = "Type of Scalar Not Supported";
+
+scalar pows(scalar to_raise, scalar raiser) {
+    if (IS_FLOAT) {
+        return pow(to_raise, raiser);
+    } else if (IS_DOUBLE) {
+        return powf(to_raise, raiser);
+    } else if (IS_LONG_DOUBLE) {
+        return powl(to_raise, raiser);
+    }
+    CLEAR_NET_ASSERT(0 && type_not_supported_message);
+    return 0;
+}
+
+scalar tanhs(scalar x) {
+    if (IS_DOUBLE) {
+        return tanh(x);
+    } else if (IS_FLOAT) {
+        return tanhf(x);
+    } else if (IS_LONG_DOUBLE) {
+        return tanhl(x);
+    }
+    CLEAR_NET_ASSERT(0 && type_not_supported_message);
+    return 0;
+}
+
+scalar exps(scalar x) {
+    if (IS_FLOAT) {
+        return expf(x);
+    } else if (IS_DOUBLE) {
+        return exp(x);
+    } else if (IS_LONG_DOUBLE) {
+        return expl(x);
+    }
+    CLEAR_NET_ASSERT(0 && type_not_supported_message);
+    return 0;
+}
 
 scalar randRange(scalar lower, scalar upper) {
     return ((scalar)rand() / RAND_MAX) * (upper - lower) + lower;
@@ -150,7 +190,7 @@ void mulBackward(CompGraph *cg, Scalar *var) {
 }
 
 ulong raise(CompGraph *cg, ulong to_raise, ulong pow) {
-    scalar val = powf(NODE(to_raise).num, NODE(pow).num);
+    scalar val = pows(NODE(to_raise).num, NODE(pow).num);
     ulong out = initScalar(cg, val, to_raise, pow, RAISE);
     return out;
 }
@@ -158,8 +198,8 @@ ulong raise(CompGraph *cg, ulong to_raise, ulong pow) {
 void raiseBackward(CompGraph *cg, Scalar *var) {
     scalar l_num = NODE(var->prev_left).num;
     scalar r_num = NODE(var->prev_right).num;
-    NODE(var->prev_left).grad += r_num * powf(l_num, r_num - 1) * var->grad;
-    NODE(var->prev_right).grad += logf(l_num) * powf(l_num, r_num) * var->grad;
+    NODE(var->prev_left).grad += r_num * pows(l_num, r_num - 1) * var->grad;
+    NODE(var->prev_right).grad += logf(l_num) * pows(l_num, r_num) * var->grad;
 }
 
 ulong relu(CompGraph *cg, ulong x) {
@@ -186,17 +226,17 @@ void leakyReluBackward(CompGraph *cg, Scalar *var, scalar leaker) {
 }
 
 ulong htan(CompGraph *cg, ulong x) {
-    scalar val = tanhf(NODE(x).num);
+    scalar val = tanhs(NODE(x).num);
     ulong out = initScalar(cg, val, x, 0, HTAN);
     return out;
 }
 
 void tanhBackward(CompGraph *cg, Scalar *var) {
-    NODE(var->prev_left).grad += (1 - powf(var->num, 2)) * var->grad;
+    NODE(var->prev_left).grad += (1 - pows(var->num, 2)) * var->grad;
 }
 
 ulong sigmoid(CompGraph *cg, ulong x) {
-    scalar val = 1 / (1 + expf(-1 * (NODE(x).num)));
+    scalar val = 1 / (1 + exps(-1 * (NODE(x).num)));
     ulong out = initScalar(cg, val, x, 0, SIG);
     return out;
 }
@@ -207,7 +247,7 @@ void sigmoidBackward(CompGraph *cg, Scalar *var) {
 
 ulong elu(CompGraph *cg, ulong x, scalar leaker) {
     scalar num = NODE(x).num;
-    scalar val = num > 0 ? num : leaker * (expf(num) - 1);
+    scalar val = num > 0 ? num : leaker * (exps(num) - 1);
     ulong out = initScalar(cg, val, x, 0, EXPLU);
     return out;
 }
@@ -256,8 +296,8 @@ void backward(CompGraph *cg, ulong last, scalar leaker) {
     }
 }
 
-void resetGrads(CompGraph *cg, ulong count) {
-    for (ulong i = 0; i < count; ++i) {
+void resetGrads(CompGraph *cg) {
+    for (ulong i = 0; i < cg->size; ++i) {
         NODE(i + 1).grad = 0;
     }
 }
