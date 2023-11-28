@@ -1,3 +1,5 @@
+#ifndef CN_GRAPH_UTILS
+#define CN_GRAPH_UTILS
 #include "clear_net.h"
 
 #define MAT_ID(mat, r, c) (mat).start_id + ((r) * (mat).ncols) + (c)
@@ -15,7 +17,6 @@ typedef struct {
     ulong nelem;
 } Vec;
 
-// for when elements are not together in the computation graph
 typedef struct {
     ulong *elem;
     ulong ncols;
@@ -41,7 +42,7 @@ typedef enum {
 } UType;
 
 typedef struct {
-    UStore data;
+    UStore in;
     UType type;
     ulong nchannels;
 } UData;
@@ -60,6 +61,9 @@ UMat allocUMat(ulong nrows, ulong ncols);
 void deallocUMat(UMat *umat);
 UVec allocUVec(ulong nelem);
 void deallocUVec(UVec *uvec);
+void printUVecInline(CompGraph *cg, UVec *uvec);
 UMat* allocUMatList(ulong nrows, ulong ncols, ulong nchannels);
 void deallocUMatList(UMat **list, ulong nelem);
 void deallocUData(UData *data);
+
+#endif // CN_GRAPH_UTILS
