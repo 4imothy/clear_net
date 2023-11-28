@@ -1,11 +1,12 @@
 #include "../lib/clear_net.h"
 #include <string.h>
 
-#define la cn.la
+#define data cn.data
 
 // sepal length (cm), sepal width (cm), petal length (cm), petal width (cm),
 // target
 // clang-format off
+
 scalar train_values[] = {
     5.1, 3.5, 1.4, 0.2, 0,
     4.9, 3.0, 1.4, 0.2, 0,
@@ -177,69 +178,69 @@ int main(int argc, char *argv[]) {
     ulong output_dim = data_cols - input_dim;
     ulong val_size = 15;
     ulong train_size = 150 - val_size;
-    Matrix train =
-        la.formMatrix(train_size, data_cols, data_cols, train_values);
-    Matrix input = la.formMatrix(train_size, input_dim, train.stride,
-                                 &MAT_AT(train, 0, 0));
-    Matrix target = la.formMatrix(train_size, output_dim, train.stride,
-                                  &MAT_AT(train, 0, input_dim));
-    for (ulong i = 0; i < target.nrows; ++i) {
-        MAT_AT(target, i, 0) /= 2;
+    Vector *train_in = data.allocVectors(train_size, input_dim);
+    Vector *train_tar = data.allocVectors(train_size, output_dim);
+
+    for (ulong i = 0;  i < train_size; ++i) {
+        train_in[i] = data.formVector(input_dim, &train_values[data_cols * i]);
+        train_tar[i] = data.formVector(output_dim, &train_values[(data_cols * i) + input_dim]);
+        VEC_AT(train_tar[i], 0) /= 2;
     }
 
-    Matrix val =
-        la.formMatrix(val_size, data_cols, data_cols, validation_values);
-    Matrix val_input =
-        la.formMatrix(val_size, input_dim, val.stride, &MAT_AT(val, 0, 0));
-    Matrix val_target = la.formMatrix(val_size, output_dim, val.stride,
-                                      &MAT_AT(val, 0, input_dim));
-    for (ulong i = 0; i < val_size; ++i) {
-        MAT_AT(val_target, i, 0) /= 2;
-    }
+    CNData *io_train_in = data.allocDataFromVectors(train_in, train_size);
+    CNData *io_train_tar = data.allocDataFromVectors(train_tar, train_size);
+
     HParams *hp = cn.allocDefaultHParams();
     cn.setRate(hp, 0.02);
     cn.withMomentum(hp, 0.9);
     Net *net = cn.allocVanillaNet(hp, input_dim);
     cn.allocDenseLayer(net, SIGMOID, 1);
     cn.randomizeNet(net, -1, 1);
-    ulong num_epochs = 10000;
-    scalar loss;
-    scalar error_break = 0.01;
-    ulong i;
+
+    ulong num_epochs = 1000;
+    float loss;
+    float error_break = 0.01;
     ulong batch_size = 45;
-    la.shuffleMatrixRows(&input, &target);
-    Matrix batch_in;
-    Matrix batch_tar;
+    ulong i;
+    data.shuffleDatas(io_train_in, io_train_tar);
+    CNData *batch_in = data.allocEmptyData();
+    CNData *batch_tar = data.allocEmptyData();
     CLEAR_NET_ASSERT(train_size % batch_size == 0);
+
     for (i = 0; i < num_epochs; ++i) {
-        for (ulong batch_num = 0; batch_num < train_size / batch_size;
-             ++batch_num) {
-            la.setBatchFromMatrix(input, target, batch_num, batch_size,
-                                  &batch_in, &batch_tar);
+        for (ulong batch_num = 0; batch_num < train_size / batch_size; ++batch_num) {
+            data.setBatch(io_train_in, io_train_tar, batch_num, batch_size, batch_in, batch_tar);
             cn.lossVanilla(net, batch_in, batch_tar);
             cn.backprop(net);
         }
-        loss = cn.lossVanilla(net, input, target);
+        loss = cn.lossVanilla(net, io_train_in, io_train_tar);
         if (loss < error_break) {
+            printf("Loss < %f at epoch %zu\n", error_break, i);
             break;
         }
         if (i % (num_epochs / 5) == 0 && print) {
             printf("Average loss: %f\n", loss);
         }
     }
-    if (print) {
-        printf("Final loss at %zu : %g\n", i, loss);
-        cn.printVanillaPredictions(net, input, target);
-        printf("On validation set\n");
-        cn.printVanillaPredictions(net, val_input, val_target);
-        char *file = "model";
-        cn.saveNet(net, file);
-        cn.deallocNet(net);
-        printf("after loading\n");
-        net = cn.allocNetFromFile("model");
-        cn.printVanillaPredictions(net, val_input, val_target);
+
+    cn.printVanillaPredictions(net, io_train_in, io_train_tar);
+
+    char *file = "model";
+    cn.saveNet(net, file);
+    cn.deallocNet(net);
+    net = cn.allocNetFromFile(file);
+
+    Vector *val_in = data.allocVectors(val_size, input_dim);
+    Vector *val_tar = data.allocVectors(val_size, output_dim);
+
+    for (ulong i = 0;  i < val_size; ++i) {
+        val_in[i] = data.formVector(input_dim, &validation_values[data_cols * i]);
+        val_tar[i] = data.formVector(output_dim, &validation_values[(data_cols * i) + input_dim]);
+        VEC_AT(val_tar[i], 0) /= 2;
     }
 
+    CNData *io_val_in = data.allocDataFromVectors(val_in, val_size);
+    CNData *io_val_tar = data.allocDataFromVectors(val_tar, val_size);
+    cn.printVanillaPredictions(net, io_val_in, io_val_tar);
     cn.deallocNet(net);
-    return 0;
 }
