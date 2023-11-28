@@ -1,6 +1,6 @@
 #include "clear_net.h"
 #include "autodiff.h"
-#include "la.h"
+#include "data.h"
 #include "net.h"
 
 #define PAIR(func) .func = func
@@ -26,7 +26,7 @@ _cn_names const cn = {
             PAIR(backward),
             PAIR(setValRand),
         },
-    .la =
+    .data =
         {
             PAIR(deallocMatrix),
             PAIR(allocMatrix),
@@ -36,11 +36,24 @@ _cn_names const cn = {
             PAIR(formVector),
             PAIR(printVector),
             PAIR(deallocVector),
-            PAIR(shuffleMatrixRows),
+            PAIR(shuffleDatas),
             PAIR(setBatchFromMatrix),
-            PAIR(formDataFromVectors),
-            PAIR(formDataFromMatrices),
-            PAIR(formDataFromMultiChannelMatrices),
+            PAIR(allocDataFromVectors),
+            PAIR(allocDataFromMatrices),
+            PAIR(allocDataFromMultiChannelMatrices),
+            PAIR(deallocData),
+            PAIR(allocVectors),
+            PAIR(allocMatrices),
+            PAIR(allocMultiMatrices),
+            PAIR(deallocVectors),
+            PAIR(deallocMatrices),
+            PAIR(deallocMultiMatrices),
+            PAIR(printVectors),
+            PAIR(printMatrices),
+            PAIR(printMultiMatrices),
+            PAIR(printData),
+            PAIR(setBatch),
+            PAIR(allocEmptyData),
         },
     PAIR(allocDefaultHParams),
     PAIR(setRate),

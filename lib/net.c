@@ -2,7 +2,7 @@
 #include "autodiff.h"
 #include "clear_net.h"
 #include "graph_utils.h"
-#include "la.h"
+#include "data.h"
 
 // FUTURE to save space can not alloc for any storing index matirx as the number
 // of elements between each element should be the same just store the stride
@@ -67,7 +67,7 @@ typedef enum {
 
 typedef struct {
     LayerType type;
-    LayerData data;
+    LayerData in;
 } Layer;
 
 struct Net {
@@ -86,7 +86,7 @@ ulong activate(CompGraph *cg, ulong x, Activation act, scalar leaker) {
         return relu(cg, x);
     case SIGMOID:
         return sigmoid(cg, x);
-    case Tanh:
+    case TANH:
         return htan(cg, x);
     case LEAKYRELU:
         return leakyRelu(cg, x, leaker);
@@ -108,13 +108,13 @@ void allocDenseLayer(Net *net, Activation act, ulong dim_out) {
         Layer player = net->layers[net->nlayers - 1];
         CLEAR_NET_ASSERT(player.type == DENSE || player.type == GLOBPOOL);
         if (player.type == DENSE) {
-            dim_input = player.data.dense.output.nelem;
+            dim_input = player.in.dense.output.nelem;
         } else {
-            dim_input = player.data.glob_pool.output.nelem;
+            dim_input = player.in.glob_pool.output.nelem;
         }
     } else {
         CLEAR_NET_ASSERT(net->input.type == UVEC);
-        dim_input = net->input.data.vec.nelem;
+        dim_input = net->input.in.vec.nelem;
     }
 
     DenseLayer layer;
@@ -127,7 +127,7 @@ void allocDenseLayer(Net *net, Activation act, ulong dim_out) {
 
     Layer l;
     l.type = DENSE;
-    l.data.dense = layer;
+    l.in.dense = layer;
 
     addLayer(net, l);
     net->output_type = UVEC;
@@ -171,7 +171,7 @@ void applyDenseGrads(CompGraph *cg, DenseLayer *layer, HParams *hp) {
     applyVecGrads(cg, &layer->biases, hp);
 }
 
-void allocConvLayer(Net *net, Padding padding, Activation act, ulong noutput,
+void allocConvLayer(Net *net, Activation act, Padding padding, ulong noutput,
                     ulong kernel_nrows, ulong kernel_ncols) {
     ulong input_nrows;
     ulong input_ncols;
@@ -181,23 +181,23 @@ void allocConvLayer(Net *net, Padding padding, Activation act, ulong noutput,
                          net->input.type == UMATLIST);
         nimput = net->input.nchannels;
         if (net->input.type == UMAT) {
-            input_nrows = net->input.data.mat.nrows;
-            input_ncols = net->input.data.mat.ncols;
+            input_nrows = net->input.in.mat.nrows;
+            input_ncols = net->input.in.mat.ncols;
         } else {
-            input_nrows = net->input.data.mats->nrows;
-            input_ncols = net->input.data.mats->ncols;
+            input_nrows = net->input.in.mats->nrows;
+            input_ncols = net->input.in.mats->ncols;
         }
     } else {
         Layer player = net->layers[net->nlayers - 1];
         CLEAR_NET_ASSERT(player.type == CONV || player.type == POOL);
         if (player.type == CONV) {
-            input_nrows = player.data.conv.output_nrows;
-            input_nrows = player.data.conv.output_ncols;
-            nimput = player.data.conv.nfilters;
+            input_nrows = player.in.conv.output_nrows;
+            input_ncols = player.in.conv.output_ncols;
+            nimput = player.in.conv.nfilters;
         } else {
-            input_nrows = player.data.pool.output_nrows;
-            input_ncols = player.data.pool.output_ncols;
-            nimput = player.data.pool.noutput;
+            input_nrows = player.in.pool.output_nrows;
+            input_ncols = player.in.pool.output_ncols;
+            nimput = player.in.pool.noutput;
         }
     }
 
@@ -251,7 +251,7 @@ void allocConvLayer(Net *net, Padding padding, Activation act, ulong noutput,
 
     Layer l;
     l.type = CONV;
-    l.data.conv = layer;
+    l.in.conv = layer;
     addLayer(net, l);
     net->output_type = UMAT;
 }
@@ -278,6 +278,17 @@ void deallocConvLayer(ConvolutionalLayer *layer) {
     layer->output_ncols = 0;
     layer->k_nrows = 0;
     layer->k_ncols = 0;
+}
+
+void printConvLayer(CompGraph *cg, ConvolutionalLayer *layer, ulong id) {
+    printf("Layer #%zu Convolutional\n", id);
+    for (ulong i = 0; i < layer->nfilters; ++i) {
+        for (ulong j = 0; j < layer->nimput; ++j) {
+            printf("Kernel #%zu", j);
+            printMat(cg, &layer->filters[i].kernels[j], "");
+        }
+        printMat(cg, &layer->filters[i].biases, "filter bias");
+    }
 }
 
 void randomizeConvLayer(CompGraph *cg, ConvolutionalLayer *layer, scalar lower,
@@ -388,10 +399,10 @@ void allocPoolingLayer(Net *net, Pooling strat, ulong kernel_nrows,
     pooler.k_nrows = kernel_nrows;
     pooler.k_ncols = kernel_ncols;
     pooler.output_nrows =
-        net->layers[net->nlayers - 1].data.conv.output_nrows / kernel_nrows;
+        net->layers[net->nlayers - 1].in.conv.output_nrows / kernel_nrows;
     pooler.output_ncols =
-        net->layers[net->nlayers - 1].data.conv.output_ncols / kernel_ncols;
-    pooler.noutput = net->layers[net->nlayers - 1].data.conv.nfilters;
+        net->layers[net->nlayers - 1].in.conv.output_ncols / kernel_ncols;
+    pooler.noutput = net->layers[net->nlayers - 1].in.conv.nfilters;
     pooler.outputs = CLEAR_NET_ALLOC(pooler.noutput * sizeof(UMat));
     for (ulong i = 0; i < pooler.noutput; ++i) {
         pooler.outputs[i] = allocUMat(pooler.output_nrows, pooler.output_ncols);
@@ -400,7 +411,7 @@ void allocPoolingLayer(Net *net, Pooling strat, ulong kernel_nrows,
 
     Layer l;
     l.type = POOL;
-    l.data.pool = pooler;
+    l.in.pool = pooler;
     addLayer(net, l);
     net->output_type = UMAT;
 }
@@ -416,6 +427,19 @@ void deallocPoolingLayer(PoolingLayer *layer) {
     }
     CLEAR_NET_DEALLOC(layer->outputs);
     layer->noutput = 0;
+}
+
+void printPoolingLayer(PoolingLayer *layer, ulong id) {
+    printf("Layer #%zu ", id);
+    switch(layer->strat) {
+    case(MAX):
+        printf("Max ");
+        break;
+    case(AVERAGE):
+        printf("Average ");
+        break;
+    }
+    printf("Pooling Layer\n");
 }
 
 UMat *forwardPool(CompGraph *cg, PoolingLayer *pooler, UMat *input) {
@@ -470,17 +494,17 @@ void allocGlobalPoolingLayer(Net *net, Pooling strat) {
         gpooler = (GlobalPoolingLayer){
             .strat = strat,
             .output =
-                allocUVec(net->layers[net->nlayers - 1].data.conv.nfilters)};
+                allocUVec(net->layers[net->nlayers - 1].in.conv.nfilters)};
     } else {
         gpooler = (GlobalPoolingLayer){
             .strat = strat,
             .output =
-                allocUVec(net->layers[net->nlayers - 1].data.pool.noutput),
+                allocUVec(net->layers[net->nlayers - 1].in.pool.noutput),
         };
     }
     Layer l;
     l.type = GLOBPOOL;
-    l.data.glob_pool = gpooler;
+    l.in.glob_pool = gpooler;
     addLayer(net, l);
     net->output_type = UVEC;
 }
@@ -488,6 +512,19 @@ void allocGlobalPoolingLayer(Net *net, Pooling strat) {
 void deallocGlobalPoolingLayer(GlobalPoolingLayer *layer) {
     deallocUVec(&layer->output);
     layer->strat = 0;
+}
+
+void printGlobalPoolingLayer(GlobalPoolingLayer *layer, ulong id) {
+    printf("Layer #%zu: ", id);
+    switch (layer->strat) {
+    case (MAX):
+        printf("Max ");
+        break;
+    case (AVERAGE):
+        printf("Average ");
+        break;
+    }
+    printf("Global Pooling Layer\n");
 }
 
 UVec forwardGlobPool(CompGraph *cg, GlobalPoolingLayer *pooler, UMat *input) {
@@ -558,7 +595,7 @@ Net *allocVanillaNet(HParams *hp, ulong input_nelem) {
     CLEAR_NET_ASSERT(input_nelem != 0);
     UData input;
     input.type = UVEC;
-    input.data.vec = allocUVec(input_nelem);
+    input.in.vec = allocUVec(input_nelem);
     Net *net = allocNet(hp);
     net->input = input;
     return net;
@@ -571,10 +608,10 @@ Net *allocConvNet(HParams *hp, ulong input_nrows, ulong input_ncols,
     input.nchannels = nchannels;
     if (input.nchannels == 1) {
         input.type = UMAT;
-        input.data.mat = allocUMat(input_nrows, input_ncols);
+        input.in.mat = allocUMat(input_nrows, input_ncols);
     } else {
         input.type = UMATLIST;
-        input.data.mats =
+        input.in.mats =
             allocUMatList(input_nrows, input_ncols, nchannels);
     }
 
@@ -589,16 +626,16 @@ void printNet(Net *net, char *name) {
         Layer layer = net->layers[i];
         switch (layer.type) {
         case (DENSE):
-            printDenseLayer(net->cg, &layer.data.dense, i);
+            printDenseLayer(net->cg, &layer.in.dense, i);
             break;
         case (CONV):
-            // TODO
+            printConvLayer(net->cg, &layer.in.conv, i);
             break;
         case (POOL):
-            // TODO
+            printPoolingLayer(&layer.in.pool, i);
             break;
         case (GLOBPOOL):
-            // TODO
+            printGlobalPoolingLayer(&layer.in.glob_pool, i);
             break;
         }
     }
@@ -610,16 +647,16 @@ void deallocNet(Net *net) {
         Layer layer = net->layers[i];
         switch (layer.type) {
         case (DENSE):
-            deallocDenseLayer(&layer.data.dense);
+            deallocDenseLayer(&layer.in.dense);
             break;
         case (CONV):
-            deallocConvLayer(&layer.data.conv);
+            deallocConvLayer(&layer.in.conv);
             break;
         case (POOL):
-            deallocPoolingLayer(&layer.data.pool);
+            deallocPoolingLayer(&layer.in.pool);
             break;
         case (GLOBPOOL):
-            deallocGlobalPoolingLayer(&layer.data.glob_pool);
+            deallocGlobalPoolingLayer(&layer.in.glob_pool);
             break;
         }
     }
@@ -633,9 +670,9 @@ void randomizeNet(Net *net, scalar lower, scalar upper) {
     for (ulong i = 0; i < net->nlayers; ++i) {
         Layer layer = net->layers[i];
         if (layer.type == DENSE) {
-            randomizeDenseLayer(net->cg, &layer.data.dense, lower, upper);
+            randomizeDenseLayer(net->cg, &layer.in.dense, lower, upper);
         } else if (layer.type == CONV) {
-            randomizeConvLayer(net->cg, &layer.data.conv, lower, upper);
+            randomizeConvLayer(net->cg, &layer.in.conv, lower, upper);
         }
     }
 }
@@ -643,7 +680,7 @@ void randomizeNet(Net *net, scalar lower, scalar upper) {
 UVec _predictVanilla(Net *net, UVec prev) {
     for (ulong i = 0; i < net->nlayers; ++i) {
         prev =
-            forwardDense(net->cg, &net->layers[i].data.dense, prev, net->hp.leaker);
+            forwardDense(net->cg, &net->layers[i].in.dense, prev, net->hp.leaker);
     }
     return prev;
 }
@@ -659,79 +696,81 @@ UData _predictConv(Net *net, UMat *prevs) {
         Layer layer = net->layers[i];
         switch (layer.type) {
         case(DENSE):
-            uvec = forwardDense(cg, &layer.data.dense, uvec, leaker);
+            uvec = forwardDense(cg, &layer.in.dense, uvec, leaker);
             break;
         case(CONV):
-            prevs = forwardConv(cg, &layer.data.conv, prevs, leaker);
+            prevs = forwardConv(cg, &layer.in.conv, prevs, leaker);
             break;
         case(POOL):
-            prevs = forwardPool(cg, &layer.data.pool, prevs);
+            prevs = forwardPool(cg, &layer.in.pool, prevs);
             break;
         case(GLOBPOOL):
-            uvec = forwardGlobPool(cg, &layer.data.glob_pool, prevs);
+            uvec = forwardGlobPool(cg, &layer.in.glob_pool, prevs);
         }
     }
 
     UData data;
     data.type = net->output_type;
-    data.nchannels = net->layers[net->nlayers - 1].data.conv.nfilters;
+    data.nchannels = net->layers[net->nlayers - 1].in.conv.nfilters;
     switch(data.type) {
     case(UVEC):
-        data.data.vec = uvec;
+        data.in.vec = uvec;
         break;
     case(UMAT):
-        data.data.mat = *prevs;
+        data.in.mat = *prevs;
         break;
     case(UMATLIST):
-        data.data.mats = prevs;
+        data.in.mats = prevs;
         break;
     }
     return data;
 }
 
 Vector *predictVanilla(Net *net, Vector input, Vector *store) {
-    CLEAR_NET_ASSERT(net->input.data.vec.nelem == input.nelem);
+    CLEAR_NET_ASSERT(net->input.in.vec.nelem == input.nelem);
     CompGraph *cg = net->cg;
 
     for (ulong i = 0; i < input.nelem; ++i) {
-        VEC_AT(net->input.data.vec, i) = getSize(cg);
+        VEC_AT(net->input.in.vec, i) = getSize(cg);
         initLeafScalar(cg, VEC_AT(input, i));
     }
-    UVec prediction = _predictVanilla(net, net->input.data.vec);
+    UVec prediction = _predictVanilla(net, net->input.in.vec);
     CLEAR_NET_ASSERT(store->nelem == prediction.nelem);
     for (ulong i = 0; i < store->nelem; ++i) {
         VEC_AT(*store, i) = getVal(cg, VEC_AT(prediction, i));
     }
+    setSize(cg, net->nparams + 1);
 
     return store;
 }
 
-scalar lossVanilla(Net *net, Matrix input, Matrix target) {
-    CLEAR_NET_ASSERT(input.nrows == target.nrows);
-    CLEAR_NET_ASSERT(net->input.data.vec.nelem == input.ncols);
-    resetGrads(net->cg, net->nparams);
-    ulong train_size = input.nrows;
+scalar lossVanilla(Net *net, CNData *input, CNData* target) {
+    CLEAR_NET_ASSERT(input->nelem == target->nelem);
+    CLEAR_NET_ASSERT(input->type == VECTORS && target->type == VECTORS);
+    CLEAR_NET_ASSERT(net->input.in.vec.nelem == input->in.vectors->nelem);
     CompGraph *cg = net->cg;
     setSize(cg, net->nparams + 1);
+    resetGrads(net->cg);
+    ulong train_size = input->nelem;
 
     scalar total_loss = 0;
-    for (ulong i = 0; i < input.ncols; ++i) {
-        VEC_AT(net->input.data.vec, i) = getSize(cg) + i;
+    for (ulong i = 0; i < input->in.vectors->nelem; ++i) {
+        VEC_AT(net->input.in.vec, i) = getSize(cg) + i;
     }
 
     Vec target_vec;
-    target_vec.nelem = target.ncols;
+    target_vec.nelem = target->in.vectors->nelem;
     for (ulong i = 0; i < train_size; ++i) {
-        for (ulong j = 0; j < input.ncols; ++j) {
-            initLeafScalar(cg, MAT_AT(input, i, j));
+        for (ulong j = 0; j < input->in.vectors->nelem; ++j) {
+            initLeafScalar(cg, VEC_AT(input->in.vectors[i], j));
         }
-        UVec prediction = _predictVanilla(net, net->input.data.vec);
+        UVec prediction = _predictVanilla(net, net->input.in.vec);
         target_vec.start_id = getSize(cg);
 
-        for (ulong j = 0; j < target.ncols; ++j) {
-            initLeafScalar(cg, MAT_AT(target, i, j));
+        for (ulong j = 0; j < target->in.vectors->nelem; ++j) {
+            initLeafScalar(cg, VEC_AT(target->in.vectors[i], j));
         }
-        // start raising and stuff
+
         ulong raiser = initLeafScalar(cg, 2);
         ulong loss = initLeafScalar(cg, 0);
         for (ulong j = 0; j < target_vec.nelem; ++j) {
@@ -748,11 +787,11 @@ scalar lossVanilla(Net *net, Matrix input, Matrix target) {
     return total_loss / train_size;
 }
 
-scalar lossConv(Net *net, IOData *input, IOData* target) {
-    resetGrads(net->cg, net->nparams);
+scalar lossConv(Net *net, CNData *input, CNData* target) {
+    CLEAR_NET_ASSERT(input->nelem == target->nelem);
     CLEAR_NET_ASSERT(input->type == MATRICES || input->type == MULTIMATRICES);
     if (net->input.type == UMATLIST) {
-        CLEAR_NET_ASSERT(net->layers[0].data.conv.nimput == input->nchannels);
+        CLEAR_NET_ASSERT(net->layers[0].in.conv.nimput == input->nchannels);
     }
 
     if (net->output_type == UVEC) {
@@ -761,66 +800,67 @@ scalar lossConv(Net *net, IOData *input, IOData* target) {
         CLEAR_NET_ASSERT(target->type == MATRICES);
     }
 
-
-    scalar total_loss = 0;
-    setSize(net->cg, net->nparams + 1);
     CompGraph *cg = net->cg;
+    setSize(cg, net->nparams + 1);
+    resetGrads(cg);
+    scalar total_loss = 0;
+
     ulong offset = getSize(cg);
 
-    if (net->layers[0].data.conv.nimput > 1) {
-        for (ulong i = 0; i < net->layers[0].data.conv.nimput; ++i) {
-            for (ulong j = 0; j < net->input.data.mats->nrows; ++j) {
-                for (ulong k = 0; k < net->input.data.mats->ncols; ++k) {
-                    MAT_AT(net->input.data.mats[i], j ,k) = offset++;
+    if (net->layers[0].in.conv.nimput > 1) {
+        for (ulong i = 0; i < net->layers[0].in.conv.nimput; ++i) {
+            for (ulong j = 0; j < net->input.in.mats->nrows; ++j) {
+                for (ulong k = 0; k < net->input.in.mats->ncols; ++k) {
+                    MAT_AT(net->input.in.mats[i], j ,k) = offset++;
                 }
             }
         }
     } else {
-        for (ulong i = 0; i < net->input.data.mat.nrows; ++i) {
-            for (ulong j = 0; j < net->input.data.mat.ncols; ++j) {
-                MAT_AT(net->input.data.mat, i, j) = offset++;
+        for (ulong i = 0; i < net->input.in.mat.nrows; ++i) {
+            for (ulong j = 0; j < net->input.in.mat.ncols; ++j) {
+                MAT_AT(net->input.in.mat, i, j) = offset++;
             }
         }
     }
 
     for (ulong i = 0; i < input->nelem; ++i) {
-        if (net->layers[0].data.conv.nimput > 1) {
-            for (ulong j = 0; j < net->layers[0].data.conv.nimput; ++j) {
-                for (ulong k = 0; k < net->input.data.mats->nrows; ++k) {
-                    for (ulong l = 0; l < net->input.data.mats->ncols; ++l) {
-                        initLeafScalar(cg, MAT_AT(input->data.multi_mat_list[i][j], k, l));
+        if (net->layers[0].in.conv.nimput > 1) {
+            for (ulong j = 0; j < net->layers[0].in.conv.nimput; ++j) {
+                for (ulong k = 0; k < net->input.in.mats->nrows; ++k) {
+                    for (ulong l = 0; l < net->input.in.mats->ncols; ++l) {
+                        initLeafScalar(cg, MAT_AT(input->in.multi_matrices[i][j], k, l));
                     }
                 }
             }
         } else {
-            for (ulong j = 0; j < net->input.data.mat.nrows; ++j) {
-                for (ulong k = 0; k < net->input.data.mat.ncols; ++k) {
-                    initLeafScalar(cg, MAT_AT(input->data.mat_list[i], j, k));
+            for (ulong j = 0; j < net->input.in.mat.nrows; ++j) {
+                for (ulong k = 0; k < net->input.in.mat.ncols; ++k) {
+                    initLeafScalar(cg, MAT_AT(input->in.matrices[i], j, k));
                 }
             }
         }
-        // TODO mat_list should just be a pointer so to not access the extra .mats
+
         UData out;
         if (net->input.type == UMATLIST) {
-            out = _predictConv(net, net->input.data.mats);
+            out = _predictConv(net, net->input.in.mats);
         } else {
-            out = _predictConv(net, &net->input.data.mat);
+            out = _predictConv(net, &net->input.in.mat);
         }
         size_t raiser = initLeafScalar(cg, 2);
         ulong loss = initLeafScalar(cg, 0);
         switch (out.type) {
         case (UVEC): {
             Vec target_vec;
-            target_vec.nelem = target->data.vec_list->nelem;
+            target_vec.nelem = target->in.vectors->nelem;
             target_vec.start_id = getSize(cg);
             for (ulong j = 0; j < target_vec.nelem; ++j) {
-                initLeafScalar(cg, VEC_AT(target->data.vec_list[i], j));
+                initLeafScalar(cg, VEC_AT(target->in.vectors[i], j));
             }
 
             for (ulong j = 0; j < target_vec.nelem; ++j) {
                 loss = add(
                            cg, loss,
-                           raise(cg, sub(cg, VEC_AT(out.data.vec, j), VEC_ID(target_vec, j)),
+                           raise(cg, sub(cg, VEC_AT(out.in.vec, j), VEC_ID(target_vec, j)),
                                  raiser));
             }
             break;
@@ -828,18 +868,18 @@ scalar lossConv(Net *net, IOData *input, IOData* target) {
         case (UMAT): {
             Mat target_mat;
             target_mat.start_id = getSize(cg);
-            target_mat.nrows = target->data.mat_list->nrows;
-            target_mat.ncols = target->data.mat_list->ncols;
+            target_mat.nrows = target->in.matrices->nrows;
+            target_mat.ncols = target->in.matrices->ncols;
             for (ulong j = 0; j < target_mat.nrows; ++j) {
                 for (ulong k = 0; k < target_mat.ncols; ++k) {
-                    initLeafScalar(cg, MAT_AT(target->data.mat_list[i], j, k));
+                    initLeafScalar(cg, MAT_AT(target->in.matrices[i], j, k));
                 }
             }
             for (ulong j = 0; j < target_mat.nrows; ++j) {
                 for (ulong k = 0; k < target_mat.ncols; ++k) {
                     loss = add(
                                cg, loss,
-                               raise(cg, sub(cg, MAT_AT(out.data.mat, j, k), MAT_ID(target_mat, j, k)),
+                               raise(cg, sub(cg, MAT_AT(out.in.mat, j, k), MAT_ID(target_mat, j, k)),
                                      raiser));
                 }
             }
@@ -860,39 +900,46 @@ scalar lossConv(Net *net, IOData *input, IOData* target) {
 void backprop(Net *net) {
     for (ulong i = 0; i < net->nlayers; ++i) {
         if (net->layers[i].type == DENSE) {
-            applyDenseGrads(net->cg, &net->layers[i].data.dense, &net->hp);
+            applyDenseGrads(net->cg, &net->layers[i].in.dense, &net->hp);
         } else if (net->layers[i].type == CONV) {
-            applyConvGrads(net->cg, &net->layers[i].data.conv, &net->hp);
+            applyConvGrads(net->cg, &net->layers[i].in.conv, &net->hp);
         }
     }
 }
 
-void printVanillaPredictions(Net *net, Matrix input, Matrix target) {
-    CLEAR_NET_ASSERT(input.nrows == target.nrows);
+void printVanillaPredictions(Net *net, CNData *input, CNData *target) {
+    CLEAR_NET_ASSERT(input->nelem == target->nelem);
     printf("Input | Net Output | Target \n");
     scalar loss = 0;
+    CompGraph *cg = net->cg;
 
-    Vector out = allocVector(target.ncols);
+    for (ulong i = 0; i < input->in.vectors->nelem; ++i) {
+        VEC_AT(net->input.in.vec, i) = getSize(cg) + i;
+    }
 
-    for (ulong i = 0; i < input.nrows; ++i) {
-        Vector in = formVector(input.ncols, &MAT_AT(input, i, 0));
-        predictVanilla(net, in, &out);
-        Vector tar = formVector(target.ncols, &MAT_AT(target, i, 0));
+    for (ulong i = 0; i < input->nelem; ++i) {
+        Vector in = input->in.vectors[i];
+        Vector tar = target->in.vectors[i];
+
+        for (ulong j = 0; j < in.nelem; ++j) {
+            initLeafScalar(cg, VEC_AT(in, j));
+        }
+        UVec out = _predictVanilla(net, net->input.in.vec);
+
         for (ulong j = 0; j < out.nelem; ++j) {
-            loss += powf(VEC_AT(out, j) - VEC_AT(tar, j), 2);
+            loss += pows(getVal(cg, VEC_AT(out, j)) - VEC_AT(tar, j), 2);
         }
         printVectorInline(&in);
         printf("| ");
-        printVectorInline(&out);
+        printUVecInline(cg, &out);
         printf("| ");
         printVectorInline(&tar);
         printf("\n");
+        setSize(cg, net->nparams + 1);
     }
-    printf("Average Loss: %f\n", loss / input.nrows);
-    deallocVector(&out);
+    printf("Average Loss: %f\n", loss / input->nelem);
 }
 
-// TODO this saving should go to its own file
 #define FWRITE(ptr, nitems, fp) fwrite(ptr, sizeof(*ptr), nitems, fp);
 #define FREAD(ptr, nitems, fp) fread(ptr, sizeof(*ptr), nitems, fp);
 
@@ -959,10 +1006,73 @@ void allocDenseLayerFromFile(Net *net, FILE *fp) {
     ulong out_dim;
     FREAD(&out_dim, 1, fp);
     allocDenseLayer(net, act, out_dim);
-    loadMatFromFile(net->cg, &net->layers[net->nlayers - 1].data.dense.weights,
+    loadMatFromFile(net->cg, &net->layers[net->nlayers - 1].in.dense.weights,
                     fp);
-    loadVecFromFile(net->cg, &net->layers[net->nlayers - 1].data.dense.biases,
+    loadVecFromFile(net->cg, &net->layers[net->nlayers - 1].in.dense.biases,
                     fp);
+}
+
+void saveConvLayer(CompGraph *cg, ConvolutionalLayer *layer, FILE *fp) {
+    FWRITE(&layer->act, 1, fp);
+    FWRITE(&layer->padding, 1, fp);
+    FWRITE(&layer->nfilters, 1, fp);
+    FWRITE(&layer->k_nrows, 1, fp);
+    FWRITE(&layer->k_ncols, 1, fp);
+    for (ulong i = 0; i < layer->nfilters; ++i) {
+        for (ulong j = 0; j < layer->nimput; ++j) {
+            saveMat(cg, &layer->filters[i].kernels[j], fp);
+        }
+        saveMat(cg, &layer->filters[i].biases, fp);
+    }
+}
+
+void allocConvLayerFromFile(Net *net, FILE *fp) {
+    Activation act;
+    FREAD(&act, 1, fp);
+    Padding padding;
+    FREAD(&padding, 1, fp);
+    ulong nfilters;
+    FREAD(&nfilters, 1, fp);
+    ulong k_nrows;
+    FREAD(&k_nrows, 1, fp);
+    ulong k_ncols;
+    FREAD(&k_ncols, 1, fp);
+
+    allocConvLayer(net, act, padding, nfilters, k_nrows, k_ncols);
+    ConvolutionalLayer *layer = &net->layers[net->nlayers - 1].in.conv;
+    for (ulong i= 0 ; i < layer->nfilters; ++i) {
+        for (ulong j = 0; j < layer->nimput; ++j) {
+            loadMatFromFile(net->cg, &layer->filters[i].kernels[j], fp);
+        }
+        loadMatFromFile(net->cg, &layer->filters[i].biases, fp);
+    }
+
+}
+
+void savePoolingLayer(PoolingLayer *pool, FILE *fp) {
+    FWRITE(&pool->strat, 1, fp);
+    FWRITE(&pool->k_nrows, 1, fp);
+    FWRITE(&pool->k_ncols, 1, fp);
+}
+
+void allocPoolingLayerFromFile(Net *net, FILE *fp) {
+    Pooling strat;
+    FREAD(&strat, 1, fp);
+    ulong k_nrows;
+    FREAD(&k_nrows, 1, fp);
+    ulong k_ncols;
+    FREAD(&k_ncols, 1, fp);
+    allocPoolingLayer(net, strat, k_nrows, k_ncols);
+}
+
+void saveGlobalPoolingLayer(GlobalPoolingLayer *layer, FILE *fp) {
+    FWRITE(&layer->strat, 1, fp);
+}
+
+void allocGlobalPoolingLayerFromFile(Net *net, FILE *fp) {
+    Pooling strat;
+    FREAD(&strat, 1, fp);
+    allocGlobalPoolingLayer(net, strat);
 }
 
 void saveNet(Net *net, char *path) {
@@ -973,16 +1083,16 @@ void saveNet(Net *net, char *path) {
 
     switch (net->input.type) {
     case (UVEC): // vanilla net
-        FWRITE(&net->input.data.vec.nelem, 1, fp);
+        FWRITE(&net->input.in.vec.nelem, 1, fp);
         break;
     case (UMAT): // convolutional net
-        FWRITE(&net->input.data.mat.nrows, 1, fp);
-        FWRITE(&net->input.data.mat.ncols, 1, fp);
+        FWRITE(&net->input.in.mat.nrows, 1, fp);
+        FWRITE(&net->input.in.mat.ncols, 1, fp);
         break;
     case (UMATLIST): // convolutional net with many channels to start
         FWRITE(&net->input.nchannels, 1, fp);
-        FWRITE(&net->input.data.mats->nrows, 1, fp);
-        FWRITE(&net->input.data.mats->ncols, 1, fp);
+        FWRITE(&net->input.in.mats->nrows, 1, fp);
+        FWRITE(&net->input.in.mats->ncols, 1, fp);
         break;
     }
 
@@ -990,16 +1100,16 @@ void saveNet(Net *net, char *path) {
         FWRITE(&net->layers[i].type, 1, fp);
         switch (net->layers[i].type) {
         case (DENSE):
-            saveDenseLayer(net->cg, &net->layers[i].data.dense, fp);
+            saveDenseLayer(net->cg, &net->layers[i].in.dense, fp);
             break;
         case (CONV):
-            // TODO
+            saveConvLayer(net->cg, &net->layers[i].in.conv, fp);
             break;
         case (POOL):
-            // TODO
+            savePoolingLayer(&net->layers[i].in.pool, fp);
             break;
         case (GLOBPOOL):
-            // TODO
+            saveGlobalPoolingLayer(&net->layers[i].in.glob_pool, fp);
             break;
         }
     }
@@ -1049,13 +1159,13 @@ Net *allocNetFromFile(char *path) {
             allocDenseLayerFromFile(net, fp);
             break;
         case (CONV):
-            // TODO
+            allocConvLayerFromFile(net, fp);
             break;
         case (POOL):
-            // TODO
+            allocPoolingLayerFromFile(net, fp);
             break;
         case (GLOBPOOL):
-            // TODO
+            allocGlobalPoolingLayerFromFile(net, fp);
             break;
         }
     }

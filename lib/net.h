@@ -21,16 +21,16 @@ void allocDenseLayer(Net *net, Activation act, ulong dim_out);
 void deallocNet(Net *net);
 void printNet(Net *net, char *name);
 Vector *predictVanilla(Net *net, Vector input, Vector *store);
-void printVanillaPredictions(Net *net, Matrix input, Matrix target);
-scalar lossVanilla(Net *net, Matrix input, Matrix target);
+void printVanillaPredictions(Net *net, CNData *input, CNData *target);
+scalar lossVanilla(Net *net, CNData *input, CNData* target);
 void backprop(Net *net);
 void saveNet(Net *net, char *path);
 Net *allocNetFromFile(char *path);
-void allocConvLayer(Net *net, Padding padding, Activation act, ulong noutput,
-                       ulong kernel_nrows, ulong kernel_ncols);
+void allocConvLayer(Net *net, Activation act, Padding padding, ulong noutput,
+                    ulong kernel_nrows, ulong kernel_ncols);
 void allocPoolingLayer(Net *net, Pooling strat, ulong kernel_nrows,
                        ulong kernel_ncols);
 void allocGlobalPoolingLayer(Net *net, Pooling strat);
-scalar lossConv(Net *net, IOData *input, IOData* target);
+scalar lossConv(Net *net, CNData *input, CNData* target);
 
 #endif // CN_NET

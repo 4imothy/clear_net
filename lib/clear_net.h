@@ -10,19 +10,22 @@
 #define MAT_AT(mat, r, c) (mat).elem[(r) * (mat).stride + (c)]
 #define VEC_AT(vec, i) (vec).elem[(i)]
 
-// FUTURE need to do sgd with batches for conv
-// FUTURE a print net results function for conv
-// FUTURE need to save and load a model for conv
+// TODO support for pooling layers being the first in a net
+// TODO organize net.c into seperate files for each layer type, dense, convolutional, pooling make sure naming schemes are consistent
+// TODO reorganize so each *.c has a *_pub.h which has the externally shared functions in a struct and gives those functions to be declared in the *.c, still has a *.h which has the internally shared functions, this will reduce the number of times a mothed must be copied but it actually won't because needs *.c *_pub.h and *.h, theres gotta be a better way to do this, put this question on reddit
+// TODO fix tests
+// TODO test for saving and loading the net
 // FUTURE better benching suite with ability to measure the amount of memory used
 // FUTURE clear security vulnrebilities
-// FUTURE make a data loading library that works well with clear_net
+// FUTURE make a nice error interface to replace assertions of 0
+// FUTURE make a data loading library that works well with clear_net, this will load images and put the class as the folder, so change the python script to respect this structure
 
 typedef float scalar;
 typedef unsigned long ulong;
 typedef struct CompGraph CompGraph;
 typedef struct Net Net;
 typedef struct HParams HParams;
-typedef struct IOData IOData;
+typedef struct CNData CNData;
 
 typedef enum {
     SIGMOID,
@@ -87,14 +90,27 @@ typedef struct {
         Vector (*formVector)(ulong nelem, scalar *elem);
         void (*printVector)(Vector *vec, char *name);
         void (*deallocVector)(Vector *vec);
-        void (*shuffleMatrixRows)(Matrix *input, Matrix *target);
+        void (*shuffleDatas)(CNData *input, CNData *target);
         void (*setBatchFromMatrix)(Matrix all_input, Matrix all_target,
                                    ulong batch_num, ulong batch_size,
                                    Matrix *batch_in, Matrix *batch_tar);
-        IOData *(*formDataFromVectors)(Vector *vectors, ulong nelem);
-        IOData *(*formDataFromMatrices)(Matrix *matrices, ulong nelem);
-        IOData *(*formDataFromMultiChannelMatrices)(Matrix **multi_matrices, ulong nelem, ulong nchannels);
-    } la;
+        CNData *(*allocDataFromVectors)(Vector *vectors, ulong nelem);
+        CNData *(*allocDataFromMatrices)(Matrix *matrices, ulong nelem);
+        CNData *(*allocDataFromMultiChannelMatrices)(Matrix **multi_matrices, ulong nelem, ulong nchannels);
+        CNData *(*allocEmptyData)(void);
+        void (*deallocData)(CNData *data);
+        Vector *(*allocVectors)(ulong count, ulong nelem);
+        Matrix *(*allocMatrices)(ulong count, ulong nrows, ulong ncols);
+        Matrix **(*allocMultiMatrices)(ulong count, ulong nchannels, ulong nrows, ulong ncols);
+        void (*deallocVectors)(Vector *list, ulong count);
+        void (*deallocMatrices)(Matrix *list, ulong count);
+        void (*deallocMultiMatrices)(Matrix **list, ulong count, ulong nchannels);
+        void (*printVectors)(Vector *list, ulong count);
+        void (*printMatrices)(Matrix *list, ulong count);
+        void (*printMultiMatrices)(Matrix **list, ulong count, ulong nchannels);
+        void (*printData)(CNData *d);
+        void (*setBatch)(CNData *all_input, CNData *all_target, ulong batch_num, ulong batch_size, CNData *batch_in, CNData *batch_tar);
+    } data;
     HParams *(*allocDefaultHParams)(void);
     void (*setRate)(HParams *hp, scalar rate);
     void (*withMomentum)(HParams *hp, scalar beta);
@@ -104,17 +120,17 @@ typedef struct {
     Net *(*allocConvNet)(HParams *hp, ulong input_nrows, ulong input_ncols,
                          ulong nchannels);
     void (*allocDenseLayer)(Net *net, Activation act, ulong dim_out);
-    void (*allocConvLayer)(Net *net, Padding padding, Activation act, ulong noutput,
-                        ulong kernel_nrows, ulong kernel_ncols);
+    void (*allocConvLayer)(Net *net, Activation act, Padding padding, ulong noutput,
+                    ulong kernel_nrows, ulong kernel_ncols);
     void (*allocPoolingLayer)(Net *net, Pooling strat, ulong kernel_nrows,
                        ulong kernel_ncols);
     void (*allocGlobalPoolingLayer)(Net *net, Pooling strat);
     void (*deallocNet)(Net *net);
     void (*printNet)(Net *net, char *name);
     Vector *(*predictVanilla)(Net *net, Vector input, Vector *store);
-    void (*printVanillaPredictions)(Net *net, Matrix input, Matrix target);
-    scalar (*lossVanilla)(Net *net, Matrix input, Matrix target);
-    scalar (*lossConv)(Net *net, IOData *input, IOData* target);
+    void (*printVanillaPredictions)(Net *net, CNData *input, CNData *target);
+    scalar (*lossVanilla)(Net *net, CNData *input, CNData* target);
+    scalar (*lossConv)(Net *net, CNData *input, CNData* target);
     void (*backprop)(Net *net);
     void (*saveNet)(Net *net, char *path);
     Net *(*allocNetFromFile)(char *path);
