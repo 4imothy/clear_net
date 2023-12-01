@@ -16,6 +16,7 @@
 // TODO create a python script to automate documentation creating, read a comment above the function declaration in the clear_net.h thing
 // TODO fix tests
 // TODO test for saving and loading the net
+// FUTURE have a train and use mode which is a bool passed to the autodiff functions only change the val and don't store backtracking or stuff on the graph but still have to return a ulong
 // FUTURE better benching suite with ability to measure the amount of memory used
 // FUTURE clear security vulnrebilities
 // FUTURE make a nice error interface to replace assertions of 0
@@ -129,7 +130,10 @@ typedef struct {
     void (*deallocNet)(Net *net);
     void (*printNet)(Net *net, char *name);
     Vector *(*predictVanilla)(Net *net, Vector input, Vector *store);
+    Vector *(*predictConvToVector)(Net *net, Matrix *input, ulong nchannels, Vector *store);
+    Matrix *(*predictConvToMatrix)(Net *net, Matrix *input, ulong nchannels, Matrix *store);
     void (*printVanillaPredictions)(Net *net, CNData *input, CNData *target);
+    void (*printConvPredictions)(Net *net, CNData *input, CNData *target);
     scalar (*lossVanilla)(Net *net, CNData *input, CNData* target);
     scalar (*lossConv)(Net *net, CNData *input, CNData* target);
     void (*backprop)(Net *net);

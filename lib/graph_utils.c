@@ -128,6 +128,15 @@ void printUVecInline(CompGraph *cg, UVec *uvec) {
     }
 }
 
+void printUVec(CompGraph *cg, UVec *vec, char *name) {
+    printf("%s = [\n", name);
+    for (ulong i = 0; i < vec->nelem; ++i) {
+        printf("    ");
+        printf("%f ", getVal(cg, VEC_AT(*vec, i)));
+    }
+    printf("]\n");
+}
+
 UMat* allocUMatList(ulong nrows, ulong ncols, ulong nelem) {
     UMat *list = CLEAR_NET_ALLOC(nelem * sizeof(UMat));
     CLEAR_NET_ASSERT(list != NULL);
@@ -144,6 +153,18 @@ void deallocUMatList(UMat **list, ulong nelem) {
         }
     }
     CLEAR_NET_DEALLOC(list);
+}
+
+void printUMat(CompGraph *cg, UMat *mat, char *name) {
+    printf("%s = [\n", name);
+    for (ulong i = 0; i < mat->nrows; ++i) {
+        printf("    ");
+        for (ulong j = 0; j < mat->ncols; ++j) {
+            printf("%f ", getVal(cg, MAT_AT(*mat, i, j)));
+        }
+        printf("\n");
+    }
+    printf("]\n");
 }
 
 void deallocUData(UData *data) {
