@@ -181,9 +181,10 @@ int main(int argc, char *argv[]) {
     Vector *train_in = data.allocVectors(train_size, input_dim);
     Vector *train_tar = data.allocVectors(train_size, output_dim);
 
-    for (ulong i = 0;  i < train_size; ++i) {
+    for (ulong i = 0; i < train_size; ++i) {
         train_in[i] = data.formVector(input_dim, &train_values[data_cols * i]);
-        train_tar[i] = data.formVector(output_dim, &train_values[(data_cols * i) + input_dim]);
+        train_tar[i] = data.formVector(
+            output_dim, &train_values[(data_cols * i) + input_dim]);
         VEC_AT(train_tar[i], 0) /= 2;
     }
 
@@ -208,8 +209,10 @@ int main(int argc, char *argv[]) {
     CLEAR_NET_ASSERT(train_size % batch_size == 0);
 
     for (i = 0; i < num_epochs; ++i) {
-        for (ulong batch_num = 0; batch_num < train_size / batch_size; ++batch_num) {
-            data.setBatch(io_train_in, io_train_tar, batch_num, batch_size, batch_in, batch_tar);
+        for (ulong batch_num = 0; batch_num < train_size / batch_size;
+             ++batch_num) {
+            data.setBatch(io_train_in, io_train_tar, batch_num, batch_size,
+                          batch_in, batch_tar);
             cn.lossVanilla(net, batch_in, batch_tar);
             cn.backprop(net);
         }
@@ -233,9 +236,11 @@ int main(int argc, char *argv[]) {
     Vector *val_in = data.allocVectors(val_size, input_dim);
     Vector *val_tar = data.allocVectors(val_size, output_dim);
 
-    for (ulong i = 0;  i < val_size; ++i) {
-        val_in[i] = data.formVector(input_dim, &validation_values[data_cols * i]);
-        val_tar[i] = data.formVector(output_dim, &validation_values[(data_cols * i) + input_dim]);
+    for (ulong i = 0; i < val_size; ++i) {
+        val_in[i] =
+            data.formVector(input_dim, &validation_values[data_cols * i]);
+        val_tar[i] = data.formVector(
+            output_dim, &validation_values[(data_cols * i) + input_dim]);
         VEC_AT(val_tar[i], 0) /= 2;
     }
 

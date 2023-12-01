@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
     else if (strequal(argv[1], "same_guassian_blur_3")) {
         const size_t dim = 20;
         scalar elem[] = {0.0625, 0.1250, 0.0625, 0.1250, 0.25,
-                        0.1250, 0.0625, 0.1250, 0.0625};
+                         0.1250, 0.0625, 0.1250, 0.0625};
         ulong elem_len = LEN(elem);
         do_test(SAME, dim, dim, 3, 3, elem, elem_len, input_elem,
                 input_elem_len);
@@ -52,9 +52,9 @@ int main(int argc, char *argv[]) {
     else if (strequal(argv[1], "same_guassian_blur_5")) {
         const size_t dim = 20;
         scalar elem[] = {0.0037, 0.0147, 0.0256, 0.0147, 0.0037, 0.0147, 0.0586,
-                        0.0952, 0.0586, 0.0147, 0.0256, 0.0952, 0.1502, 0.0952,
-                        0.0256, 0.0147, 0.0586, 0.0952, 0.0586, 0.0147, 0.0037,
-                        0.0147, 0.0256, 0.0147, 0.0037};
+                         0.0952, 0.0586, 0.0147, 0.0256, 0.0952, 0.1502, 0.0952,
+                         0.0256, 0.0147, 0.0586, 0.0952, 0.0586, 0.0147, 0.0037,
+                         0.0147, 0.0256, 0.0147, 0.0037};
         ulong elem_len = LEN(elem);
         do_test(SAME, dim, dim, 5, 5, elem, elem_len, input_elem,
                 input_elem_len);

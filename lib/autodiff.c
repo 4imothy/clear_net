@@ -99,7 +99,8 @@ scalar getGrad(CompGraph *cg, ulong x) { return NODE(x).grad; }
 
 void applyGrad(CompGraph *cg, ulong x) { NODE(x).num -= NODE(x).grad; }
 
-void applyGradWithHP(CompGraph *cg, ulong x, scalar rate, bool momentum, scalar beta) {
+void applyGradWithHP(CompGraph *cg, ulong x, scalar rate, bool momentum,
+                     scalar beta) {
     scalar change = NODE(x).grad * rate;
     if (momentum) {
         NODE(x).store = (beta * NODE(x).store) + ((1 - beta) * change);

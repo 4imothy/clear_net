@@ -1,5 +1,5 @@
-#include "clear_net.h"
 #include "data.h"
+#include "clear_net.h"
 
 CNData *allocEmptyData(void) {
     CNData *data = CLEAR_NET_ALLOC(sizeof(CNData));
@@ -16,11 +16,10 @@ void fillDataWithVectors(CNData *d, Vector *vectors, ulong nelem) {
 }
 
 CNData *allocDataFromVectors(Vector *vectors, ulong nelem) {
-    CNData* data = CLEAR_NET_ALLOC(sizeof(CNData));
+    CNData *data = CLEAR_NET_ALLOC(sizeof(CNData));
     fillDataWithVectors(data, vectors, nelem);
     return data;
 }
-
 
 void fillDataWithMatrices(CNData *d, Matrix *matrices, ulong nelem) {
     d->type = MATRICES;
@@ -30,34 +29,37 @@ void fillDataWithMatrices(CNData *d, Matrix *matrices, ulong nelem) {
 }
 
 CNData *allocDataFromMatrices(Matrix *matrices, ulong nelem) {
-    CNData* data = CLEAR_NET_ALLOC(sizeof(CNData));
-    fillDataWithMatrices(data, matrices,  nelem);
+    CNData *data = CLEAR_NET_ALLOC(sizeof(CNData));
+    fillDataWithMatrices(data, matrices, nelem);
     return data;
 }
 
-void fillDataWithMultiMatrices(CNData *d, Matrix **multi_matrices, ulong nelem, ulong nchannels) {
+void fillDataWithMultiMatrices(CNData *d, Matrix **multi_matrices, ulong nelem,
+                               ulong nchannels) {
     d->type = MULTIMATRICES;
     d->nelem = nelem;
     d->nchannels = nchannels;
     d->in.multi_matrices = multi_matrices;
 }
 
-CNData *allocDataFromMultiChannelMatrices(Matrix **multi_matrices, ulong nelem, ulong nchannels) {
-    CNData* data = CLEAR_NET_ALLOC(sizeof(CNData));
+CNData *allocDataFromMultiChannelMatrices(Matrix **multi_matrices, ulong nelem,
+                                          ulong nchannels) {
+    CNData *data = CLEAR_NET_ALLOC(sizeof(CNData));
     fillDataWithMultiMatrices(data, multi_matrices, nelem, nchannels);
     return data;
 }
 
 void deallocData(CNData *data) {
-    switch(data->type) {
-    case(VECTORS):
+    switch (data->type) {
+    case (VECTORS):
         deallocVectors(data->in.vectors, data->nelem);
         return;
-    case(MATRICES):
+    case (MATRICES):
         deallocMatrices(data->in.matrices, data->nelem);
         return;
-    case(MULTIMATRICES):
-        deallocMultiMatrices(data->in.multi_matrices, data->nelem, data->nchannels);
+    case (MULTIMATRICES):
+        deallocMultiMatrices(data->in.multi_matrices, data->nelem,
+                             data->nchannels);
         return;
     }
     data->nelem = 0;
@@ -66,14 +68,14 @@ void deallocData(CNData *data) {
 }
 
 void printData(CNData *d) {
-    switch(d->type) {
-    case(VECTORS):
+    switch (d->type) {
+    case (VECTORS):
         printVectors(d->in.vectors, d->nelem);
         return;
-    case(MATRICES):
+    case (MATRICES):
         printMatrices(d->in.matrices, d->nelem);
         return;
-    case(MULTIMATRICES):
+    case (MULTIMATRICES):
         printMultiMatrices(d->in.multi_matrices, d->nelem, d->nchannels);
         return;
     }
@@ -92,7 +94,7 @@ Matrix allocMatrix(ulong nrows, ulong ncols) {
 
 Matrix *allocMatrices(ulong count, ulong nrows, ulong ncols) {
     Matrix *list = CLEAR_NET_ALLOC(count * sizeof(Matrix));
-    for (ulong i =0; i < count; ++i) {
+    for (ulong i = 0; i < count; ++i) {
         list[i] = allocMatrix(nrows, ncols);
     }
 
@@ -107,7 +109,7 @@ void deallocMatrices(Matrix *list, ulong count) {
 }
 
 void printMatrices(Matrix *list, ulong count) {
-    for (ulong i = 0;  i < count; ++i) {
+    for (ulong i = 0; i < count; ++i) {
         printf("%zu", i);
         printMatrix(&list[i], "");
     }
@@ -119,8 +121,9 @@ void swapMatrices(Matrix *list, ulong one, ulong two) {
     list[two] = t;
 }
 
-Matrix **allocMultiMatrices(ulong count, ulong nchannels, ulong nrows, ulong ncols) {
-    Matrix **list = CLEAR_NET_ALLOC(count * sizeof(Matrix*));
+Matrix **allocMultiMatrices(ulong count, ulong nchannels, ulong nrows,
+                            ulong ncols) {
+    Matrix **list = CLEAR_NET_ALLOC(count * sizeof(Matrix *));
 
     for (ulong i = 0; i < count; ++i) {
         list[i] = allocMatrices(nchannels, nrows, ncols);
@@ -137,7 +140,7 @@ void deallocMultiMatrices(Matrix **list, ulong count, ulong nchannels) {
 }
 
 void printMultiMatrices(Matrix **list, ulong count, ulong nchannels) {
-    for (ulong i = 0;  i < count; ++i) {
+    for (ulong i = 0; i < count; ++i) {
         printMatrices(list[i], nchannels);
     }
 }
@@ -166,7 +169,7 @@ void deallocVectors(Vector *list, ulong count) {
 }
 
 void printVectors(Vector *list, ulong count) {
-    for (ulong i = 0;  i < count; ++i) {
+    for (ulong i = 0; i < count; ++i) {
         printf("%zu", i);
         printVector(&list[i], "");
     }
@@ -199,14 +202,14 @@ void printMatrix(Matrix *mat, char *name) {
 }
 
 void swapInData(CNData *d, ulong one, ulong two) {
-    switch(d->type) {
-    case(VECTORS):
+    switch (d->type) {
+    case (VECTORS):
         swapVectors(d->in.vectors, one, two);
         break;
-    case(MATRICES):
+    case (MATRICES):
         swapMatrices(d->in.matrices, one, two);
         break;
-    case(MULTIMATRICES):
+    case (MULTIMATRICES):
         swapMultiMatrices(d->in.multi_matrices, one, two);
         break;
     }
@@ -261,20 +264,25 @@ void setBatchFromMatrix(Matrix all_input, Matrix all_target, ulong batch_num,
 }
 
 void batchData(CNData *all, CNData *batch, ulong batch_num, ulong batch_size) {
-    switch(all->type) {
-    case(VECTORS):
-        fillDataWithVectors(batch, &all->in.vectors[batch_num * batch_size], batch_size);
+    switch (all->type) {
+    case (VECTORS):
+        fillDataWithVectors(batch, &all->in.vectors[batch_num * batch_size],
+                            batch_size);
         return;
-    case(MATRICES):
-        fillDataWithMatrices(batch, &all->in.matrices[batch_num * batch_size], batch_size);
+    case (MATRICES):
+        fillDataWithMatrices(batch, &all->in.matrices[batch_num * batch_size],
+                             batch_size);
         return;
-    case(MULTIMATRICES):
-        fillDataWithMultiMatrices(batch, &all->in.multi_matrices[batch_num * batch_size], batch_size, all->nchannels);
+    case (MULTIMATRICES):
+        fillDataWithMultiMatrices(
+            batch, &all->in.multi_matrices[batch_num * batch_size], batch_size,
+            all->nchannels);
         return;
     }
 }
 
-void setBatch(CNData *all_input, CNData *all_target, ulong batch_num, ulong batch_size, CNData *batch_in, CNData *batch_tar) {
+void setBatch(CNData *all_input, CNData *all_target, ulong batch_num,
+              ulong batch_size, CNData *batch_in, CNData *batch_tar) {
     batchData(all_input, batch_in, batch_num, batch_size);
     batchData(all_target, batch_tar, batch_num, batch_size);
 }

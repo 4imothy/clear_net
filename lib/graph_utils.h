@@ -51,12 +51,14 @@ Mat createMat(CompGraph *cg, ulong nrows, ulong ncols, ulong *offset);
 void zeroMat(Mat *mat);
 void printMat(CompGraph *cg, Mat *mat, char *name);
 void randomizeMat(CompGraph *cg, Mat *mat, scalar lower, scalar upper);
-void applyMatGrads(CompGraph *cg, Mat *mat, scalar rate, bool momentum, scalar beta);
+void applyMatGrads(CompGraph *cg, Mat *mat, scalar rate, bool momentum,
+                   scalar beta);
 Vec createVec(CompGraph *cg, ulong nelem, ulong *offset);
 void zeroVec(Vec *vec);
 void printVec(CompGraph *cg, Vec *vec, char *name);
 void randomizeVec(CompGraph *cg, Vec *vec, scalar lower, scalar upper);
-void applyVecGrads(CompGraph *cg, Vec *vec, scalar rate, bool momentum, scalar beta);
+void applyVecGrads(CompGraph *cg, Vec *vec, scalar rate, bool momentum,
+                   scalar beta);
 UMat allocUMat(ulong nrows, ulong ncols);
 void deallocUMat(UMat *umat);
 void printUMat(CompGraph *cg, UMat *mat, char *name);
@@ -64,7 +66,7 @@ UVec allocUVec(ulong nelem);
 void deallocUVec(UVec *uvec);
 void printUVecInline(CompGraph *cg, UVec *uvec);
 void printUVec(CompGraph *cg, UVec *vec, char *name);
-UMat* allocUMatList(ulong nrows, ulong ncols, ulong nchannels);
+UMat *allocUMatList(ulong nrows, ulong ncols, ulong nchannels);
 void deallocUMatList(UMat **list, ulong nelem);
 void deallocUData(UData *data);
 

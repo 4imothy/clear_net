@@ -313,9 +313,11 @@ UMat *forwardConv(CompGraph *cg, ConvolutionalLayer *layer, UMat *input,
 void applyConvGrads(CompGraph *cg, ConvolutionalLayer *layer, HParams *hp) {
     for (ulong i = 0; i < layer->nfilters; ++i) {
         for (ulong j = 0; j < layer->nimput; ++j) {
-            applyMatGrads(cg, &layer->filters[i].kernels[j], hp->rate, hp->momentum, hp->beta);
+            applyMatGrads(cg, &layer->filters[i].kernels[j], hp->rate,
+                          hp->momentum, hp->beta);
         }
-        applyMatGrads(cg, &layer->filters[i].biases, hp->rate, hp->momentum, hp->beta);
+        applyMatGrads(cg, &layer->filters[i].biases, hp->rate, hp->momentum,
+                      hp->beta);
     }
 }
 
@@ -335,7 +337,6 @@ void allocPoolingLayer(Net *net, Pooling strat, ulong kernel_nrows,
     for (ulong i = 0; i < pooler.noutput; ++i) {
         pooler.outputs[i] = allocUMat(pooler.output_nrows, pooler.output_ncols);
     }
-
 
     Layer l;
     l.type = POOL;
@@ -359,11 +360,11 @@ void deallocPoolingLayer(PoolingLayer *layer) {
 
 void printPoolingLayer(PoolingLayer *layer, ulong id) {
     printf("Layer #%zu ", id);
-    switch(layer->strat) {
-    case(MAX):
+    switch (layer->strat) {
+    case (MAX):
         printf("Max ");
         break;
-    case(AVERAGE):
+    case (AVERAGE):
         printf("Average ");
         break;
     }
@@ -426,8 +427,7 @@ void allocGlobalPoolingLayer(Net *net, Pooling strat) {
     } else {
         gpooler = (GlobalPoolingLayer){
             .strat = strat,
-            .output =
-                allocUVec(net->layers[net->nlayers - 1].in.pool.noutput),
+            .output = allocUVec(net->layers[net->nlayers - 1].in.pool.noutput),
         };
     }
     Layer l;
@@ -539,8 +539,7 @@ Net *allocConvNet(HParams *hp, ulong input_nrows, ulong input_ncols,
         input.in.mat = allocUMat(input_nrows, input_ncols);
     } else {
         input.type = UMATLIST;
-        input.in.mats =
-            allocUMatList(input_nrows, input_ncols, nchannels);
+        input.in.mats = allocUMatList(input_nrows, input_ncols, nchannels);
     }
 
     Net *net = allocNet(hp);
@@ -607,8 +606,8 @@ void randomizeNet(Net *net, scalar lower, scalar upper) {
 
 UVec _predictVanilla(Net *net, UVec prev) {
     for (ulong i = 0; i < net->nlayers; ++i) {
-        prev =
-            forwardDense(net->cg, &net->layers[i].in.dense, prev, net->hp.leaker);
+        prev = forwardDense(net->cg, &net->layers[i].in.dense, prev,
+                            net->hp.leaker);
     }
     return prev;
 }
@@ -620,16 +619,16 @@ UData _predictConv(Net *net, UMat *prevs) {
     for (ulong i = 0; i < net->nlayers; ++i) {
         Layer layer = net->layers[i];
         switch (layer.type) {
-        case(DENSE):
+        case (DENSE):
             uvec = forwardDense(cg, &layer.in.dense, uvec, leaker);
             break;
-        case(CONV):
+        case (CONV):
             prevs = forwardConv(cg, &layer.in.conv, prevs, leaker);
             break;
-        case(POOL):
+        case (POOL):
             prevs = forwardPool(cg, &layer.in.pool, prevs);
             break;
-        case(GLOBPOOL):
+        case (GLOBPOOL):
             uvec = forwardGlobPool(cg, &layer.in.glob_pool, prevs);
         }
     }
@@ -637,14 +636,14 @@ UData _predictConv(Net *net, UMat *prevs) {
     UData data;
     data.type = net->output_type;
     data.nchannels = net->layers[net->nlayers - 1].in.conv.nfilters;
-    switch(data.type) {
-    case(UVEC):
+    switch (data.type) {
+    case (UVEC):
         data.in.vec = uvec;
         break;
-    case(UMAT):
+    case (UMAT):
         data.in.mat = *prevs;
         break;
-    case(UMATLIST):
+    case (UMATLIST):
         data.in.mats = prevs;
         break;
     }
@@ -671,7 +670,7 @@ void transferConvInput(Net *net, Matrix *in, ulong nchannels) {
     }
 }
 
-scalar lossVanilla(Net *net, CNData *input, CNData* target) {
+scalar lossVanilla(Net *net, CNData *input, CNData *target) {
     CLEAR_NET_ASSERT(input->nelem == target->nelem);
     CLEAR_NET_ASSERT(input->type == VECTORS && target->type == VECTORS);
     CLEAR_NET_ASSERT(net->input.in.vec.nelem == input->in.vectors->nelem);
@@ -715,7 +714,7 @@ scalar lossVanilla(Net *net, CNData *input, CNData* target) {
     return total_loss / train_size;
 }
 
-scalar lossConv(Net *net, CNData *input, CNData* target) {
+scalar lossConv(Net *net, CNData *input, CNData *target) {
     CLEAR_NET_ASSERT(input->nelem == target->nelem);
     CLEAR_NET_ASSERT(input->type == MATRICES || input->type == MULTIMATRICES);
     if (net->input.type == UMATLIST) {
@@ -738,7 +737,7 @@ scalar lossConv(Net *net, CNData *input, CNData* target) {
         for (ulong i = 0; i < net->layers[0].in.conv.nimput; ++i) {
             for (ulong j = 0; j < net->input.in.mats->nrows; ++j) {
                 for (ulong k = 0; k < net->input.in.mats->ncols; ++k) {
-                    MAT_AT(net->input.in.mats[i], j ,k) = offset++;
+                    MAT_AT(net->input.in.mats[i], j, k) = offset++;
                 }
             }
         }
@@ -755,7 +754,8 @@ scalar lossConv(Net *net, CNData *input, CNData* target) {
             for (ulong j = 0; j < net->layers[0].in.conv.nimput; ++j) {
                 for (ulong k = 0; k < net->input.in.mats->nrows; ++k) {
                     for (ulong l = 0; l < net->input.in.mats->ncols; ++l) {
-                        initLeafScalar(cg, MAT_AT(input->in.multi_matrices[i][j], k, l));
+                        initLeafScalar(
+                            cg, MAT_AT(input->in.multi_matrices[i][j], k, l));
                     }
                 }
             }
@@ -786,9 +786,10 @@ scalar lossConv(Net *net, CNData *input, CNData* target) {
 
             for (ulong j = 0; j < target_vec.nelem; ++j) {
                 loss = add(
-                           cg, loss,
-                           raise(cg, sub(cg, VEC_AT(out.in.vec, j), VEC_ID(target_vec, j)),
-                                 raiser));
+                    cg, loss,
+                    raise(cg,
+                          sub(cg, VEC_AT(out.in.vec, j), VEC_ID(target_vec, j)),
+                          raiser));
             }
             break;
         }
@@ -804,15 +805,16 @@ scalar lossConv(Net *net, CNData *input, CNData* target) {
             }
             for (ulong j = 0; j < target_mat.nrows; ++j) {
                 for (ulong k = 0; k < target_mat.ncols; ++k) {
-                    loss = add(
-                               cg, loss,
-                               raise(cg, sub(cg, MAT_AT(out.in.mat, j, k), MAT_ID(target_mat, j, k)),
+                    loss = add(cg, loss,
+                               raise(cg,
+                                     sub(cg, MAT_AT(out.in.mat, j, k),
+                                         MAT_ID(target_mat, j, k)),
                                      raiser));
                 }
             }
             break;
         }
-        case(UMATLIST): {
+        case (UMATLIST): {
             CLEAR_NET_ASSERT(0 && "not supported");
         }
         }
@@ -854,8 +856,8 @@ Vector *predictVanilla(Net *net, Vector input, Vector *store) {
     return store;
 }
 
-
-Vector *predictConvToVector(Net *net, Matrix *input, ulong nchannels, Vector *store) {
+Vector *predictConvToVector(Net *net, Matrix *input, ulong nchannels,
+                            Vector *store) {
     CLEAR_NET_ASSERT(net->input.type == UMATLIST || net->input.type == UMAT);
     CLEAR_NET_ASSERT(net->output_type == UVEC);
     ulong in_nrows;
@@ -889,7 +891,8 @@ Vector *predictConvToVector(Net *net, Matrix *input, ulong nchannels, Vector *st
     return store;
 }
 
-Matrix *predictConvToMatrix(Net *net, Matrix *input, ulong nchannels, Matrix *store) {
+Matrix *predictConvToMatrix(Net *net, Matrix *input, ulong nchannels,
+                            Matrix *store) {
     CLEAR_NET_ASSERT(net->input.type == UMATLIST || net->input.type == UMAT);
     CLEAR_NET_ASSERT(net->output_type == UMAT);
     ulong in_nrows;
@@ -962,12 +965,14 @@ void printConvPredictions(Net *net, CNData *input, CNData *target) {
     CLEAR_NET_ASSERT(input->nelem = target->nelem);
     // TODO this could be sent to its own function for setting up input indices
     for (ulong i = 0; i < net->input.nchannels; ++i) {
-        for (ulong j = 0 ; j < input->in.matrices->nrows; ++j) {
-            for (ulong k = 0 ; k < input->in.matrices->ncols; ++k) {
+        for (ulong j = 0; j < input->in.matrices->nrows; ++j) {
+            for (ulong k = 0; k < input->in.matrices->ncols; ++k) {
                 if (net->input.type == UMATLIST) {
-                    MAT_AT(net->input.in.mats[i], j, k) = getSize(net->cg) + i * ((j * k) + k);
+                    MAT_AT(net->input.in.mats[i], j, k) =
+                        getSize(net->cg) + i * ((j * k) + k);
                 } else {
-                    MAT_AT(net->input.in.mat, j, k) = getSize(net->cg) + (j * k) + k;
+                    MAT_AT(net->input.in.mat, j, k) =
+                        getSize(net->cg) + (j * k) + k;
                 }
             }
         }
@@ -988,8 +993,8 @@ void printConvPredictions(Net *net, CNData *input, CNData *target) {
         }
 
         for (ulong i = 0; i < input->nchannels; ++i) {
-            for (ulong j = 0;  j < in->nrows; ++j) {
-                for (ulong k = 0;  k < in->ncols; ++k) {
+            for (ulong j = 0; j < in->nrows; ++j) {
+                for (ulong k = 0; k < in->ncols; ++k) {
                     initLeafScalar(cg, MAT_AT(in[i], j, k));
                 }
             }
@@ -1010,12 +1015,15 @@ void printConvPredictions(Net *net, CNData *input, CNData *target) {
         if (pred.type == UMAT) {
             for (ulong j = 0; j < pred.in.mat.nrows; ++j) {
                 for (ulong k = 0; k < pred.in.mat.nrows; ++k) {
-                    loss += pows(getVal(cg, MAT_AT(pred.in.mat, j,k)) - MAT_AT(*m_tar, j, k), 2);
+                    loss += pows(getVal(cg, MAT_AT(pred.in.mat, j, k)) -
+                                     MAT_AT(*m_tar, j, k),
+                                 2);
                 }
             }
         } else {
             for (ulong j = 0; j < pred.in.vec.nelem; ++j) {
-                loss += pows(getVal(cg, VEC_AT(pred.in.vec, j)) - VEC_AT(*v_tar, j), 2);
+                loss += pows(
+                    getVal(cg, VEC_AT(pred.in.vec, j)) - VEC_AT(*v_tar, j), 2);
             }
         }
 

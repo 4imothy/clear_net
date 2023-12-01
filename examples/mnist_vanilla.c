@@ -14,7 +14,8 @@ const ulong num_train_files = 60000;
 const ulong num_test_files = 10000;
 const ulong dim_output = 10;
 
-int get_data_from_dir(Vector *train, Vector *targets, char *path, ulong num_files) {
+int get_data_from_dir(Vector *train, Vector *targets, char *path,
+                      ulong num_files) {
     DIR *directory = opendir(path);
     if (directory == NULL) {
         printf("Error: Failed to open %s.\n", path);
@@ -94,7 +95,8 @@ int main(void) {
     }
 
     CNData *test_ins = data.allocDataFromVectors(vtest_in, num_train_files);
-    CNData *test_tars = data.allocDataFromVectors(vtest_targets, num_train_files);
+    CNData *test_tars =
+        data.allocDataFromVectors(vtest_targets, num_train_files);
 
     HParams *hp = cn.allocDefaultHParams();
     cn.setRate(hp, 0.005);
@@ -109,8 +111,7 @@ int main(void) {
     scalar error_break = 0.10;
     ulong batch_size = 100;
     CLEAR_NET_ASSERT(num_train_files % batch_size == 0);
-    printf("Initial Cost: %f\n",
-           cn.lossVanilla(net, inputs, targets));
+    printf("Initial Cost: %f\n", cn.lossVanilla(net, inputs, targets));
     printf("Beginning Training\n");
     // for SGD
     CNData *batch_ins = data.allocEmptyData();
@@ -118,7 +119,8 @@ int main(void) {
     for (ulong i = 0; i < num_epochs; ++i) {
         for (ulong batch_num = 0; batch_num < (num_train_files / batch_size);
              ++batch_num) {
-            data.setBatch(inputs, targets, batch_num, batch_size, batch_ins, batch_tars);
+            data.setBatch(inputs, targets, batch_num, batch_size, batch_ins,
+                          batch_tars);
             cn.lossVanilla(net, batch_ins, batch_tars);
             cn.backprop(net);
         }

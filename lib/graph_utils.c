@@ -43,7 +43,8 @@ void randomizeMat(CompGraph *cg, Mat *mat, scalar lower, scalar upper) {
     }
 }
 
-void applyMatGrads(CompGraph *cg, Mat *mat, scalar rate, bool momentum, scalar beta) {
+void applyMatGrads(CompGraph *cg, Mat *mat, scalar rate, bool momentum,
+                   scalar beta) {
     for (ulong i = 0; i < mat->nrows; ++i) {
         for (ulong j = 0; j < mat->ncols; ++j) {
             // printf("before: %f\n", getVal(cg, MAT_ID(*mat, i, j)));
@@ -85,7 +86,8 @@ void randomizeVec(CompGraph *cg, Vec *vec, scalar lower, scalar upper) {
     }
 }
 
-void applyVecGrads(CompGraph *cg, Vec *vec, scalar rate, bool momentum, scalar beta) {
+void applyVecGrads(CompGraph *cg, Vec *vec, scalar rate, bool momentum,
+                   scalar beta) {
     for (ulong i = 0; i < vec->nelem; ++i) {
         applyGradWithHP(cg, VEC_ID(*vec, i), rate, momentum, beta);
     }
@@ -137,7 +139,7 @@ void printUVec(CompGraph *cg, UVec *vec, char *name) {
     printf("]\n");
 }
 
-UMat* allocUMatList(ulong nrows, ulong ncols, ulong nelem) {
+UMat *allocUMatList(ulong nrows, ulong ncols, ulong nelem) {
     UMat *list = CLEAR_NET_ALLOC(nelem * sizeof(UMat));
     CLEAR_NET_ASSERT(list != NULL);
     for (ulong i = 0; i < nelem; ++i) {

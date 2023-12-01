@@ -100,13 +100,12 @@ void allocConvLayerFromFile(Net *net, FILE *fp) {
 
     allocConvLayer(net, act, padding, nfilters, k_nrows, k_ncols);
     ConvolutionalLayer *layer = &net->layers[net->nlayers - 1].in.conv;
-    for (ulong i= 0 ; i < layer->nfilters; ++i) {
+    for (ulong i = 0; i < layer->nfilters; ++i) {
         for (ulong j = 0; j < layer->nimput; ++j) {
             loadMatFromFile(net->cg, &layer->filters[i].kernels[j], fp);
         }
         loadMatFromFile(net->cg, &layer->filters[i].biases, fp);
     }
-
 }
 
 void savePoolingLayer(PoolingLayer *pool, FILE *fp) {

@@ -71,7 +71,8 @@ int get_data_from_dir(Matrix *train, Vector *targets, char *path,
 int main(void) {
     srand(0);
     char *train_path = "./datasets/mnist/train";
-    Matrix *train_ins = data.allocMatrices(num_train_files, img_height, img_width);
+    Matrix *train_ins =
+        data.allocMatrices(num_train_files, img_height, img_width);
     Vector *train_tars = data.allocVectors(num_train_files, dim_output);
     int res =
         get_data_from_dir(train_ins, train_tars, train_path, num_train_files);
@@ -83,7 +84,8 @@ int main(void) {
     CNData *target = data.allocDataFromVectors(train_tars, num_train_files);
 
     char *test_path = "./datasets/mnist/test";
-    Matrix *test_ins = data.allocMatrices(num_test_files, img_height, img_width);
+    Matrix *test_ins =
+        data.allocMatrices(num_test_files, img_height, img_width);
     Vector *test_tars = data.allocVectors(num_test_files, dim_output);
     res = get_data_from_dir(test_ins, test_tars, test_path, num_test_files);
     if (res != 0) {
@@ -94,11 +96,10 @@ int main(void) {
 
     data.shuffleDatas(input, target);
 
-
-    HParams *hp= cn.allocDefaultHParams();
+    HParams *hp = cn.allocDefaultHParams();
     cn.setRate(hp, 0.01);
     Net *net = cn.allocConvNet(hp, img_height, img_width, nchannels);
-    cn.allocConvLayer(net, SIGMOID,VALID, 3, 9, 9);
+    cn.allocConvLayer(net, SIGMOID, VALID, 3, 9, 9);
     cn.allocConvLayer(net, SIGMOID, VALID, 5, 5, 5);
     cn.allocPoolingLayer(net, AVERAGE, 4, 4);
     cn.allocConvLayer(net, SIGMOID, VALID, 10, 3, 3);
@@ -110,9 +111,7 @@ int main(void) {
     size_t batch_size = 32;
     CLEAR_NET_ASSERT(num_train_files % batch_size == 0);
 
-
-    printf("Initial Cost: %f\n",
-           cn.lossConv(net, input, target));
+    printf("Initial Cost: %f\n", cn.lossConv(net, input, target));
     printf("Beginning Training\n");
     CNData *batch_in = data.allocEmptyData();
     CNData *batch_tar = data.allocEmptyData();
@@ -121,8 +120,8 @@ int main(void) {
     float loss;
     for (size_t i = 0; i < nepochs; ++i) {
         for (size_t batch_num = 0; batch_num < nbatches; ++batch_num) {
-            data.setBatch(input, target, batch_num, batch_size,
-                              batch_in, batch_tar);
+            data.setBatch(input, target, batch_num, batch_size, batch_in,
+                          batch_tar);
             printf("Loss at batch: %zu is %f\n", batch_num,
                    cn.lossConv(net, batch_in, batch_tar));
             cn.backprop(net);

@@ -19,7 +19,7 @@ scalar input_elem[] = {
 const ulong input_elem_len = LEN(input_elem);
 
 scalar matrix_elem[] = {2, 6, 7, 8, 4, 0, 6, 4, 2, 0, 9, 7, 5, 9, 8, 8,
-                       4, 6, 0, 2, 4, 7, 6, 1, 7, 5, 2, 9, 6, 7, 8};
+                        4, 6, 0, 2, 4, 7, 6, 1, 7, 5, 2, 9, 6, 7, 8};
 const size_t matrix_elem_len = LEN(matrix_elem);
 
 int strequal(char *a, char *b) { return !(strcmp(a, b)); }

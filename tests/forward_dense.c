@@ -46,11 +46,13 @@ int main(int argc, char *argv[]) {
     }
 
     else if (strequal(argv[1], "10_10")) {
-        do_test(10, 10, matrix_elem, matrix_elem_len, input_elem, input_elem_len);
+        do_test(10, 10, matrix_elem, matrix_elem_len, input_elem,
+                input_elem_len);
     }
 
     else if (strequal(argv[1], "1000_1000")) {
-        do_test(1000, 1000, matrix_elem, matrix_elem_len, input_elem, input_elem_len);
+        do_test(1000, 1000, matrix_elem, matrix_elem_len, input_elem,
+                input_elem_len);
     }
 
     else if (strequal(argv[1], "1_5")) {
@@ -62,13 +64,14 @@ int main(int argc, char *argv[]) {
     }
 
     else if (strequal(argv[1], "15_40")) {
-        do_test(15, 40, matrix_elem, matrix_elem_len, input_elem, input_elem_len);
+        do_test(15, 40, matrix_elem, matrix_elem_len, input_elem,
+                input_elem_len);
     }
 
     else if (strequal(argv[1], "40_15")) {
-        do_test(40, 15, matrix_elem, matrix_elem_len, input_elem, input_elem_len);
+        do_test(40, 15, matrix_elem, matrix_elem_len, input_elem,
+                input_elem_len);
     }
-
 
     return 0;
 }

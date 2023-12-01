@@ -8,8 +8,10 @@ scalar rand_range(scalar lower, scalar upper) {
     return ((scalar)rand()) / RAND_MAX * (upper - lower) + lower;
 }
 
-scalar do_func(scalar a,scalar b,scalar c,scalar d,scalar e,scalar f,scalar g,scalar h) {
-    return 2 + (4 * a) -(3 * b) + (5 * c) + (6 * d) - (2 * e) + (7 * f) - (8 * g) + (9 * h);
+scalar do_func(scalar a, scalar b, scalar c, scalar d, scalar e, scalar f,
+               scalar g, scalar h) {
+    return 2 + (4 * a) - (3 * b) + (5 * c) + (6 * d) - (2 * e) + (7 * f) -
+           (8 * g) + (9 * h);
 }
 
 int main(void) {
@@ -25,7 +27,8 @@ int main(void) {
     Vector *val_inputs = data.allocVectors(num_train, dim_input);
     Vector *targets = data.allocVectors(num_train, dim_output);
     Vector *val_targets = data.allocVectors(num_train, dim_output);
-    scalar max = do_func(upper, upper, upper, upper, upper, upper, upper, upper);
+    scalar max =
+        do_func(upper, upper, upper, upper, upper, upper, upper, upper);
 
     scalar a;
     scalar b;

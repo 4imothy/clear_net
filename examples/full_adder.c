@@ -29,9 +29,10 @@ int main(void) {
     Vector *inputs = data.allocVectors(num_combinations, num_inputs);
     Vector *targets = data.allocVectors(num_combinations, num_outputs);
 
-    for (ulong i = 0;  i < num_combinations; ++i) {
+    for (ulong i = 0; i < num_combinations; ++i) {
         inputs[i] = data.formVector(inputs->nelem, &all[i * stride]);
-        targets[i] = data.formVector(targets->nelem, &all[(i * stride) + num_inputs]);
+        targets[i] =
+            data.formVector(targets->nelem, &all[(i * stride) + num_inputs]);
     }
 
     CNData *io_inputs = data.allocDataFromVectors(inputs, num_combinations);

@@ -69,10 +69,11 @@ int get_data_from_dir(Matrix *train, Vector *targets, char *path,
 int main(void) {
     srand(0);
     char *train_path = "./datasets/mnist/train";
-    Matrix *train_ins = data.allocMatrices(num_train_files, img_height, img_width);
+    Matrix *train_ins =
+        data.allocMatrices(num_train_files, img_height, img_width);
     Vector *train_targets = data.allocVectors(num_train_files, dim_output);
-    int res =
-        get_data_from_dir(train_ins, train_targets, train_path, num_train_files);
+    int res = get_data_from_dir(train_ins, train_targets, train_path,
+                                num_train_files);
     if (res) {
         return 1;
     }
@@ -90,10 +91,8 @@ int main(void) {
     cn.allocGlobalPoolingLayer(net, MAX);
     cn.randomizeNet(net, -1, 1);
 
-    printf("Initial Cost: %f\n",
-           cn.lossConv(net, input, target));
+    printf("Initial Cost: %f\n", cn.lossConv(net, input, target));
     printf("Beginning Training\n");
-
 
     ulong nepochs = 2000;
     float loss;

@@ -1,10 +1,9 @@
 #ifndef CN_NET
 #define CN_NET
-#include "clear_net.h"
 #include "autodiff.h"
 #include "clear_net.h"
-#include "graph_utils.h"
 #include "data.h"
+#include "graph_utils.h"
 
 HParams *allocDefaultHParams(void);
 void setRate(HParams *hp, scalar rate);
@@ -18,11 +17,13 @@ void allocDenseLayer(Net *net, Activation act, ulong dim_out);
 void deallocNet(Net *net);
 void printNet(Net *net, char *name);
 Vector *predictVanilla(Net *net, Vector input, Vector *store);
-Vector *predictConvToVector(Net *net, Matrix *input, ulong nchannels, Vector *store);
-Matrix *predictConvToMatrix(Net *net, Matrix *input, ulong nchannels, Matrix *store);
+Vector *predictConvToVector(Net *net, Matrix *input, ulong nchannels,
+                            Vector *store);
+Matrix *predictConvToMatrix(Net *net, Matrix *input, ulong nchannels,
+                            Matrix *store);
 void printVanillaPredictions(Net *net, CNData *input, CNData *target);
 void printConvPredictions(Net *net, CNData *input, CNData *target);
-scalar lossVanilla(Net *net, CNData *input, CNData* target);
+scalar lossVanilla(Net *net, CNData *input, CNData *target);
 void backprop(Net *net);
 void saveNet(Net *net, char *path);
 Net *allocNetFromFile(char *path);
@@ -31,6 +32,6 @@ void allocConvLayer(Net *net, Activation act, Padding padding, ulong noutput,
 void allocPoolingLayer(Net *net, Pooling strat, ulong kernel_nrows,
                        ulong kernel_ncols);
 void allocGlobalPoolingLayer(Net *net, Pooling strat);
-scalar lossConv(Net *net, CNData *input, CNData* target);
+scalar lossConv(Net *net, CNData *input, CNData *target);
 
 #endif // CN_NET

@@ -4,9 +4,10 @@
 #define IS_DOUBLE sizeof(scalar) == sizeof(double)
 #define IS_LONG_DOUBLE sizeof(scalar) == sizeof(long double)
 
-// TODO this causes issues with printing with %f so create a new to_char function for easier printing
+// TODO this causes issues with printing with %f so create a new to_char
+// function for easier printing
 
-char* type_not_supported_message = "Type of Scalar Not Supported";
+char *type_not_supported_message = "Type of Scalar Not Supported";
 
 scalar pows(scalar to_raise, scalar raiser) {
     if (IS_FLOAT) {
