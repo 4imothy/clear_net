@@ -11,6 +11,12 @@ my_impl = "./" + script_name
 torch_res = []
 
 
+def create_tensor(val):
+    t = torch.Tensor([val])
+    t.requires_grad = True
+    return t
+
+
 def get_res(code):
     """Get the result from running my implementation."""
     output_bytes = subprocess.check_output(my_impl + f" {code}",
@@ -93,10 +99,8 @@ def do_test_one():
     global torch_res
     torch_res = []
 
-    a = torch.Tensor([-2.0])
-    a.requires_grad = True
-    b = torch.Tensor([3.0])
-    b.requires_grad = True
+    a = create_tensor(-2)
+    b = create_tensor(3)
     c = a * b
     d = a + b
     e = c * d
@@ -125,10 +129,8 @@ def do_test_two():
     global torch_res
     torch_res = []
 
-    a = torch.Tensor([-4.0])
-    a.requires_grad = True
-    b = torch.Tensor([2.0])
-    b.requires_grad = True
+    a = create_tensor(-4)
+    b = create_tensor(2)
     c = a + b
     c.retain_grad()
     d = (a * b) + b
@@ -156,10 +158,8 @@ def do_test_pow():
     """Test raising things to a power."""
     global torch_res
     torch_res = []
-    a = torch.Tensor([5.0])
-    a.requires_grad = True
-    b = torch.Tensor([10.0])
-    b.requires_grad = True
+    a = create_tensor(5)
+    b = create_tensor(10)
     c = a**b
     c = c**2
     c.retain_grad()
@@ -174,10 +174,8 @@ def do_test_on_itself():
     """Test adding variables to themselves."""
     global torch_res
     torch_res = []
-    a = torch.Tensor([3.0])
-    a.requires_grad = True
-    b = torch.Tensor([7.0])
-    b.requires_grad = True
+    a = create_tensor(3)
+    b = create_tensor(7)
     c = a + b
     c.retain_grad()
     c += 2
@@ -201,18 +199,13 @@ def do_test_tanh():
     global torch_res
     torch_res = []
 
-    x1 = torch.Tensor([2.0])
-    x1.requires_grad = True
-    x2 = torch.Tensor([-.0])
-    x2.requires_grad = True
+    x1 = create_tensor(2)
+    x2 = create_tensor(0)
 
-    w1 = torch.Tensor([-3.0])
-    w1.requires_grad = True
-    w2 = torch.Tensor([1.0])
-    w2.requires_grad = True
+    w1 = create_tensor(-3)
+    w2 = create_tensor(1)
 
-    b = torch.Tensor([7.0])
-    b.requires_grad = True
+    b = create_tensor(7)
 
     n = x1*w1 + x2*w2 + b
 
@@ -230,9 +223,9 @@ def do_test_relu():
     global torch_res
     torch_res = []
 
-    a = torch.Tensor([10.0])
+    a = create_tensor(10.0)
     a.requires_grad = True
-    b = torch.Tensor([5.0])
+    b = create_tensor(5.0)
     b.requires_grad = True
     c = a * b
     d = torch.relu(c)
@@ -252,11 +245,11 @@ def do_test_sigmoid():
     global torch_res
     torch_res = []
 
-    a = torch.Tensor([0.3])
+    a = create_tensor(0.3)
     a.requires_grad = True
-    b = torch.Tensor([0.5])
+    b = create_tensor(0.5)
     b.requires_grad = True
-    c = torch.Tensor([-1.0])
+    c = create_tensor(-1.0)
     c.requires_grad = True
     d = (a + b) * c
     e = d * a
@@ -282,11 +275,11 @@ def do_test_leaky_relu():
 
     leaky_relu = torch.nn.LeakyReLU(0.1)
 
-    a = torch.Tensor([72])
+    a = create_tensor(72)
     a.requires_grad = True
-    b = torch.Tensor([38])
+    b = create_tensor(38)
     b.requires_grad = True
-    c = torch.Tensor([-10.0])
+    c = create_tensor(-10.0)
     c.requires_grad = True
     d = (a + b) * c
     e = d * a
@@ -312,9 +305,9 @@ def do_test_elu():
 
     elu = torch.nn.ELU(0.1)
 
-    a = torch.Tensor([5])
+    a = create_tensor(5)
     a.requires_grad = True
-    b = torch.Tensor([-6])
+    b = create_tensor(-6)
     b.requires_grad = True
     c = elu(b)
     d = a * (c - b)
