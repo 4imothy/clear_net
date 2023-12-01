@@ -11,10 +11,16 @@
 ***/
 
 /***
-    TODO do all computations on the computation graph, no more of just vanilla float implementation, need to output the floats so have some function which takes the gs id to floats, each net has a matrix/vector for output float values, after the final layer change the output_ids to just the output matrix/matrices/vector
-    TODO come up with some way to use the typedef for scalar and not the float specifics like powf
+    TODO do all computations on the computation graph, no more of just vanilla
+float implementation, need to output the floats so have some function which
+takes the gs id to floats, each net has a matrix/vector for output float values,
+after the final layer change the output_ids to just the output
+matrix/matrices/vector
+    TODO come up with some way to use the typedef for scalar and not the float
+specifics like powf
     TODO instead of funciton pointers do operation type enum
-    TODO way to write the forwarding once for both vanilla floats and storing computation graph
+    TODO way to write the forwarding once for both vanilla floats and storing
+computation graph
     TODO paralell
     TODO more loss functions,
     TODO more optimization methods
@@ -49,13 +55,13 @@
 #define CLEAR_NET_INITIAL_GRAPH_LENGTH 10
 #endif // CLEAR_NET_INITIAL_GRAPH_LENGTH
 #ifndef CLEAR_NET_DEFINE_HYPERPARAMETERS
-#define CLEAR_NET_DEFINE_HYPERPARAMETERS                                \
-    NetType CN_NET_TYPE;                                                \
-    scalar CN_RATE;                                                   \
-    size_t CN_NLAYERS;                                                  \
-    size_t CN_NPARAMS;                                                  \
-    scalar CN_NEG_SCALE;                                              \
-    size_t CN_WITH_MOMENTUM;                                            \
+#define CLEAR_NET_DEFINE_HYPERPARAMETERS                                       \
+    NetType CN_NET_TYPE;                                                       \
+    scalar CN_RATE;                                                            \
+    size_t CN_NLAYERS;                                                         \
+    size_t CN_NPARAMS;                                                         \
+    scalar CN_NEG_SCALE;                                                       \
+    size_t CN_WITH_MOMENTUM;                                                   \
     scalar CN_MOMENTUM_BETA;
 #endif // CLEAR_NET_DEFINE_HYPERPARAMETERS
 #ifndef CN_MAX_PARAM
@@ -216,7 +222,7 @@ void _cn_randomize_conv_layer(ConvolutionalLayer *layer, scalar lower,
 void _cn_copy_conv_params(GradientStore *gs, ConvolutionalLayer *layer);
 Matrix *cn_forward_conv(ConvolutionalLayer *layer, Matrix *input);
 scalar cn_correlate(Matrix kern, Matrix input, long top_left_row,
-                   long top_left_col);
+                    long top_left_col);
 size_t _cn_correlate(GradientStore *gs, Matrix kern, DMatrix input,
                      long top_left_row, long top_left_col);
 DMatrix *_cn_forward_conv(ConvolutionalLayer *layer, GradientStore *gs,
@@ -271,7 +277,7 @@ void cn_print_net(Net net, char *name);
 /* Declare: Vanilla */
 scalar cn_learn_vani(Net *net, Matrix input, Matrix target);
 scalar _cn_find_grad_vani(Net *net, GradientStore *gs, Vector input,
-                         Vector target);
+                          Vector target);
 Vector cn_predict_vani(Net *net, Vector input);
 DVector _cn_predict_vani(Net *net, GradientStore *gs, DVector prev_ids);
 scalar cn_loss_vani(Net *net, Matrix input, Matrix target);
@@ -281,7 +287,7 @@ void cn_print_target_output_pairs_vani(Net net, Matrix input, Matrix target);
 /* Declare: Convolutional Net */
 scalar cn_learn_conv(Net *net, Matrix **inputs, LAData *targets, size_t nimput);
 scalar _cn_find_grad_conv(Net *net, GradientStore *gs, Matrix *inputs,
-                         LAData target);
+                          LAData target);
 LAData cn_predict_conv(Net *net, Matrix *input);
 DLAData _cn_predict_conv(Net *net, GradientStore *gs, DMatrix *minput);
 scalar cn_loss_conv(Net *net, Matrix **input, LAData *targets, size_t nimput);
@@ -1169,7 +1175,7 @@ void _cn_copy_conv_params(GradientStore *gs, ConvolutionalLayer *layer) {
 }
 
 scalar cn_correlate(Matrix kern, Matrix input, long top_left_row,
-                   long top_left_col) {
+                    long top_left_col) {
     scalar res = 0;
     long lrows = (long)kern.nrows;
     long lcols = (long)kern.ncols;
@@ -1944,7 +1950,7 @@ scalar cn_learn_vani(Net *net, Matrix input, Matrix target) {
 }
 
 scalar _cn_find_grad_vani(Net *net, GradientStore *gs, Vector input,
-                         Vector target) {
+                          Vector target) {
     input.gs_id = gs->length;
     _cn_copy_vector_params(gs, input);
     DVector prediction = _cn_predict_vani(net, gs, net->input_ids.data.vec);
@@ -2044,7 +2050,8 @@ void cn_print_target_output_pairs_vani(Net net, Matrix input, Matrix target) {
 }
 
 /* Implement: Convolutional Net */
-scalar cn_learn_conv(Net *net, Matrix **inputs, LAData *targets, size_t nimput) {
+scalar cn_learn_conv(Net *net, Matrix **inputs, LAData *targets,
+                     size_t nimput) {
     CLEAR_NET_ASSERT((*targets).type == net->output_type);
     scalar total_loss = 0;
     net->computation_graph.length = 1;
@@ -2086,7 +2093,7 @@ scalar cn_learn_conv(Net *net, Matrix **inputs, LAData *targets, size_t nimput) 
 }
 
 scalar _cn_find_grad_conv(Net *net, GradientStore *gs, Matrix *input,
-                         LAData target) {
+                          LAData target) {
     for (size_t i = 0; i < net->layers[0].data.conv.nimput; ++i) {
         input[i].gs_id = gs->length;
         _cn_copy_matrix_params(gs, input[i]);
