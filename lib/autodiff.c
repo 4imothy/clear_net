@@ -1,14 +1,8 @@
-#include "clear_net.h"
-#include "net.h"
-
-// TODO this causes issues with printing with %f so create a new to_char function for easier printing also export the scalar stuff to a scalar.c/h
+#include "autodiff.h"
 
 #define INITIAL_GRAPH_SIZE 50
 #define NODE(id) (cg)->vars[(id)]
 #define POS(cg, x) NODE(x).num > 0
-#define IS_FLOAT sizeof(scalar) == sizeof(float)
-#define IS_DOUBLE sizeof(scalar) == sizeof(double)
-#define IS_LONG_DOUBLE sizeof(scalar) == sizeof(long double)
 
 typedef enum {
     ADD,
@@ -37,48 +31,6 @@ struct CompGraph {
     ulong size;
     ulong max_size;
 };
-
-char* type_not_supported_message = "Type of Scalar Not Supported";
-
-scalar pows(scalar to_raise, scalar raiser) {
-    if (IS_FLOAT) {
-        return pow(to_raise, raiser);
-    } else if (IS_DOUBLE) {
-        return powf(to_raise, raiser);
-    } else if (IS_LONG_DOUBLE) {
-        return powl(to_raise, raiser);
-    }
-    CLEAR_NET_ASSERT(0 && type_not_supported_message);
-    return 0;
-}
-
-scalar tanhs(scalar x) {
-    if (IS_DOUBLE) {
-        return tanh(x);
-    } else if (IS_FLOAT) {
-        return tanhf(x);
-    } else if (IS_LONG_DOUBLE) {
-        return tanhl(x);
-    }
-    CLEAR_NET_ASSERT(0 && type_not_supported_message);
-    return 0;
-}
-
-scalar exps(scalar x) {
-    if (IS_FLOAT) {
-        return expf(x);
-    } else if (IS_DOUBLE) {
-        return exp(x);
-    } else if (IS_LONG_DOUBLE) {
-        return expl(x);
-    }
-    CLEAR_NET_ASSERT(0 && type_not_supported_message);
-    return 0;
-}
-
-scalar randRange(scalar lower, scalar upper) {
-    return ((scalar)rand() / RAND_MAX) * (upper - lower) + lower;
-}
 
 ulong extendSize(ulong size) {
     return (size == 0 ? INITIAL_GRAPH_SIZE : size * 2);
@@ -147,10 +99,10 @@ scalar getGrad(CompGraph *cg, ulong x) { return NODE(x).grad; }
 
 void applyGrad(CompGraph *cg, ulong x) { NODE(x).num -= NODE(x).grad; }
 
-void _applyGrad(CompGraph *cg, ulong x, HParams *hp) {
-    scalar change = NODE(x).grad * hp->rate;
-    if (hp->momentum) {
-        NODE(x).store = (hp->beta * NODE(x).store) + ((1 - hp->beta) * change);
+void applyGradWithHP(CompGraph *cg, ulong x, scalar rate, bool momentum, scalar beta) {
+    scalar change = NODE(x).grad * rate;
+    if (momentum) {
+        NODE(x).store = (beta * NODE(x).store) + ((1 - beta) * change);
         change = NODE(x).store;
     }
     NODE(x).num -= change;

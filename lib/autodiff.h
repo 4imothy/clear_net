@@ -1,6 +1,8 @@
 #ifndef CN_AUTODIFF
 #define CN_AUTODIFF
 #include "clear_net.h"
+#include "clear_net.h"
+#include "scalar.h"
 
 scalar pows(scalar to_raise, scalar raiser);
 scalar tanhs(scalar x);
@@ -9,7 +11,7 @@ void deallocCompGraph(CompGraph *cg);
 ulong initLeafScalar(CompGraph *cg, scalar num);
 void resetGrads(CompGraph *cg);
 void applyGrad(CompGraph *cg, ulong x);
-void _applyGrad(CompGraph *cg, ulong x, HParams *hp);
+void applyGradWithHP(CompGraph *cg, ulong x, scalar rate, bool momentum, scalar beta);
 scalar getVal(CompGraph *cg, ulong x);
 scalar getGrad(CompGraph *cg, ulong x);
 void setVal(CompGraph *cg, ulong x, scalar num);
