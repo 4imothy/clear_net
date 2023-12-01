@@ -12,7 +12,8 @@
 
 // TODO support for pooling layers being the first in a net
 // TODO organize net.c into seperate files for each layer type, dense, convolutional, pooling make sure naming schemes are consistent
-// TODO reorganize so each *.c has a *_pub.h which has the externally shared functions in a struct and gives those functions to be declared in the *.c, still has a *.h which has the internally shared functions, this will reduce the number of times a mothed must be copied but it actually won't because needs *.c *_pub.h and *.h, theres gotta be a better way to do this, put this question on reddit
+// TODO reorganize so each *.c has a *_pub.h which has the externally shared functions in a struct and gives those functions to be declared in the *.c, still has a *.h which has the internally shared functions, this will reduce the number of times a mothed must be copied but it actually won't because needs *.c *_pub.h and *.h, theres gotta be a better way to do this, put this question on reddit, create a minimal example and include in the reddit question
+// TODO create a python script to automate documentation creating, read a comment above the function declaration in the clear_net.h thing
 // TODO fix tests
 // TODO test for saving and loading the net
 // FUTURE better benching suite with ability to measure the amount of memory used
