@@ -1,13 +1,10 @@
 #ifndef CN_NET
 #define CN_NET
 #include "clear_net.h"
-
-struct HParams {
-    scalar rate;
-    scalar leaker;
-    scalar beta;
-    bool momentum;
-};
+#include "autodiff.h"
+#include "clear_net.h"
+#include "graph_utils.h"
+#include "data.h"
 
 HParams *allocDefaultHParams(void);
 void setRate(HParams *hp, scalar rate);

@@ -1,13 +1,15 @@
 #include "net.h"
-#include "autodiff.h"
-#include "clear_net.h"
-#include "graph_utils.h"
-#include "data.h"
 
 // FUTURE to save space can not alloc for any storing index matirx as the number
 // of elements between each element should be the same just store the stride
 // again
-// FUTURE split each layer into its own .c and .h
+
+struct HParams {
+    scalar rate;
+    scalar leaker;
+    scalar beta;
+    bool momentum;
+};
 
 typedef struct {
     Mat weights;
@@ -167,8 +169,8 @@ UVec forwardDense(CompGraph *cg, DenseLayer *layer, UVec input, scalar leaker) {
 }
 
 void applyDenseGrads(CompGraph *cg, DenseLayer *layer, HParams *hp) {
-    applyMatGrads(cg, &layer->weights, hp);
-    applyVecGrads(cg, &layer->biases, hp);
+    applyMatGrads(cg, &layer->weights, hp->rate, hp->momentum, hp->beta);
+    applyVecGrads(cg, &layer->biases, hp->rate, hp->momentum, hp->beta);
 }
 
 void allocConvLayer(Net *net, Activation act, Padding padding, ulong noutput,
@@ -385,9 +387,9 @@ UMat *forwardConv(CompGraph *cg, ConvolutionalLayer *layer, UMat *input,
 void applyConvGrads(CompGraph *cg, ConvolutionalLayer *layer, HParams *hp) {
     for (ulong i = 0; i < layer->nfilters; ++i) {
         for (ulong j = 0; j < layer->nimput; ++j) {
-            applyMatGrads(cg, &layer->filters[i].kernels[j], hp);
+            applyMatGrads(cg, &layer->filters[i].kernels[j], hp->rate, hp->momentum, hp->beta);
         }
-        applyMatGrads(cg, &layer->filters[i].biases, hp);
+        applyMatGrads(cg, &layer->filters[i].biases, hp->rate, hp->momentum, hp->beta);
     }
 }
 
