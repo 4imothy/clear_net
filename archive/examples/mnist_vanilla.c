@@ -70,7 +70,7 @@ int get_data_from_dir(Matrix *data, char *path, int num_files) {
 int main(void) {
     srand(0);
 
-    char *train_path = "./datasets/mnist/train";
+    char *train_path = "../datasets/mnist/train";
     Matrix train = cn_alloc_matrix(num_train_files, num_pixels + dim_output);
     int res = get_data_from_dir(&train, train_path, num_train_files);
     if (res) {
@@ -85,7 +85,7 @@ int main(void) {
 
     cn_shuffle_vani_input(&train_input, &train_output);
 
-    char *test_path = "./datasets/mnist/test";
+    char *test_path = "../datasets/mnist/test";
     Matrix test = cn_alloc_matrix(num_test_files, num_pixels + dim_output);
     res = get_data_from_dir(&test, test_path, num_test_files);
     if (res != 0) {

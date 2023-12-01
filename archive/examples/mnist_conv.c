@@ -70,7 +70,7 @@ int get_data_from_dir(Matrix *data, Vector *targets, char *path,
 
 int main(void) {
     srand(0);
-    char *train_path = "./datasets/mnist/train";
+    char *train_path = "../datasets/mnist/train";
     Matrix *train = CLEAR_NET_ALLOC(num_train_files * sizeof(Matrix));
     Vector *train_targets = CLEAR_NET_ALLOC(num_train_files * sizeof(Vector));
     for (size_t i = 0; i < num_train_files; ++i) {
@@ -94,7 +94,7 @@ int main(void) {
         targets[i].data.vec = train_targets[i];
     }
 
-    char *test_path = "./datasets/mnist/test";
+    char *test_path = "../datasets/mnist/test";
     Matrix *test = CLEAR_NET_ALLOC(num_test_files * sizeof(Matrix));
     Vector *test_targets = CLEAR_NET_ALLOC(num_test_files * sizeof(Vector));
     for (size_t i = 0; i < num_test_files; ++i) {
