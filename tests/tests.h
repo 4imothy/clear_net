@@ -4,7 +4,6 @@
 #include "../lib/autodiff.h"
 #include "../lib/clear_net.h"
 #include "../lib/graph_utils.h"
-#include <stdio.h>
 #include <string.h>
 
 #define LEN(ptr) sizeof(ptr) / sizeof(*ptr)
@@ -19,7 +18,7 @@ scalar input_elem[] = {
     0.0433154872324607,  0.42621935359557017};
 const ulong input_elem_len = LEN(input_elem);
 
-float matrix_elem[] = {2, 6, 7, 8, 4, 0, 6, 4, 2, 0, 9, 7, 5, 9, 8, 8,
+scalar matrix_elem[] = {2, 6, 7, 8, 4, 0, 6, 4, 2, 0, 9, 7, 5, 9, 8, 8,
                        4, 6, 0, 2, 4, 7, 6, 1, 7, 5, 2, 9, 6, 7, 8};
 const size_t matrix_elem_len = LEN(matrix_elem);
 
@@ -134,7 +133,7 @@ typedef enum {
 
 typedef struct {
     LayerType type;
-    LayerData data;
+    LayerData in;
 } Layer;
 
 struct Net {
@@ -164,7 +163,7 @@ scalar lossVanilla(Net *net, Matrix input, Matrix target);
 void backprop(Net *net);
 void saveNet(Net *net, char *path);
 Net *allocNetFromFile(char *path);
-void allocConvLayer(Net *net, Padding padding, Activation act, ulong noutput,
+void allocConvLayer(Net *net, Activation act, Padding padding, ulong noutput,
                     ulong kernel_nrows, ulong kernel_ncols);
 UMat *forwardConv(CompGraph *cg, ConvolutionalLayer *layer, UMat *input,
                   scalar leaker);

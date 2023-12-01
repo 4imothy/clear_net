@@ -8,14 +8,14 @@ void do_test(ulong input_nelem, ulong out_nelem, scalar *mat_pool,
     setLeaker(hp, 1);
     Net *net = allocVanillaNet(hp, input_nelem);
     allocDenseLayer(net, default_act, out_nelem);
-    Mat mat = net->layers[0].data.dense.weights;
+    Mat mat = net->layers[0].in.dense.weights;
     fill_mat(net->cg, &mat, mat_pool, mat_pool_len);
 
     UVec input = allocUVec(input_nelem);
     set_uvec(net->cg, &input, input_pool, input_pool_len);
-    forwardDense(net->cg, &net->layers[0].data.dense, input, net->hp.leaker);
+    forwardDense(net->cg, &net->layers[0].in.dense, input, net->hp.leaker);
 
-    printVecResults(net->cg, net->layers[0].data.dense.output);
+    printVecResults(net->cg, net->layers[0].in.dense.output);
     deallocNet(net);
 }
 
