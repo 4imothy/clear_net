@@ -1,11 +1,11 @@
-#define CLEAR_NET_IMPLEMENTATION
-#include "../clear_net.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "./external/stb_image.h"
 #include <dirent.h>
 #include <sys/stat.h>
 
-CLEAR_NET_DEFINE_HYPERPARAMETERS
+#include "../lib/clear_net.h"
+
+#define data cn.data
 
 const size_t img_height = 28;
 const size_t img_width = 28;
@@ -15,7 +15,7 @@ const size_t num_test_files = 10000;
 const size_t dim_output = 10;
 const size_t nchannels = 1;
 
-int get_data_from_dir(Matrix *data, Vector *targets, char *path,
+int get_data_from_dir(Matrix *train, Vector *targets, char *path,
                       size_t num_files) {
     DIR *directory = opendir(path);
     if (directory == NULL) {
@@ -54,7 +54,7 @@ int get_data_from_dir(Matrix *data, Vector *targets, char *path,
             for (int j = 0; j < img_width * img_height; ++j) {
                 size_t row = j / img_width;
                 size_t col = j % img_width;
-                MAT_AT(data[count], row, col) = img_pixels[j] / 255.f;
+                MAT_AT(train[count], row, col) = img_pixels[j] / 255.f;
             }
             // the python script set it up so the first character is the label
             size_t label = (entry->d_name[0] - '0');
@@ -71,104 +71,76 @@ int get_data_from_dir(Matrix *data, Vector *targets, char *path,
 int main(void) {
     srand(0);
     char *train_path = "./datasets/mnist/train";
-    Matrix *train = CLEAR_NET_ALLOC(num_train_files * sizeof(Matrix));
-    Vector *train_targets = CLEAR_NET_ALLOC(num_train_files * sizeof(Vector));
-    for (size_t i = 0; i < num_train_files; ++i) {
-        train[i] = cn_alloc_matrix(img_height, img_width);
-        train_targets[i] = cn_alloc_vector(dim_output);
-    }
+    Matrix *train_ins =
+        data.allocMatrices(num_train_files, img_height, img_width);
+    Vector *train_tars = data.allocVectors(num_train_files, dim_output);
     int res =
-        get_data_from_dir(train, train_targets, train_path, num_train_files);
+        get_data_from_dir(train_ins, train_tars, train_path, num_train_files);
     if (res) {
         return 1;
     }
 
-    Matrix **input_list = CLEAR_NET_ALLOC(num_train_files * sizeof(Matrix *));
-    for (size_t i = 0; i < num_train_files; ++i) {
-        input_list[i] = &train[i];
-    }
-
-    LAData *targets = CLEAR_NET_ALLOC(num_train_files * sizeof(LAData));
-    for (size_t i = 0; i < num_train_files; ++i) {
-        targets[i].type = Vec;
-        targets[i].data.vec = train_targets[i];
-    }
+    CNData *input = data.allocDataFromMatrices(train_ins, num_train_files);
+    CNData *target = data.allocDataFromVectors(train_tars, num_train_files);
 
     char *test_path = "./datasets/mnist/test";
-    Matrix *test = CLEAR_NET_ALLOC(num_test_files * sizeof(Matrix));
-    Vector *test_targets = CLEAR_NET_ALLOC(num_test_files * sizeof(Vector));
-    for (size_t i = 0; i < num_test_files; ++i) {
-        test[i] = cn_alloc_matrix(img_width, img_height);
-        test_targets[i] = cn_alloc_vector(dim_output);
-    }
-    res = get_data_from_dir(test, test_targets, test_path, num_test_files);
+    Matrix *test_ins =
+        data.allocMatrices(num_test_files, img_height, img_width);
+    Vector *test_tars = data.allocVectors(num_test_files, dim_output);
+    res = get_data_from_dir(test_ins, test_tars, test_path, num_test_files);
     if (res != 0) {
         return 1;
     }
+    CNData *test_input = data.allocDataFromMatrices(test_ins, num_test_files);
+    CNData *test_target = data.allocDataFromVectors(test_tars, num_test_files);
 
-    Matrix **test_list = CLEAR_NET_ALLOC(num_test_files * sizeof(Matrix *));
-    LAData *la_test_targets = CLEAR_NET_ALLOC(num_test_files * sizeof(LAData));
-    for (size_t i = 0; i < num_test_files; ++i) {
-        test_list[i] = &test[i];
-        la_test_targets[i].type = Vec;
-        la_test_targets[i].data.vec = test_targets[i];
-    }
+    data.shuffleDatas(input, target);
 
-    cn_shuffle_conv_input(&input_list, &targets, num_train_files);
-
-    cn_default_hparams();
-    Net net = cn_alloc_conv_net(img_height, img_width, nchannels);
-    cn_alloc_conv_layer(&net, Valid, Sigmoid, 3, 9, 9);
-    cn_alloc_conv_layer(&net, Valid, Sigmoid, 5, 5, 5);
-    cn_alloc_pooling_layer(&net, Average, 4, 4);
-    cn_alloc_conv_layer(&net, Valid, Sigmoid, 10, 3, 3);
-    cn_alloc_global_pooling_layer(&net, Max);
-    cn_alloc_dense_layer(&net, Sigmoid, 10);
-    cn_randomize_net(&net, -1, 1);
+    HParams *hp = cn.allocDefaultHParams();
+    cn.setRate(hp, 0.01);
+    Net *net = cn.allocConvNet(hp, img_height, img_width, nchannels);
+    cn.allocConvLayer(net, SIGMOID, VALID, 3, 9, 9);
+    cn.allocConvLayer(net, SIGMOID, VALID, 5, 5, 5);
+    cn.allocPoolingLayer(net, AVERAGE, 4, 4);
+    cn.allocConvLayer(net, SIGMOID, VALID, 10, 3, 3);
+    cn.allocGlobalPoolingLayer(net, MAX);
+    cn.allocDenseLayer(net, SIGMOID, 10);
+    cn.randomizeNet(net, -1, 1);
 
     size_t nepochs = 2000;
     size_t batch_size = 32;
     CLEAR_NET_ASSERT(num_train_files % batch_size == 0);
 
-    cn_set_rate(0.01);
-    printf("Initial Cost: %f\n",
-           cn_loss_conv(&net, input_list, targets, num_train_files));
+    printf("Initial Cost: %f\n", cn.lossConv(net, input, target));
     printf("Beginning Training\n");
+    CNData *batch_in = data.allocEmptyData();
+    CNData *batch_tar = data.allocEmptyData();
+    size_t nbatches = num_train_files / batch_size;
 
-    Matrix **batch_in = CLEAR_NET_ALLOC(batch_size * sizeof(Matrix *));
-    LAData *batch_tar = CLEAR_NET_ALLOC(batch_size * sizeof(LAData));
     float loss;
     for (size_t i = 0; i < nepochs; ++i) {
-        for (size_t batch_num = 0; batch_num < (num_train_files / batch_size);
-             ++batch_num) {
-            cn_get_batch_conv(batch_in, batch_tar, input_list, targets,
-                              batch_num, batch_size);
-            printf("loss at batch: %zu is %f\n", batch_num,
-                   cn_learn_conv(&net, batch_in, batch_tar, batch_size));
+        for (size_t batch_num = 0; batch_num < nbatches; ++batch_num) {
+            data.setBatch(input, target, batch_num, batch_size, batch_in,
+                          batch_tar);
+            printf("Loss at batch: %zu is %f\n", batch_num,
+                   cn.lossConv(net, batch_in, batch_tar));
+            cn.backprop(net);
         }
-        loss = cn_loss_conv(&net, input_list, targets, num_train_files);
+        loss = cn.lossConv(net, input, target);
         printf("Loss at epoch %zu: %f\n", i, loss);
         if (loss < 0.25) {
             break;
         }
     }
 
-    for (size_t i = 0; i < num_test_files; ++i) {
-        printf("tar: ");
-        cn_print_vector_inline(la_test_targets[i].data.vec);
-        printf("\n");
-        printf("net: ");
-        cn_print_vector_inline(cn_predict_conv(&net, test_list[i]).data.vec);
-        printf("\n");
-    }
     char *file = "model";
     printf("Loss on validation: %f\n",
-           cn_loss_conv(&net, test_list, la_test_targets, num_test_files));
-    cn_save_net_to_file(net, file);
-    cn_dealloc_net(&net);
-    net = cn_alloc_net_from_file(file);
+           cn.lossConv(net, test_input, test_target));
+    cn.saveNet(net, file);
+    cn.deallocNet(net);
+    net = cn.allocNetFromFile(file);
     printf("Loss on validation after loading save: %f\n",
-           cn_loss_conv(&net, test_list, la_test_targets, num_test_files));
+           cn.lossConv(net, test_input, test_target));
 
     return 0;
 }

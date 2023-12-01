@@ -5,15 +5,18 @@ PY := python3
 C_FORMAT := clang-format
 PY_FORMAT := autopep8
 
-LIB_FILE := clear_net.h
+LIB_DIR := lib
 EXAMPLE_DIR := examples
 SCRIPTS_DIR := scripts
 BENCHMARK_DIR := $(SCRIPTS_DIR)/benchmarks
-TEST_DIR := $(SCRIPTS_DIR)/tests
+TEST_DIR := tests
 DOWNLOAD_DATA_DIR := $(SCRIPTS_DIR)/download_datasets
 
+LIB_C_FILES := $(wildcard $(LIB_DIR)/*.c)
+LIB_H_FILES := $(wildcard $(LIB_DIR)/*.h)
 EXAMPLE_FILES := $(wildcard $(EXAMPLE_DIR)/*.c)
 TEST_FILES := $(wildcard $(TEST_DIR)/*.c)
+TEST_HEADER := $(TEST_DIR)/tests.h
 DOWNLOAD_SCRIPTS := $(wildcard $(DOWNLOAD_DATA_DIR)/*.py)
 
 C_FILES := $(shell find . -name '*.c' -not -path "./env/*")
@@ -24,22 +27,21 @@ BENCH_MAT_MUL_FILE := $(BENCHMARK_DIR)/bench_mat_mul.c
 
 examples := mnist_vanilla mnist_conv mnist_mix xor full_adder iris lin_reg mnist_conv_tiny
 downloaders := get_mnist
-clear_net: $(LIB_FILE)
 
 .DEFAULT_GOAL := all
 
 all: $(examples)
 
-$(examples): clear_net $(EXAMPLE_FILES)
-	$(CC) $(CFLAGS) -o $@ $(EXAMPLE_DIR)/$@.c
+$(examples): $(LIB_C_FILES) $(LIB_H_FILES) $(EXAMPLE_FILES)
+	$(CC) $(CFLAGS) -o $@ $(LIB_C_FILES) $(EXAMPLE_DIR)/$@.c
 
 run_%: %
 	./$<
 
-tests := autodiff correlation gs_forward
+tests := autodiff correlation forward_dense
 
-$(tests): clear_net $(TEST_FILES)
-	$(CC) $(CFLAGS) -o $@ $(TEST_DIR)/$@.c
+$(tests): $(LIB_C_FILES) $(LIB_H_FILES) $(TEST_FILES) $(TEST_HEADER)
+	$(CC) $(CFLAGS) -o $@ $(TEST_DIR)/$@.c $(LIB_C_FILES)
 
 test_%: %
 	$(PY) $(TEST_DIR)/$<.py

@@ -1,95 +1,88 @@
-#define CLEAR_NET_IMPLEMENTATION
-#include "../clear_net.h"
+#include "../lib/clear_net.h"
 // function to learn
 // y = 2 + 4a - 3b + 5c + 6d - 2e + 7f - 8g + 9h
 
-NetType CN_NET_TYPE;
-float CN_RATE;
-size_t CN_NLAYERS;
-size_t CN_NPARAMS;
-float CN_NEG_SCALE;
-size_t CN_WITH_MOMENTUM;
-float CN_MOMENTUM_BETA;
+#define data cn.data
 
-const size_t num_train = 100;
-const size_t num_var = 8 + 1;
-float train[num_train * num_var] = {0};
-float val[num_train * num_var] = {0};
-
-float rand_rangef(float lower, float upper) {
-    return ((float)rand()) / RAND_MAX * (upper - lower) + lower;
+scalar rand_range(scalar lower, scalar upper) {
+    return ((scalar)rand()) / RAND_MAX * (upper - lower) + lower;
 }
 
-#define do_func(a, b, c, d, e, f, g, h)                                        \
-    (2 + 4 * (a)-3 * (b) + 5 * (c) + 6 * (d)-2 * (e) + 7 * (f)-8 * (g) +       \
-     9 * (h))
-
-const float len = 1;
-const float lower = -1.0f * len;
-const float upper = len;
-
-// data is normalized
-const float max = do_func(1, 1, 1, 1, 1, 1, 1, 1);
-
-const size_t dim_input = num_var - 1;
-
-float mul_max(float x) { return (x * max); }
+scalar do_func(scalar a, scalar b, scalar c, scalar d, scalar e, scalar f,
+               scalar g, scalar h) {
+    return 2 + (4 * a) - (3 * b) + (5 * c) + (6 * d) - (2 * e) + (7 * f) -
+           (8 * g) + (9 * h);
+}
 
 int main(void) {
     srand(0);
-    float a;
-    float b;
-    float c;
-    float d;
-    float e;
-    float f;
-    float g;
-    float h;
-    for (size_t i = 0; i < num_train; ++i) {
-        for (size_t j = 0; j < num_var; ++j) {
-            train[i * num_var + j] = rand_rangef(lower, upper);
-            val[i * num_var + j] = rand_rangef(lower, upper);
-            if (j == num_var - 1) {
-                a = train[i * num_var];
-                b = train[i * num_var + 1];
-                c = train[i * num_var + 2];
-                d = train[i * num_var + 3];
-                e = train[i * num_var + 4];
-                f = train[i * num_var + 5];
-                g = train[i * num_var + 6];
-                h = train[i * num_var + 7];
-                train[i * num_var + num_var - 1] =
-                    do_func(a, b, c, d, e, f, g, h) / max;
+    ulong num_train = 100;
+    scalar lower = -1;
+    scalar upper = 1;
 
-                a = val[i * num_var];
-                b = val[i * num_var + 1];
-                c = val[i * num_var + 2];
-                d = val[i * num_var + 3];
-                e = val[i * num_var + 4];
-                f = val[i * num_var + 5];
-                g = val[i * num_var + 6];
-                h = val[i * num_var + 7];
-                val[i * num_var + num_var - 1] =
-                    do_func(a, b, c, d, e, f, g, h) / max;
-            }
+    ulong dim_input = 8;
+    ulong dim_output = 1;
+
+    Vector *inputs = data.allocVectors(num_train, dim_input);
+    Vector *val_inputs = data.allocVectors(num_train, dim_input);
+    Vector *targets = data.allocVectors(num_train, dim_output);
+    Vector *val_targets = data.allocVectors(num_train, dim_output);
+    scalar max =
+        do_func(upper, upper, upper, upper, upper, upper, upper, upper);
+
+    scalar a;
+    scalar b;
+    scalar c;
+    scalar d;
+    scalar e;
+    scalar f;
+    scalar g;
+    scalar h;
+    for (ulong i = 0; i < num_train; ++i) {
+        for (ulong j = 0; j < dim_input; ++j) {
+            VEC_AT(inputs[i], j) = rand_range(lower, upper);
+            VEC_AT(val_inputs[i], j) = rand_range(lower, upper);
         }
     }
+    for (ulong i = 0; i < num_train; ++i) {
+        a = VEC_AT(inputs[i], 0);
+        b = VEC_AT(inputs[i], 1);
+        c = VEC_AT(inputs[i], 2);
+        d = VEC_AT(inputs[i], 3);
+        e = VEC_AT(inputs[i], 4);
+        f = VEC_AT(inputs[i], 5);
+        g = VEC_AT(inputs[i], 6);
+        h = VEC_AT(inputs[i], 7);
+        VEC_AT(targets[i], 0) = do_func(a, b, c, d, e, f, g, h);
+        VEC_AT(targets[i], 0) /= max;
+        a = VEC_AT(val_inputs[i], 0);
+        b = VEC_AT(val_inputs[i], 1);
+        c = VEC_AT(val_inputs[i], 2);
+        d = VEC_AT(val_inputs[i], 3);
+        e = VEC_AT(val_inputs[i], 4);
+        f = VEC_AT(val_inputs[i], 5);
+        g = VEC_AT(val_inputs[i], 6);
+        h = VEC_AT(val_inputs[i], 7);
+        VEC_AT(val_targets[i], 0) = do_func(a, b, c, d, e, f, g, h);
+        VEC_AT(val_targets[i], 0) /= max;
+    }
 
-    Matrix input = cn_form_matrix(num_train, dim_input, num_var, train);
-    Matrix output = cn_form_matrix(num_train, 1, num_var, &train[dim_input]);
-    Matrix val_in = cn_form_matrix(num_train, dim_input, num_var, val);
-    Matrix val_out = cn_form_matrix(num_train, 1, num_var, &val[dim_input]);
+    CNData *io_ins = data.allocDataFromVectors(inputs, num_train);
+    CNData *io_tars = data.allocDataFromVectors(targets, num_train);
+    CNData *io_val_ins = data.allocDataFromVectors(val_inputs, num_train);
+    CNData *io_val_tars = data.allocDataFromVectors(val_targets, num_train);
 
-    cn_default_hparams();
-    cn_set_rate(0.01);
-    Net net = cn_alloc_vani_net(8);
-    cn_alloc_dense_layer(&net, Tanh, 1);
-    cn_randomize_net(&net, -1, 1);
-    size_t num_epochs = 200000;
-    float error_break = 0.01f;
-    float loss;
-    for (size_t i = 0; i < num_epochs; ++i) {
-        loss = cn_learn_vani(&net, input, output);
+    HParams *hp = cn.allocDefaultHParams();
+    cn.setRate(hp, 0.01);
+    Net *net = cn.allocVanillaNet(hp, 8);
+    cn.allocDenseLayer(net, TANH, 1);
+    cn.randomizeNet(net, -1, 1);
+    ulong num_epochs = 200000;
+    scalar error_break = 0.01f;
+    scalar loss;
+    for (ulong i = 0; i < num_epochs; ++i) {
+        loss = cn.lossVanilla(net, io_ins, io_tars);
+        cn.backprop(net);
         if (i % (num_epochs / 20) == 0) {
             printf("Cost at %zu: %f\n", i, loss);
         }
@@ -98,14 +91,15 @@ int main(void) {
             break;
         }
     }
-    printf("Final output: %f\n", cn_loss_vani(&net, input, output));
-    cn_print_vani_results(net, input, output);
+
+    printf("Final output: %f\n", cn.lossVanilla(net, io_ins, io_tars));
+    cn.printVanillaPredictions(net, io_val_ins, io_val_tars);
     char *file_name = "model";
-    cn_save_net_to_file(net, file_name);
-    cn_dealloc_net(&net);
-    net = cn_alloc_net_from_file(file_name);
+    cn.saveNet(net, file_name);
+    cn.deallocNet(net);
+    net = cn.allocNetFromFile(file_name);
     printf("After Loading From File\n");
-    cn_print_vani_results(net, val_in, val_out);
-    cn_dealloc_net(&net);
+    cn.printVanillaPredictions(net, io_val_ins, io_val_tars);
+    cn.deallocNet(net);
     return 0;
 }
