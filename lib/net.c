@@ -7,6 +7,7 @@
 // FUTURE to save space can not alloc for any storing index matirx as the number
 // of elements between each element should be the same just store the stride
 // again
+// TODO input can always be a list of matrices indexed the normal way, indexing at 0 would be same as input.mat
 
 ulong activate(CompGraph *cg, ulong x, Activation act, scalar leaker) {
     switch (act) {
@@ -733,40 +734,45 @@ scalar lossConv(Net *net, CNData *input, CNData *target) {
 
     ulong offset = getSize(cg);
 
-    if (net->layers[0].in.conv.nimput > 1) {
-        for (ulong i = 0; i < net->layers[0].in.conv.nimput; ++i) {
-            for (ulong j = 0; j < net->input.in.mats->nrows; ++j) {
-                for (ulong k = 0; k < net->input.in.mats->ncols; ++k) {
-                    MAT_AT(net->input.in.mats[i], j, k) = offset++;
-                }
-            }
-        }
+    // put these in a setup indices for matrix function
+    // iterate over the list in this funciton
+
+    ulong nchannels_in = net->layers[0].in.conv.nimput;
+
+    ulong in_nrows;
+    ulong in_ncols;
+    if (nchannels_in > 1) {
+        in_nrows = net->input.in.mats->nrows;
+        in_ncols = net->input.in.mats->ncols;
     } else {
-        for (ulong i = 0; i < net->input.in.mat.nrows; ++i) {
-            for (ulong j = 0; j < net->input.in.mat.ncols; ++j) {
-                MAT_AT(net->input.in.mat, i, j) = offset++;
+        in_nrows = net->input.in.mat.nrows;
+        in_ncols = net->input.in.mat.ncols;
+    }
+
+    for (ulong i = 0; i < net->layers[0].in.conv.nimput; ++i) {
+        for (ulong j = 0; j < in_nrows; ++j) {
+            for (ulong k = 0; k < in_ncols; ++k) {
+                if (nchannels_in > 1) {
+                    MAT_AT(net->input.in.mats[i], j, k) = offset++;
+                } else {
+                    MAT_AT(net->input.in.mat, j, k) = offset++;
+                }
             }
         }
     }
-
     for (ulong i = 0; i < input->nelem; ++i) {
-        if (net->layers[0].in.conv.nimput > 1) {
-            for (ulong j = 0; j < net->layers[0].in.conv.nimput; ++j) {
-                for (ulong k = 0; k < net->input.in.mats->nrows; ++k) {
-                    for (ulong l = 0; l < net->input.in.mats->ncols; ++l) {
+        for (ulong j = 0; j < nchannels_in; ++j) {
+            for (ulong k = 0; k < in_nrows; ++k) {
+                for (ulong l = 0; l < in_ncols; ++l) {
+                    if (nchannels_in > 1) {
                         initLeafScalar(
-                            cg, MAT_AT(input->in.multi_matrices[i][j], k, l));
+                                       cg, MAT_AT(input->in.multi_matrices[i][j], k, l));
+                    } else {
+                        initLeafScalar(cg, MAT_AT(input->in.matrices[i], k, l));
                     }
                 }
             }
-        } else {
-            for (ulong j = 0; j < net->input.in.mat.nrows; ++j) {
-                for (ulong k = 0; k < net->input.in.mat.ncols; ++k) {
-                    initLeafScalar(cg, MAT_AT(input->in.matrices[i], j, k));
-                }
-            }
         }
-
         UData out;
         if (net->input.type == UMATLIST) {
             out = _predictConv(net, net->input.in.mats);
@@ -777,9 +783,13 @@ scalar lossConv(Net *net, CNData *input, CNData *target) {
         ulong loss = initLeafScalar(cg, 0);
         switch (out.type) {
         case (UVEC): {
+            // TODO can be put in a function, create setupVecFromVector
+            // do this there is a lot of target find with .start_id = getSize(cg) so put that in its own function
             Vec target_vec;
             target_vec.nelem = target->in.vectors->nelem;
             target_vec.start_id = getSize(cg);
+            // TODO check if this can be done in one loop
+            // initialize and backward on that point
             for (ulong j = 0; j < target_vec.nelem; ++j) {
                 initLeafScalar(cg, VEC_AT(target->in.vectors[i], j));
             }
@@ -815,7 +825,7 @@ scalar lossConv(Net *net, CNData *input, CNData *target) {
             break;
         }
         case (UMATLIST): {
-            CLEAR_NET_ASSERT(0 && "not supported");
+            CLEAR_NET_ASSERT(0 && "multi matrix output for convolutional net is not supported");
         }
         }
         backward(cg, loss, net->hp.leaker);
@@ -862,7 +872,7 @@ Vector *predictConvToVector(Net *net, Matrix *input, ulong nchannels,
     CLEAR_NET_ASSERT(net->output_type == UVEC);
     ulong in_nrows;
     ulong in_ncols;
-    CLEAR_NET_ASSERT(nchannels == net->input.nchannels);
+    CLEAR_NET_ASSERT(nchannels == net->layers[0].in.conv.nimput);
     if (net->input.type == UMATLIST) {
         in_nrows = net->input.in.mats->nrows;
         in_ncols = net->input.in.mats->ncols;
@@ -897,7 +907,7 @@ Matrix *predictConvToMatrix(Net *net, Matrix *input, ulong nchannels,
     CLEAR_NET_ASSERT(net->output_type == UMAT);
     ulong in_nrows;
     ulong in_ncols;
-    CLEAR_NET_ASSERT(nchannels == net->input.nchannels);
+    CLEAR_NET_ASSERT(nchannels == net->layers[0].in.conv.nimput);
     if (net->input.type == UMATLIST) {
         in_nrows = net->input.in.mats->nrows;
         in_ncols = net->input.in.mats->ncols;
@@ -962,17 +972,33 @@ void printVanillaPredictions(Net *net, CNData *input, CNData *target) {
 }
 
 void printConvPredictions(Net *net, CNData *input, CNData *target) {
+    // TODO create a check CN input target function which has all the
+    // asserts
     CLEAR_NET_ASSERT(input->nelem = target->nelem);
     // TODO this could be sent to its own function for setting up input indices
-    for (ulong i = 0; i < net->input.nchannels; ++i) {
-        for (ulong j = 0; j < input->in.matrices->nrows; ++j) {
-            for (ulong k = 0; k < input->in.matrices->ncols; ++k) {
+
+    ulong nchannels_in = net->layers[0].in.conv.nimput;
+    ulong in_nrows;
+    ulong in_ncols;
+
+    if (nchannels_in > 1) {
+        in_nrows = net->input.in.mats->nrows;
+        in_ncols = net->input.in.mats->ncols;
+    } else {
+        in_nrows = net->input.in.mat.nrows;
+        in_ncols = net->input.in.mat.ncols;
+    }
+
+    ulong offset = getSize(net->cg);
+    for (ulong i = 0; i < nchannels_in; ++i) {
+        for (ulong j = 0; j < in_nrows; ++j) {
+            for (ulong k = 0; k < in_ncols; ++k) {
                 if (net->input.type == UMATLIST) {
                     MAT_AT(net->input.in.mats[i], j, k) =
-                        getSize(net->cg) + i * ((j * k) + k);
+                        offset++;
                 } else {
                     MAT_AT(net->input.in.mat, j, k) =
-                        getSize(net->cg) + (j * k) + k;
+                        offset++;
                 }
             }
         }
@@ -1012,7 +1038,13 @@ void printConvPredictions(Net *net, CNData *input, CNData *target) {
             v_tar = &target->in.vectors[i];
         }
 
-        if (pred.type == UMAT) {
+        if (pred.type == UVEC) {
+            for (ulong j = 0; j < pred.in.vec.nelem; ++j) {
+                loss += pows(
+                    getVal(cg, VEC_AT(pred.in.vec, j)) - VEC_AT(*v_tar, j), 2);
+            }
+
+        } else {
             for (ulong j = 0; j < pred.in.mat.nrows; ++j) {
                 for (ulong k = 0; k < pred.in.mat.nrows; ++k) {
                     loss += pows(getVal(cg, MAT_AT(pred.in.mat, j, k)) -
@@ -1020,11 +1052,7 @@ void printConvPredictions(Net *net, CNData *input, CNData *target) {
                                  2);
                 }
             }
-        } else {
-            for (ulong j = 0; j < pred.in.vec.nelem; ++j) {
-                loss += pows(
-                    getVal(cg, VEC_AT(pred.in.vec, j)) - VEC_AT(*v_tar, j), 2);
-            }
+
         }
 
         for (ulong j = 0; j < input->nchannels; ++j) {
@@ -1036,7 +1064,6 @@ void printConvPredictions(Net *net, CNData *input, CNData *target) {
                 printMatrix(&input->in.matrices[i], "");
             }
         }
-        setSize(cg, net->nparams + 1);
         printf("Output");
         if (net->output_type == UMAT) {
             printUMat(cg, &pred.in.mat, "");
@@ -1050,6 +1077,7 @@ void printConvPredictions(Net *net, CNData *input, CNData *target) {
         } else {
             printVector(&target->in.vectors[i], "");
         }
+        setSize(cg, net->nparams + 1);
     }
 
     printf("Total Loss: %f\n", loss / input->nelem);
