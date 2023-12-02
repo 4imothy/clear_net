@@ -110,6 +110,24 @@ int main(void) {
     char *file = "model";
     cn.saveNet(net, file);
 
+    Vector store = data.allocVector(dim_output);
+    cn.predictConvToVector(net, &train_ins[0], nchannels, &store);
+
+    data.printVector(&store, "prediction on 0");
+    data.printVector(&train_targets[0], "target on 0");
+
+    cn.predictConvToVector(net, &train_ins[1], nchannels, &store);
+    data.printVector(&store, "prediction on 1");
+    data.printVector(&train_targets[1], "target on 1");
+
+    cn.predictConvToVector(net, &train_ins[2], nchannels, &store);
+    data.printVector(&store, "prediction on 2");
+    data.printVector(&train_targets[2], "target on 2");
+
+    cn.predictConvToVector(net, &train_ins[3], nchannels, &store);
+    data.printVector(&store, "prediction on 3");
+    data.printVector(&train_targets[3], "target on 3");
+
     cn.deallocNet(net);
     net = cn.allocNetFromFile(file);
     printf("Loss After loading: %f\n", cn.lossConv(net, input, target));
