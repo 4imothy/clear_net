@@ -106,9 +106,9 @@ int main(void) {
     cn.allocDenseLayer(net, SIGMOID, 16);
     cn.allocDenseLayer(net, SIGMOID, dim_output);
     cn.randomizeNet(net, -1, 1);
-    ulong num_epochs = 1;
+    ulong num_epochs = 1000;
     scalar error;
-    scalar error_break = 0.10;
+    scalar error_break = 0.25;
     ulong batch_size = 100;
     CLEAR_NET_ASSERT(num_train_files % batch_size == 0);
     printf("Initial Cost: %f\n", cn.lossVanilla(net, inputs, targets));
