@@ -11,24 +11,19 @@
 #define VEC_AT(vec, i) (vec).elem[(i)]
 
 // TODO support for pooling layers being the first in a net
-// TODO organize net.c into seperate files for each layer type, dense,
-// convolutional, pooling make sure naming schemes are consistent
-// TODO reorganize so each *.c has a *_pub.h which has the externally shared
-// functions in a struct and gives those functions to be declared in the *.c,
-// still has a *.h which has the internally shared functions, this will reduce
-// the number of times a mothed must be copied but it actually won't because
-// needs *.c *_pub.h and *.h, theres gotta be a better way to do this, put this
-// question on reddit, create a minimal example and include in the reddit
-// question
+
 // TODO create a python script to automate documentation creating, read a
 // comment above the function declaration in the clear_net.h thing
-// TODO fix tests
+
 // TODO test for saving and loading the net
+
 // FUTURE have a train and use mode which is a bool passed to the autodiff
 // functions only change the val and don't store backtracking or stuff on the
 // graph but still have to return a ulong FUTURE better benching suite with
 // ability to measure the amount of memory used FUTURE clear security
-// vulnrebilities FUTURE make a nice error interface to replace assertions of 0
+// vulnrebilities
+
+// FUTURE make a nice error interface to replace assertions of 0
 // FUTURE make a data loading library that works well with clear_net, this will
 // load images and put the class as the folder, so change the python script to
 // respect this structure
