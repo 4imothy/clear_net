@@ -10,18 +10,18 @@
 #define MAT_AT(mat, r, c) (mat).elem[(r) * (mat).stride + (c)]
 #define VEC_AT(vec, i) (vec).elem[(i)]
 
+// TODO move all headers out of this file except for the strictly necessary
 // TODO support for pooling layers being the first in a net
+// TODO rewrite the compgraph to pass around Scalar type each of which has its values index in the graph, so the graph only stores scalars, or try a Scalar type which only has the index and value and a Parameter type which has all the other stuff
 
 // TODO create a python script to automate documentation creating, read a
 // comment above the function declaration in the clear_net.h thing
 
 // TODO test for saving and loading the net
 
-// FUTURE have a train and use mode which is a bool passed to the autodiff
-// functions only change the val and don't store backtracking or stuff on the
-// graph but still have to return a ulong FUTURE better benching suite with
-// ability to measure the amount of memory used FUTURE clear security
-// vulnrebilities
+// FUTURE have a train and use mode which is a bool passed to a wrapper for the autodiff functions
+//   1. Return a void pointer but the scalar res will be stack allocated so this won't really work
+//   2. Return a wrapper class around a ulong and scalar *.s (scalar) or *.u (ulong)
 
 // FUTURE make a nice error interface to replace assertions of 0
 // FUTURE make a data loading library that works well with clear_net, this will
