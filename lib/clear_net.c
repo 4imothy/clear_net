@@ -3,6 +3,7 @@
 #include "data.h"
 #include "net.h"
 
+
 #define PAIR(func) .func = func
 
 _cn_names const cn = {
