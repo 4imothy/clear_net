@@ -2,6 +2,7 @@
 #define CN_AUTODIFF
 #include "clear_net.h"
 #include "scalar.h"
+#include <stdbool.h>
 
 scalar pows(scalar to_raise, scalar raiser);
 scalar tanhs(scalar x);

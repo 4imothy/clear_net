@@ -3,6 +3,7 @@
 #include "data.h"
 #include "graph_utils.h"
 #include "net_types.h"
+#include <float.h>
 
 // FUTURE to save space can not alloc for any storing index matirx as the number
 // of elements between each element should be the same just store the stride

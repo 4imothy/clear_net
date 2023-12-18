@@ -1,4 +1,5 @@
 #include "autodiff.h"
+#include <math.h>
 
 #define INITIAL_GRAPH_SIZE 50
 #define NODE(id) (cg)->vars[(id)]

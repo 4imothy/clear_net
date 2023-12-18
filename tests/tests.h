@@ -5,6 +5,7 @@
 #include "../lib/clear_net.h"
 #include "../lib/graph_utils.h"
 #include <string.h>
+#include <stdio.h>
 
 #define LEN(ptr) sizeof(ptr) / sizeof(*ptr)
 

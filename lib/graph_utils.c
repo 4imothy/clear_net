@@ -1,6 +1,7 @@
 #include "graph_utils.h"
 #include "autodiff.h"
 #include "clear_net.h"
+#include <stdio.h>
 
 Mat createMat(CompGraph *cg, ulong nrows, ulong ncols, ulong *offset) {
     Mat mat = (Mat){

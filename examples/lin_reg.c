@@ -1,4 +1,6 @@
 #include "../lib/clear_net.h"
+#include <stdio.h>
+
 // function to learn
 // y = 2 + 4a - 3b + 5c + 6d - 2e + 7f - 8g + 9h
 

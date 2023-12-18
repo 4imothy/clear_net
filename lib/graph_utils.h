@@ -1,6 +1,7 @@
 #ifndef CN_GRAPH_UTILS
 #define CN_GRAPH_UTILS
 #include "clear_net.h"
+#include <stdbool.h>
 
 #define MAT_ID(mat, r, c) (mat).start_id + ((r) * (mat).ncols) + (c)
 #define VEC_ID(vec, i) (vec).start_id + (i)

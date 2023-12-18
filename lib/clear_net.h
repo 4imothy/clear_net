@@ -1,16 +1,12 @@
 #ifndef CLEAR_NET
 #define CLEAR_NET
 #include <assert.h>
-#include <float.h>
-#include <math.h>
-#include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #define MAT_AT(mat, r, c) (mat).elem[(r) * (mat).stride + (c)]
 #define VEC_AT(vec, i) (vec).elem[(i)]
 
-// TODO move all headers out of this file except for the strictly necessary
+// TODO segfault in mnist_vanilla
 // TODO support for pooling layers being the first in a net
 // TODO rewrite the compgraph to pass around Scalar type each of which has its values index in the graph, so the graph only stores scalars, or try a Scalar type which only has the index and value and a Parameter type which has all the other stuff
 
@@ -27,6 +23,9 @@
 // FUTURE make a data loading library that works well with clear_net, this will
 // load images and put the class as the folder, so change the python script to
 // respect this structure
+//
+// FUTURE better error than just asserting
+//
 
 typedef float scalar;
 typedef unsigned long ulong;

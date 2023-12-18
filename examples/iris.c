@@ -1,5 +1,7 @@
 #include "../lib/clear_net.h"
 #include <string.h>
+#include <stdbool.h>
+#include <stdio.h>
 
 #define data cn.data
 

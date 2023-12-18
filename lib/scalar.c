@@ -1,4 +1,5 @@
 #include "scalar.h"
+#include <math.h>
 
 #define IS_FLOAT sizeof(scalar) == sizeof(float)
 #define IS_DOUBLE sizeof(scalar) == sizeof(double)

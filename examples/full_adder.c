@@ -1,4 +1,5 @@
 #include "../lib/clear_net.h"
+#include <stdio.h>
 
 #define data cn.data
 

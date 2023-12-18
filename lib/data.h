@@ -2,6 +2,7 @@
 #define CN_LA
 
 #include "clear_net.h"
+#include <stdio.h>
 
 typedef enum {
     VECTORS,
